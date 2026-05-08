@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Robertium — Discovering drug hypotheses through open biomedical literature</title>
+  <meta name="description" content="Open-source infrastructure for literature-based drug discovery. Robertium reads biomedical papers, extracts structured claims, and surfaces drug repurposing hypotheses.">
+  <meta name="keywords" content="drug discovery, drug repurposing, biomedical literature, open science, knowledge graph, glioblastoma, epilepsy, hypothesis generation">
+  <meta property="og:title" content="Robertium">
+  <meta property="og:description" content="Open-source infrastructure for literature-based drug discovery">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://robertium.com">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Robertium">
+  <meta name="twitter:description" content="Open-source infrastructure for literature-based drug discovery">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 18px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #1a1a1a;
+      background: #fafafa;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 40px 0 0;
+    }
+
+    header .container {
+      display: flex;
+      align-items: center;
+    }
+
+    .wordmark {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #1a1a1a;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 120px 0 100px;
+    }
+
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
+      color: #1a1a1a;
+      margin-bottom: 20px;
+    }
+
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 36px;
+    }
+
+    .hero .cta {
+      display: inline-block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #1a1a1a;
+      text-decoration: none;
+      border: 1px solid #ccc;
+      padding: 10px 24px;
+      border-radius: 4px;
+      transition: border-color 0.15s;
+    }
+
+    .hero .cta:hover {
+      border-color: #1a1a1a;
+    }
+
+    /* Sections */
+    section {
+      padding: 60px 0;
+    }
+
+    section h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+      color: #1a1a1a;
+    }
+
+    section p {
+      color: #333;
+      margin-bottom: 16px;
+    }
+
+    section p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Status list */
+    .status-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 2;
+      color: #333;
+    }
+
+    .status-list li::before {
+      content: "\2022";
+      margin-right: 10px;
+      color: #999;
+    }
+
+    .status-note {
+      font-size: 0.85rem;
+      color: #777;
+      margin-top: 20px;
+    }
+
+    /* Roadmap */
+    .roadmap-item {
+      margin-bottom: 28px;
+    }
+
+    .roadmap-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .roadmap-item strong {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .roadmap-item span {
+      color: #555;
+    }
+
+    /* Contact */
+    .contact-links {
+      list-style: none;
+      padding: 0;
+      line-height: 2.2;
+    }
+
+    .contact-links a {
+      color: #1a1a1a;
+      text-decoration: none;
+      border-bottom: 1px solid #ddd;
+      transition: border-color 0.15s;
+    }
+
+    .contact-links a:hover {
+      border-color: #1a1a1a;
+    }
+
+    .contact-links .label {
+      display: inline-block;
+      width: 80px;
+      color: #777;
+      font-size: 0.85rem;
+    }
+
+    /* Footer */
+    footer {
+      padding: 60px 0 40px;
+      border-top: 1px solid #eee;
+      margin-top: 40px;
+    }
+
+    footer p {
+      font-size: 0.8rem;
+      color: #999;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      html {
+        font-size: 16px;
+      }
+
+      .hero {
+        padding: 80px 0 60px;
+      }
+
+      .hero h1 {
+        font-size: 1.8rem;
+      }
+
+      section {
+        padding: 40px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <span class="wordmark">Robertium</span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="container">
+      <h1>Discovering drug hypotheses through open biomedical literature</h1>
+      <p class="subtitle">Open-source infrastructure for literature-based drug discovery.</p>
+      <a href="https://github.com/routewise96/robertium" class="cta">View on GitHub &rarr;</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <h2>The Problem</h2>
+      <p>Over 4,000 biomedical papers are published every day. Knowledge stays fragmented across journals, disciplines, and languages. The connections that would lead to new treatments often already exist in the published literature, but no human team can find them systematically.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Approach</h2>
+      <p>Robertium reads open biomedical literature, extracts structured claims about drugs, genes, and diseases, and connects them into a knowledge graph. From this graph, it surfaces contradictions, gaps, and reasoning chains that point to new drug repurposing hypotheses.</p>
+      <p>The pipeline is domain-agnostic. The first domain is glioblastoma. The second will be epilepsy.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Open</h2>
+      <p>Robertium is open-source under the MIT license. The code, the extracted claims, and the knowledge graph are all freely available.</p>
+      <p>This is intentional. Drug discovery infrastructure should belong to the scientific community, not to private platforms.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Status</h2>
+      <p>The first domain &mdash; glioblastoma &mdash; is being processed.</p>
+      <ul class="status-list">
+        <li>9,933 papers ingested</li>
+        <li>4,628 passed entity filtering</li>
+        <li>13,000+ structured claims extracted</li>
+        <li>Knowledge graph in development</li>
+      </ul>
+      <p class="status-note">This page is updated as work progresses.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Roadmap</h2>
+      <div class="roadmap-item">
+        <strong>Foundation.</strong>
+        <span>Glioblastoma corpus processed. Knowledge graph operational. First contradictions identified.</span>
+      </div>
+      <div class="roadmap-item">
+        <strong>Second domain.</strong>
+        <span>Epilepsy added. Pipeline validated as domain-agnostic.</span>
+      </div>
+      <div class="roadmap-item">
+        <strong>Publication.</strong>
+        <span>Preprint on bioRxiv describing methodology and findings.</span>
+      </div>
+      <div class="roadmap-item">
+        <strong>Expansion.</strong>
+        <span>Additional therapeutic areas where treatment is incomplete.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Contact</h2>
+      <ul class="contact-links">
+        <li><span class="label">Email</span> <a href="mailto:daniel@robertium.com">daniel@robertium.com</a></li>
+        <li><span class="label">GitHub</span> <a href="https://github.com/routewise96/robertium">github.com/routewise96/robertium</a></li>
+        <li><span class="label">LinkedIn</span> <a href="https://linkedin.com/in/danieltrofimov">linkedin.com/in/danieltrofimov</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>Robertium &middot; MIT License &middot; Built in the open</p>
+    </div>
+  </footer>
+
+</body>
+</html>
