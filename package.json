@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build-og": "node scripts/build-og.mjs",
+    "build": "npm run build-og && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -15,5 +16,8 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }
