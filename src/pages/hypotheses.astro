@@ -1,0 +1,364 @@
+---
+import Layout from '../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dataPath = path.join(process.cwd(), 'public', 'data', 'hypotheses.json');
+const raw = fs.readFileSync(dataPath, 'utf-8');
+const data = JSON.parse(raw) as {
+  metadata: {
+    generated_at: string;
+    total_count: number;
+    domains: string[];
+    evidence_papers: number;
+    schema_version: string;
+  };
+  hypotheses: Array<{
+    id: number;
+    drug: string;
+    drug_domain: string | null;
+    predicate_ab: string | null;
+    mediator: string;
+    mediator_type: string | null;
+    predicate_bc: string | null;
+    outcome: string;
+    outcome_domain: string | null;
+    score: number | null;
+    ab_count: number | null;
+    bc_count: number | null;
+    direct_count: number | null;
+    evidence: {
+      ab: Array<{ pmid: string; title: string; year: number | null }>;
+      bc: Array<{ pmid: string; title: string; year: number | null }>;
+    };
+  }>;
+};
+
+const drugDomains = Array.from(
+  new Set(data.hypotheses.map((h) => h.drug_domain).filter(Boolean))
+).sort() as string[];
+const outcomeDomains = Array.from(
+  new Set(data.hypotheses.map((h) => h.outcome_domain).filter(Boolean))
+).sort() as string[];
+
+const domainPairs = new Set(
+  data.hypotheses.map((h) => `${h.drug_domain ?? ''}→${h.outcome_domain ?? ''}`)
+);
+---
+<Layout
+  title="Drug Repurposing Hypotheses — Robertium"
+  description="Browse cross-domain drug repurposing hypotheses generated through literature-based discovery. Each hypothesis is a chain of evidence from peer-reviewed papers."
+  current="hypotheses"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Drug repurposing hypotheses</h1>
+      <p class="subtitle">
+        Cross-domain candidates discovered through literature-based discovery.
+        Each hypothesis is a chain of evidence from peer-reviewed papers.
+      </p>
+      <p class="meta">
+        <strong>{data.metadata.total_count}</strong> hypotheses across
+        <strong>{domainPairs.size}</strong> domain pairs
+        ({data.metadata.domains.join(' ↔ ')}),
+        backed by <strong>{data.metadata.evidence_papers}</strong> evidence papers
+      </p>
+    </div>
+  </section>
+
+  <div class="hyp-filters">
+    <div class="container">
+      <div class="hyp-filters-grid">
+        <input
+          type="search"
+          id="hyp-search"
+          class="hyp-input"
+          placeholder="Search by drug, gene, protein, or disease…"
+          aria-label="Search hypotheses"
+          autocomplete="off"
+        />
+        <select id="hyp-drug-domain" class="hyp-select" aria-label="Drug domain">
+          <option value="">All drug domains</option>
+          {drugDomains.map((d) => <option value={d}>{d}</option>)}
+        </select>
+        <select id="hyp-outcome-domain" class="hyp-select" aria-label="Outcome domain">
+          <option value="">All outcome domains</option>
+          {outcomeDomains.map((d) => <option value={d}>{d}</option>)}
+        </select>
+        <select id="hyp-sort" class="hyp-select" aria-label="Sort">
+          <option value="score-desc">Score (high to low)</option>
+          <option value="score-asc">Score (low to high)</option>
+          <option value="evidence-desc">Evidence count</option>
+        </select>
+        <label class="hyp-checkbox">
+          <input type="checkbox" id="hyp-multi" />
+          Multi-evidence
+        </label>
+        <button type="button" id="hyp-reset" class="hyp-reset">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="hyp-status" class="hyp-status"></div>
+    <table class="hyp-table" id="hyp-table">
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>Drug</th>
+          <th></th>
+          <th>Mediator</th>
+          <th></th>
+          <th>Outcome</th>
+          <th class="num">Score</th>
+          <th class="num">Evidence</th>
+        </tr>
+      </thead>
+      <tbody id="hyp-tbody"></tbody>
+    </table>
+    <div id="hyp-empty" class="hyp-empty" hidden>
+      No hypotheses match your filters. Try a different search or
+      <button type="button" id="hyp-empty-reset" class="hyp-reset" style="display:inline-block; margin-left:6px;">reset filters</button>.
+    </div>
+  </div>
+
+  <script
+    type="application/json"
+    id="hyp-data"
+    set:html={JSON.stringify(data.hypotheses)}
+  />
+
+  <script is:inline>
+    (() => {
+      const dataEl = document.getElementById('hyp-data');
+      const HYPOTHESES = JSON.parse(dataEl.textContent);
+
+      const $ = (id) => document.getElementById(id);
+      const search = $('hyp-search');
+      const drugDomain = $('hyp-drug-domain');
+      const outcomeDomain = $('hyp-outcome-domain');
+      const sortBy = $('hyp-sort');
+      const multi = $('hyp-multi');
+      const reset = $('hyp-reset');
+      const emptyReset = $('hyp-empty-reset');
+      const tbody = $('hyp-tbody');
+      const status = $('hyp-status');
+      const empty = $('hyp-empty');
+      const table = $('hyp-table');
+
+      let openId = null;
+
+      const escapeHtml = (s) =>
+        String(s ?? '').replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[c]);
+
+      const escapeAttr = escapeHtml;
+
+      const domainTagClass = (d) => {
+        if (!d) return '';
+        if (d === 'glioblastoma') return ' hyp-domain-tag--gbm';
+        if (d === 'epilepsy') return ' hyp-domain-tag--epi';
+        return '';
+      };
+
+      const domainTag = (d) =>
+        d
+          ? `<span class="hyp-domain-tag${domainTagClass(d)}">${escapeHtml(d)}</span>`
+          : '';
+
+      const renderRow = (h, index) => {
+        const score = h.score != null ? h.score.toFixed(3) : '—';
+        const evidence = `${h.ab_count ?? 0} + ${h.bc_count ?? 0}`;
+        return `
+          <tr class="hyp-row" data-id="${h.id}">
+            <td class="num">${index + 1}</td>
+            <td class="drug">${escapeHtml(h.drug)}${domainTag(h.drug_domain)}</td>
+            <td class="arrow">→</td>
+            <td class="mediator">${escapeHtml(h.mediator)}</td>
+            <td class="arrow">→</td>
+            <td class="outcome">${escapeHtml(h.outcome)}${domainTag(h.outcome_domain)}</td>
+            <td class="num score">${score}</td>
+            <td class="num evidence">${evidence}</td>
+          </tr>
+        `;
+      };
+
+      const renderDetail = (h) => {
+        const pubmedUrl = (pmid) => `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(pmid)}/`;
+        const evList = (items) =>
+          items.length
+            ? `<ul class="hyp-evidence-list">${items
+                .map(
+                  (e) => `
+                    <li>
+                      <a href="${pubmedUrl(e.pmid)}" target="_blank" rel="noopener">PMID ${escapeHtml(e.pmid)}</a>
+                      <span class="ev-title">${escapeHtml(e.title)}</span>${
+                        e.year ? ` <span style="color:#94a3b8">(${e.year})</span>` : ''
+                      }
+                    </li>`
+                )
+                .join('')}</ul>`
+            : `<p class="hyp-evidence-empty">No PMID-linked papers in this leg.</p>`;
+
+        const score = h.score != null ? h.score.toFixed(3) : '—';
+        return `
+          <tr class="hyp-detail-row">
+            <td colspan="8" class="hyp-detail">
+              <div class="hyp-detail-inner">
+                <div class="hyp-chain">
+                  <span class="chain-node">${escapeHtml(h.drug)}</span>
+                  <span class="chain-pred">--[${escapeHtml(h.predicate_ab ?? '?')}]--&gt;</span>
+                  <span class="chain-node">${escapeHtml(h.mediator)}</span>
+                  <span class="chain-pred">--[${escapeHtml(h.predicate_bc ?? '?')}]--&gt;</span>
+                  <span class="chain-node">${escapeHtml(h.outcome)}</span>
+                </div>
+                <div class="hyp-detail-meta">
+                  <span>Score: <strong>${score}</strong></span>
+                  <span>Evidence A→B: <strong>${h.ab_count ?? 0}</strong></span>
+                  <span>Evidence B→C: <strong>${h.bc_count ?? 0}</strong></span>
+                  <span>Direct A→C: <strong>${h.direct_count ?? 0}</strong></span>
+                  <span>ID: <strong>${h.id}</strong></span>
+                </div>
+                <div class="hyp-evidence-section">
+                  <h4>Evidence: ${escapeHtml(h.drug)} ${escapeHtml(h.predicate_ab ?? '?')} ${escapeHtml(h.mediator)}</h4>
+                  ${evList(h.evidence.ab || [])}
+                </div>
+                <div class="hyp-evidence-section">
+                  <h4>Evidence: ${escapeHtml(h.mediator)} ${escapeHtml(h.predicate_bc ?? '?')} ${escapeHtml(h.outcome)}</h4>
+                  ${evList(h.evidence.bc || [])}
+                </div>
+                <button type="button" class="hyp-permalink" data-permalink="${h.id}">
+                  Copy permalink
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      };
+
+      const filtered = () => {
+        const q = (search.value || '').trim().toLowerCase();
+        const dd = drugDomain.value;
+        const od = outcomeDomain.value;
+        const m = multi.checked;
+        let list = HYPOTHESES.filter((h) => {
+          if (dd && h.drug_domain !== dd) return false;
+          if (od && h.outcome_domain !== od) return false;
+          if (m && !((h.ab_count || 0) >= 2 || (h.bc_count || 0) >= 2)) return false;
+          if (q) {
+            const blob = `${h.drug} ${h.mediator} ${h.outcome}`.toLowerCase();
+            if (!blob.includes(q)) return false;
+          }
+          return true;
+        });
+        const sb = sortBy.value;
+        list.sort((a, b) => {
+          if (sb === 'score-asc') return (a.score || 0) - (b.score || 0);
+          if (sb === 'evidence-desc')
+            return ((b.ab_count || 0) + (b.bc_count || 0)) - ((a.ab_count || 0) + (a.bc_count || 0));
+          return (b.score || 0) - (a.score || 0);
+        });
+        return list;
+      };
+
+      const render = () => {
+        const list = filtered();
+        status.textContent = `Showing ${list.length} of ${HYPOTHESES.length} hypotheses`;
+        if (!list.length) {
+          tbody.innerHTML = '';
+          empty.hidden = false;
+          table.style.display = 'none';
+          return;
+        }
+        empty.hidden = true;
+        table.style.display = '';
+        const fragments = [];
+        list.forEach((h, i) => {
+          fragments.push(renderRow(h, i));
+          if (h.id === openId) fragments.push(renderDetail(h));
+        });
+        tbody.innerHTML = fragments.join('');
+      };
+
+      const debounce = (fn, ms) => {
+        let t;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(null, args), ms);
+        };
+      };
+
+      const updateUrl = () => {
+        const params = new URLSearchParams();
+        if (openId != null) params.set('id', String(openId));
+        if (search.value) params.set('q', search.value);
+        const qs = params.toString();
+        const url = qs ? `?${qs}` : window.location.pathname;
+        history.replaceState(null, '', url);
+      };
+
+      tbody.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        const permaBtn = target.closest('[data-permalink]');
+        if (permaBtn) {
+          e.stopPropagation();
+          const id = permaBtn.getAttribute('data-permalink');
+          const link = `${window.location.origin}${window.location.pathname}?id=${id}`;
+          navigator.clipboard.writeText(link).then(() => {
+            permaBtn.textContent = 'Copied!';
+            permaBtn.classList.add('hyp-permalink--copied');
+            setTimeout(() => {
+              permaBtn.textContent = 'Copy permalink';
+              permaBtn.classList.remove('hyp-permalink--copied');
+            }, 1600);
+          });
+          return;
+        }
+        if (target.closest('a')) return;
+        const row = target.closest('.hyp-row');
+        if (!row) return;
+        const id = Number(row.getAttribute('data-id'));
+        openId = openId === id ? null : id;
+        render();
+        updateUrl();
+      });
+
+      search.addEventListener('input', debounce(() => { render(); updateUrl(); }, 200));
+      drugDomain.addEventListener('change', () => { render(); });
+      outcomeDomain.addEventListener('change', () => { render(); });
+      sortBy.addEventListener('change', () => { render(); });
+      multi.addEventListener('change', () => { render(); });
+
+      const doReset = () => {
+        search.value = '';
+        drugDomain.value = '';
+        outcomeDomain.value = '';
+        sortBy.value = 'score-desc';
+        multi.checked = false;
+        openId = null;
+        render();
+        updateUrl();
+      };
+      reset.addEventListener('click', doReset);
+      emptyReset.addEventListener('click', doReset);
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('q')) search.value = params.get('q') || '';
+      if (params.has('id')) {
+        const id = Number(params.get('id'));
+        if (!Number.isNaN(id)) openId = id;
+      }
+
+      render();
+
+      if (openId != null) {
+        requestAnimationFrame(() => {
+          const row = document.querySelector(`.hyp-row[data-id="${openId}"]`);
+          if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+      }
+    })();
+  </script>
+</Layout>
