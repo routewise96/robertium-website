@@ -1,0 +1,208 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="Methodology — Robertium"
+  description="How Robertium discovers drug repurposing candidates from biomedical literature using knowledge graphs and the Swanson ABC model."
+  current="method"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Methodology</h1>
+      <p class="subtitle">How Robertium discovers drug repurposing candidates from biomedical literature</p>
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+        Robertium reads peer-reviewed papers, extracts structured claims about drugs, genes, and diseases,
+        builds a knowledge graph, and applies the Swanson ABC model to discover non-obvious cross-domain
+        repurposing candidates. The pipeline is open-source and reproducible — every component is documented below.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <h2>Pipeline overview</h2>
+      </div>
+      <p>The pipeline runs in four phases for each therapeutic domain: ingest, filter, extract, and connect. Each phase is independently reproducible — given the same input, you get the same output.</p>
+    </div>
+    <div class="container">
+      <div class="pipeline pipeline--four">
+        <div class="pipeline-card">
+          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <h3>Ingest</h3>
+          <p>Fetch open-access biomedical literature from OpenAlex by domain concept ID. Typical corpus: 5,000–10,000 papers per disease.</p>
+        </div>
+        <div class="pipeline-card">
+          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div>
+          <h3>Filter</h3>
+          <p>Pass papers through PubTator (NCBI) for biomedical relevance. The L1 filter keeps only abstracts with recognized genes, chemicals, or diseases.</p>
+        </div>
+        <div class="pipeline-card">
+          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
+          <h3>Extract</h3>
+          <p>Generate structured claims using DeepSeek V4 Flash with a controlled vocabulary of 18 predicates and 10 entity types.</p>
+        </div>
+        <div class="pipeline-card">
+          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/><line x1="5" y1="19" x2="19" y2="19"/></svg></div>
+          <h3>Connect</h3>
+          <p>Build a knowledge graph in Kuzu. Surface ABC-mediator chains that bridge therapeutic domains.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <h2>Open data sources</h2>
+      </div>
+      <p>Robertium uses only open access biomedical literature. No paywalled papers, no commercial datasets. Every source is freely available to anyone.</p>
+      <ul class="simple-list">
+        <li><strong>OpenAlex</strong> — Primary corpus source. Fetches metadata, abstracts, and DOIs for papers tagged with relevant biomedical concepts. We use OpenAlex concept IDs (e.g., C2780596555 for ALS) to retrieve focused, domain-specific corpora of 5,000–10,000 papers per disease.</li>
+        <li><strong>PubTator (NCBI)</strong> — Biomedical entity tagger. Filters out papers without recognized biomedical entities (genes, chemicals, diseases). Typical pass rate: 50–80% per domain.</li>
+        <li><strong>Custom claim extractor</strong> — Built on DeepSeek V4 Flash with a structured YAML prompt. Extracts triples (subject, predicate, object) with entity types, polarity, and confidence scores.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <h2>Structured claim extraction</h2>
+      </div>
+      <p>Each abstract is processed by an LLM with a controlled vocabulary of 18 predicates (inhibits, downregulates, associated_with, sensitizes_to, etc.) and 10 entity types (drug, gene, protein, pathway, phenotype, disease, biomarker, organism, cell_type, technique). The model returns JSON with strict schema validation.</p>
+      <div class="hero-card" style="margin: 24px 0;">
+        <div class="hero-card-label">Example extracted claim</div>
+        <pre>{`{
+  `}<span class="json-key">"subject"</span>: <span class="json-str">"verteporfin"</span>,{`
+  `}<span class="json-key">"subject_type"</span>: <span class="json-str">"drug"</span>,{`
+  `}<span class="json-key">"predicate"</span>: <span class="json-str">"downregulates"</span>,{`
+  `}<span class="json-key">"object"</span>: <span class="json-str">"EGFR"</span>,{`
+  `}<span class="json-key">"object_type"</span>: <span class="json-str">"gene"</span>,{`
+  `}<span class="json-key">"context"</span>: <span class="json-str">"EGFR-mutant glioblastoma"</span>,{`
+  `}<span class="json-key">"polarity"</span>: <span class="json-str">"positive"</span>,{`
+  `}<span class="json-key">"confidence"</span>: <span class="json-num">0.85</span>{`
+}`}</pre>
+      </div>
+      <p>Across 33,000 papers in our current corpus, we extract on average 2.7–3.4 claims per abstract. Total claims in the database: ~90,000 across six therapeutic domains. All claims are linked to source PMIDs for verification.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><line x1="8.7" y1="7.5" x2="15.3" y2="10.5"/><line x1="8.7" y1="16.5" x2="15.3" y2="13.5"/></svg></div>
+        <h2>Knowledge graph</h2>
+      </div>
+      <p>Claims are imported into a Kuzu graph database. Each unique entity becomes a node; each claim becomes an edge with the predicate as label. Entities mentioned in multiple domains are merged at the lexical level (with planned upgrades to UMLS-based normalization).</p>
+      <div class="method-stat-pair">
+        <div class="stat-card">
+          <div class="stat-num">~25,000</div>
+          <div class="stat-label">unique<br>nodes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">~90,000</div>
+          <div class="stat-label">claim<br>edges</div>
+        </div>
+      </div>
+      <p>This shared graph is what enables cross-domain hypothesis discovery — a protein involved in both glioblastoma and epilepsy creates a bridge between two literatures.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+        <h2>Swanson's ABC model for repurposing</h2>
+      </div>
+      <p>To discover drug repurposing candidates, we apply Don R. Swanson's literature-based discovery (LBD) model. A drug A may be repurposed for disease C if there exists a mediator B such that A affects B and B is associated with C, but A and C have no direct co-mention in the literature.</p>
+      <div class="method-chain">
+        <span>A (drug) </span><span class="chain-pred">--[affects]--&gt;</span><span> B (mediator) </span><span class="chain-pred">--[associated_with]--&gt;</span><span> C (disease)</span>
+      </div>
+      <div class="method-chain">
+        <span class="chain-meta">Direct A → C: 0 papers (novel)<br>Indirect via B: chains of evidence from multiple papers</span>
+      </div>
+      <p>Robertium currently surfaces hypotheses where:</p>
+      <ul class="simple-list">
+        <li>Direct A→C evidence is zero or minimal</li>
+        <li>Both A→B and B→C have at least one supporting peer-reviewed paper</li>
+        <li>Mediator B is a meaningful biological entity (gene, protein, pathway)</li>
+      </ul>
+      <p>Each hypothesis is scored using a logarithmic combination of A→B and B→C evidence counts, with boosts for multi-evidence chains.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+        <h2>Cross-domain discovery</h2>
+      </div>
+      <p>The most powerful application of the ABC model emerges when we combine multiple disease domains in one graph. A drug used in epilepsy may share a mediator with a glioblastoma pathway — pointing to a non-obvious repurposing opportunity that no single-domain literature review would surface.</p>
+      <div class="method-chain">
+        <span>zonisamide (epilepsy) </span><span class="chain-pred">--[downregulates]--&gt;</span><span> Cx43 (protein)<br></span><span class="chain-pred">                        --[associated_with]--&gt;</span><span> glioma progression (glioblastoma)</span>
+      </div>
+      <p>Zonisamide is an FDA-approved antiepileptic drug. Cx43 (connexin 43) is a known mediator of glioma cell migration and chemoresistance. Robertium surfaces this connection automatically — no human reviewer was looking for it.</p>
+      <p>The current cross-domain pair (epilepsy ↔ glioblastoma) yielded 383 such hypotheses. With the addition of four more domains (ALS, Alzheimer's, pancreatic cancer, depression), we expect 2,000+ cross-domain candidates across 15 domain pairs.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <h2>Quality and limitations</h2>
+      </div>
+      <p>Robertium is research infrastructure, not a clinical decision tool. Generated hypotheses require expert review and experimental validation. Known limitations:</p>
+      <ul class="simple-list">
+        <li><strong>Entity resolution.</strong> Lexical merging means "EGFR" and "Epidermal Growth Factor Receptor" are still separate nodes in the current graph. UMLS-based normalization is planned.</li>
+        <li><strong>Extraction noise.</strong> The LLM occasionally extracts secondary mentions as primary claims (e.g., a control arm drug instead of the focus drug). Manual spot-checking shows ~85% precision on top-scored hypotheses.</li>
+        <li><strong>Score formula is naive.</strong> Currently uses logarithmic combination of evidence counts. We are working on entity-quality-aware ranking that demotes generic terms (nanoparticles, cell lines) in favor of specific compounds.</li>
+        <li><strong>Direct A→C filter is heuristic.</strong> A hypothesis with one direct co-mention may still be novel if the co-mention is incidental. We surface but don't auto-exclude these.</li>
+      </ul>
+      <p>We document these limitations openly. Methodology improvements happen in public — see GitHub for current issues and roadmap.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <h2>Reproducibility</h2>
+      </div>
+      <p>Robertium is open-source under MIT license. The full pipeline is on GitHub:</p>
+      <ul class="simple-list">
+        <li><strong>Source code</strong> — github.com/routewise96/robertium</li>
+        <li><strong>Configuration files</strong> — YAML configs for each domain (concept IDs, filters, model settings)</li>
+        <li><strong>Extracted claims</strong> — Available for download (release planned for first preprint)</li>
+        <li><strong>Knowledge graph</strong> — Available as Kuzu database dump</li>
+      </ul>
+      <p>Anyone can clone the repo, run the pipeline on a new domain, and verify our results. Contributions and replications are welcome.</p>
+      <div style="margin-top: 24px;">
+        <a href="https://github.com/routewise96/robertium" class="btn btn--primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div>
+        <h2>Cite this work</h2>
+      </div>
+      <p>A preprint describing the methodology and first batch of results will be submitted to bioRxiv in mid-2026. Until then, you can cite this work as:</p>
+      <div class="method-citation">
+        Trofimov, D. (2026). Robertium: Open-Source Hypothesis Engine<br>
+        for Drug Repurposing through Literature-Based Discovery.<br>
+        Available at https://robertium.com.
+      </div>
+      <p>For collaborations, dataset access, or methodology questions: <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a></p>
+    </div>
+  </section>
+</Layout>

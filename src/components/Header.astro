@@ -10,6 +10,8 @@ const { current = '' } = Astro.props;
     <nav class="site-nav" aria-label="Main navigation">
       <a href="https://github.com/routewise96/robertium">GitHub</a>
       <a href="/hypotheses" aria-current={current === 'hypotheses' ? 'page' : undefined}>Hypotheses</a>
+      <a href="/method" aria-current={current === 'method' ? 'page' : undefined}>Method</a>
+      <a href="/about" aria-current={current === 'about' ? 'page' : undefined}>About</a>
       <a href={current === 'home' ? '#status' : '/#status'}>Status</a>
       <a href={current === 'home' ? '#roadmap' : '/#roadmap'}>Roadmap</a>
       <a href={current === 'home' ? '#contact' : '/#contact'}>Contact</a>
