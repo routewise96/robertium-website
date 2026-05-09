@@ -43,6 +43,22 @@ const ogImageURL = new URL(ogImage, Astro.site).toString();
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
   <meta name="twitter:image" content={ogImageURL} />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Robertium",
+    "url": "https://robertium.com",
+    "logo": "https://robertium.com/og/home.png",
+    "description": "Open-source infrastructure for literature-based drug repurposing discovery.",
+    "founder": {
+      "@type": "Person",
+      "name": "Daniel Trofimov"
+    },
+    "sameAs": [
+      "https://github.com/routewise96/robertium",
+      "https://www.linkedin.com/in/danieltrofimov"
+    ]
+  })} />
 </head>
 <body>
   <Header current={current} />

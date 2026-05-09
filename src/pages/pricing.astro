@@ -1,0 +1,154 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="Pricing — Robertium for Researchers and Industry"
+  description="Free for academic use. Paid plans for biotech and pharma. Transparent pricing for programmatic access to drug repurposing hypotheses."
+  current="pricing"
+  ogImage="/og/pricing.png"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Pricing</h1>
+      <p class="subtitle">Free for science. Sustainable for commerce.</p>
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+        Robertium follows a freemium model. Academic researchers, NGOs, and open science contributors get full free access.
+        Commercial users (biotech, pharma, contract research) pay for production-ready API access and dedicated support.
+        Revenue from commercial tiers funds open data releases and research grants.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="pricing-tier">Academic</div>
+          <div class="pricing-price">$0<span class="pricing-price-period"> / month</span></div>
+          <div class="pricing-for">For</div>
+          <ul class="pricing-list">
+            <li>University researchers (.edu / institutional email)</li>
+            <li>Non-profit research organizations</li>
+            <li>Independent open-source contributors</li>
+            <li>PhD students, postdocs, faculty</li>
+          </ul>
+          <div class="pricing-for">Includes</div>
+          <ul class="pricing-list">
+            <li>Full /hypotheses browser access</li>
+            <li>GitHub repository (MIT)</li>
+            <li>Complete dataset download (CC-BY-4.0)</li>
+            <li>Community support via GitHub Issues</li>
+            <li>Citation in your publications welcome</li>
+          </ul>
+          <div class="pricing-for">API access</div>
+          <ul class="pricing-list">
+            <li>1,000 queries/day</li>
+            <li>10 requests/minute</li>
+            <li>Standard endpoints</li>
+            <li>Email support</li>
+          </ul>
+          <div class="pricing-cta">
+            <a href="mailto:daniel@robertium.com?subject=Academic%20access%20request" class="btn btn--secondary">Apply for academic access</a>
+          </div>
+        </div>
+
+        <div class="pricing-card pricing-card--recommended">
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$99<span class="pricing-price-period"> / month</span></div>
+          <div class="pricing-for">For</div>
+          <ul class="pricing-list">
+            <li>Biotech startups (&lt;50 employees)</li>
+            <li>Independent research consultants</li>
+            <li>Computational biology teams</li>
+            <li>Drug discovery startups</li>
+          </ul>
+          <div class="pricing-for">Includes</div>
+          <ul class="pricing-list">
+            <li>Everything in Academic</li>
+            <li>Priority email support (24h response)</li>
+            <li>Custom domain ingestion (1/quarter)</li>
+            <li>Advanced filters (entity type, predicate combinations)</li>
+            <li>Bulk hypothesis export</li>
+          </ul>
+          <div class="pricing-for">API access</div>
+          <ul class="pricing-list">
+            <li>10,000 queries/day</li>
+            <li>60 requests/minute</li>
+            <li>All endpoints including /search</li>
+            <li>Webhooks for new hypotheses</li>
+          </ul>
+          <div class="pricing-cta">
+            <a href="mailto:daniel@robertium.com?subject=Pro%20tier%20early%20access" class="btn btn--primary">Subscribe — Beta Q3 2026</a>
+          </div>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-tier">Enterprise</div>
+          <div class="pricing-price">Custom</div>
+          <div class="pricing-for">For</div>
+          <ul class="pricing-list">
+            <li>Pharmaceutical companies</li>
+            <li>Contract research organizations (CROs)</li>
+            <li>Major biotechs (50+ employees)</li>
+            <li>Drug discovery platforms</li>
+          </ul>
+          <div class="pricing-for">Includes</div>
+          <ul class="pricing-list">
+            <li>Everything in Pro</li>
+            <li>Unlimited API queries</li>
+            <li>Dedicated infrastructure (on-premise option)</li>
+            <li>Custom domain training (build your own ontology)</li>
+            <li>SLA guarantees (99.9% uptime)</li>
+            <li>Quarterly business reviews</li>
+            <li>Co-development on methodology improvements</li>
+            <li>Direct access to maintainer</li>
+          </ul>
+          <div class="pricing-cta">
+            <a href="mailto:daniel@robertium.com?subject=Enterprise%20inquiry" class="btn btn--secondary">Contact sales</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <h2>Frequently asked</h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <p class="faq-q">When does the API launch?</p>
+          <p>Beta in Q3 2026. Early Pro subscribers get founder pricing locked in for life.</p>
+        </div>
+        <div class="faq-item">
+          <p class="faq-q">Can I try Pro before paying?</p>
+          <p>Yes. Contact us for a 14-day evaluation period.</p>
+        </div>
+        <div class="faq-item">
+          <p class="faq-q">What if I'm a student at a university with limited budget?</p>
+          <p>Free Academic tier is for you. Just email from your .edu address.</p>
+        </div>
+        <div class="faq-item">
+          <p class="faq-q">Why isn't there a "free trial" for Pro?</p>
+          <p>Pro is for production use. Academic tier is the proper free tier — we want academics to actually use Robertium without artificial limits.</p>
+        </div>
+        <div class="faq-item">
+          <p class="faq-q">Do you offer non-profit discounts on Enterprise?</p>
+          <p>Yes. Foundations and major NGOs working on drug discovery can request 50% Enterprise discount.</p>
+        </div>
+        <div class="faq-item">
+          <p class="faq-q">Can I cancel anytime?</p>
+          <p>Yes. Monthly billing, cancel at any time, no contracts (Pro tier). Enterprise has custom terms.</p>
+        </div>
+      </div>
+      <div class="data-cta" style="margin-top:24px;">
+        <a href="mailto:daniel@robertium.com?subject=Pricing%20question" class="btn btn--primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Have questions? Email us
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

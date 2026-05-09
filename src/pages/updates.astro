@@ -1,0 +1,87 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="Updates — Robertium Project News"
+  description="Project updates, methodology improvements, and new findings from Robertium. Drug repurposing discovery in the open."
+  current="updates"
+  ogImage="/og/updates.png"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Updates</h1>
+      <p class="subtitle">Open development log of the Robertium project</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="updates-list">
+
+        <article class="update-post">
+          <div class="update-date">2026-05-09</div>
+          <h2>Six therapeutic domains, 90,000 claims</h2>
+          <p>Robertium pipeline now covers six therapeutic domains: glioblastoma, epilepsy, ALS, Alzheimer's disease, pancreatic cancer, and major depressive disorder. Total: 33,000 papers ingested, 27,000 passed biomedical filtering, 90,000 structured claims extracted, 25,000 unique entities in the knowledge graph.</p>
+          <p>The expansion validates that the methodology works across both oncology and neurology, with cross-domain hypothesis discovery now possible across 30 directional pairs of domains.</p>
+          <div class="update-tags">
+            <span class="update-tag">pipeline</span>
+            <span class="update-tag">multi-domain</span>
+            <span class="update-tag">methodology</span>
+          </div>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-08</div>
+          <h2>Cross-domain validation: epilepsy ↔ glioblastoma</h2>
+          <p>The first cross-domain analysis between two diseases — epilepsy and glioblastoma — yielded 383 hypotheses with full evidence chains. Top candidates include zonisamide → Cx43 → glioma progression, cannabidiol → P-glycoprotein → temozolomide resistance, and several others involving P2X7R, MMP-9, and ferroptosis pathways.</p>
+          <p>Notable: vortioxetine, an antidepressant published in <em>Nature Medicine</em> 2024 (Lee et al.) as showing anti-glioblastoma activity, automatically surfaces in our cross-domain catalog when depression is added — providing independent validation of the methodology.</p>
+          <div class="update-tags">
+            <span class="update-tag">results</span>
+            <span class="update-tag">glioblastoma</span>
+            <span class="update-tag">epilepsy</span>
+            <span class="update-tag">validation</span>
+          </div>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-07</div>
+          <h2>Methodology decisions: why we chose Swanson's ABC model</h2>
+          <p>There are several approaches to literature-based discovery. We chose Don R. Swanson's ABC model from the 1980s — surfacing hypotheses where drug A and disease C share a mediator B but have no direct co-mention.</p>
+          <p>Why this approach:</p>
+          <ul>
+            <li>Interpretable: every hypothesis is a chain of evidence with PMIDs</li>
+            <li>Conservative: minimal hallucination compared to free-form LLM generation</li>
+            <li>Reproducible: deterministic graph algorithm on structured claims</li>
+            <li>Validated: Swanson's original work demonstrated successful repurposing predictions (fish oil → Raynaud's, magnesium → migraine)</li>
+          </ul>
+          <p>We use modern LLMs only for the claim extraction step, keeping hypothesis generation in deterministic graph queries.</p>
+          <div class="update-tags">
+            <span class="update-tag">methodology</span>
+            <span class="update-tag">swanson-abc</span>
+            <span class="update-tag">literature-based-discovery</span>
+          </div>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-06</div>
+          <h2>Open data philosophy</h2>
+          <p>Robertium is open-source (MIT) and open-data (CC-BY-4.0 on first preprint release). This is intentional.</p>
+          <p>Drug discovery infrastructure is too important to be locked behind proprietary platforms. We believe:</p>
+          <ul>
+            <li>The biomedical literature is a public good. Tools to navigate it should be public too.</li>
+            <li>Reproducibility is fundamental to science. Closed systems break that.</li>
+            <li>Researchers should inspect, modify, and improve the methods that surface hypotheses they spend years validating.</li>
+          </ul>
+          <p>The Pro and Enterprise tiers fund the infrastructure, but the data, code, and methodology stay open.</p>
+          <div class="update-tags">
+            <span class="update-tag">philosophy</span>
+            <span class="update-tag">open-source</span>
+            <span class="update-tag">business</span>
+          </div>
+        </article>
+
+      </div>
+      <p style="margin-top:24px; font-size:15px; color:#4a5568;">Subscribe to updates by email — <a href="mailto:daniel@robertium.com?subject=Subscribe%20to%20updates" style="color:#1e40af;">daniel@robertium.com</a> (mention "subscribe to updates" in subject).</p>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <g transform="translate(80, 70)">
+    <g stroke="#1e40af" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="20" cy="20" r="3"/>
+      <circle cx="6" cy="6" r="2"/>
+      <circle cx="34" cy="6" r="2"/>
+      <circle cx="6" cy="34" r="2"/>
+      <circle cx="34" cy="34" r="2"/>
+      <line x1="15.8" y1="16.2" x2="9.2" y2="9.2"/>
+      <line x1="24.2" y1="16.2" x2="30.8" y2="9.2"/>
+      <line x1="15.8" y1="23.8" x2="9.2" y2="30.8"/>
+      <line x1="24.2" y1="23.8" x2="30.8" y2="30.8"/>
+    </g>
+    <text x="56" y="28" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="26" font-weight="600" fill="#1a1a1a">Robertium</text>
+  </g>
+  <text x="80" y="290" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="92" font-weight="700" fill="#0a0a0a" letter-spacing="-2">Updates</text>
+  <text x="80" y="370" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="32" font-weight="400" fill="#4a5568">Open development log of</text>
+  <text x="80" y="412" font-family="Inter, -apple-system, system-ui, sans-serif" font-size="32" font-weight="400" fill="#4a5568">the Robertium project</text>
+  <line x1="80" y1="540" x2="1120" y2="540" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="80" y="585" font-family="JetBrains Mono, ui-monospace, Menlo, monospace" font-size="22" font-weight="400" fill="#1e40af">robertium.com/updates</text>
+</svg>

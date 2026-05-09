@@ -1,0 +1,17 @@
+---
+// Drop-in subscription block for the homepage. Replace the form action
+// placeholder once Daniel registers a Formspree form.
+const FORMSPREE_ID = 'REPLACE';
+---
+<section class="subscribe-section">
+  <div class="subscribe-inner">
+    <h2>Get notified when API launches</h2>
+    <p>We'll email you once when the API enters beta. No spam, no marketing.</p>
+    <form action={`https://formspree.io/f/${FORMSPREE_ID}`} method="POST" class="email-subscribe">
+      <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />
+      <input type="hidden" name="_subject" value="Robertium API early access signup" />
+      <button type="submit" class="btn btn--primary">Notify me</button>
+    </form>
+    <p class="email-subscribe-note">Or email <a href="mailto:daniel@robertium.com?subject=Notify%20me%20when%20API%20launches">daniel@robertium.com</a> directly.</p>
+  </div>
+</section>
