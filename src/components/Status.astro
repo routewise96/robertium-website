@@ -1,0 +1,44 @@
+---
+interface Props {
+  papersIngested?: string;
+  papersPassing?: string;
+  claims?: string;
+  graphStatus?: string;
+  note?: string;
+}
+
+const {
+  papersIngested = '9,933',
+  papersPassing = '4,628',
+  claims = '13,000+',
+  graphStatus = 'In progress',
+  note = 'The first domain — glioblastoma — is being processed. This page is updated as work progresses.',
+} = Astro.props;
+---
+<section class="section section--gray" id="status">
+  <div class="container">
+    <div class="section-header" style="justify-content: center;">
+      <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+      <h2>Current Status</h2>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num">{papersIngested}</div>
+        <div class="stat-label">papers<br>ingested</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">{papersPassing}</div>
+        <div class="stat-label">passed<br>filtering</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">{claims}</div>
+        <div class="stat-label">structured<br>claims</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num stat-num--small">{graphStatus}</div>
+        <div class="stat-label">knowledge<br>graph</div>
+      </div>
+    </div>
+    <p class="stats-note" set:html={note} />
+  </div>
+</section>
