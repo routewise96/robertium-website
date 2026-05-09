@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://robertium.com',
@@ -7,4 +8,5 @@ export default defineConfig({
     format: 'directory',
   },
   compressHTML: true,
+  integrations: [sitemap()],
 });
