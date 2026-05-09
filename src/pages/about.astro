@@ -29,6 +29,18 @@ import Layout from '../layouts/Layout.astro';
   <section class="section section--gray">
     <div class="container--narrow">
       <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <h2>Who built this</h2>
+      </div>
+      <p>Robertium is built and maintained by Daniel Trofimov as an independent open-source project, with active commits to <a href="https://github.com/routewise96/robertium" style="color:#1e40af;">github.com/routewise96/robertium</a> and a public methodology log in <a href="/updates" style="color:#1e40af;">/updates</a>.</p>
+      <p>My background is in engineering, not biomedicine. I came to this problem from the infrastructure side: structured literature mining at scale is a tractable software problem, and the existing open tools stop short of cross-domain hypothesis generation. Every methodological decision is made in public, with input from researchers who know more than I do about the biology, and corrections from the community land as commits, not silent edits.</p>
+      <p>Daniel is on <a href="https://github.com/routewise96" style="color:#1e40af;">GitHub</a> and <a href="https://linkedin.com/in/danieltrofimov" style="color:#1e40af;">LinkedIn</a>. The project name honors my father, who taught me that meaningful work takes years and that patience is a discipline.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><line x1="8.7" y1="7.5" x2="15.3" y2="10.5"/><line x1="8.7" y1="16.5" x2="15.3" y2="13.5"/></svg></div>
         <h2>The approach</h2>
       </div>
@@ -38,7 +50,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--gray">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg></div>
@@ -54,19 +66,23 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section section--gray">
+  <section class="section">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
         <h2>What's next</h2>
       </div>
       <div class="about-timeline">
-        <h3>2026</h3>
+        <h3>2026 (so far)</h3>
         <ul class="simple-list">
-          <li>Multi-domain corpus: 6 therapeutic domains, ~33,000 papers, ~90,000 claims</li>
-          <li>Cross-domain hypothesis catalog: 2,000+ candidates with full evidence chains</li>
+          <li>Multi-domain corpus live: 6 therapeutic domains, 47,370 papers, 82,708 structured claims</li>
+          <li>Cross-domain hypothesis catalog: 4,593 candidates total, 328 passing outreach-quality filters with full evidence chains</li>
+        </ul>
+        <h3>2026 (in progress)</h3>
+        <ul class="simple-list">
           <li>Public preprint on bioRxiv describing methodology and first findings</li>
-          <li>Open dataset release for the research community</li>
+          <li>Open dataset release for the research community under CC-BY-4.0</li>
+          <li>Outreach to domain experts for review of top candidates</li>
         </ul>
         <h3>2027</h3>
         <ul class="simple-list">
@@ -83,18 +99,6 @@ import Layout from '../layouts/Layout.astro';
           <li>Establish Robertium as standard infrastructure for literature-based discovery</li>
         </ul>
       </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container--narrow">
-      <div class="section-header">
-        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-        <h2>Who built this</h2>
-      </div>
-      <p>Robertium is built and maintained by Daniel Trofimov as an independent open-source project.</p>
-      <p>I'm not a biologist or medical researcher. I'm an engineer who became obsessed with the idea that systematic literature exploration could surface real treatments hiding in plain sight. Every methodological decision is made transparently, in public, with input from researchers who know more than I do about biomedicine.</p>
-      <p>The project name honors my father, who taught me that meaningful work takes years and that patience is a discipline.</p>
     </div>
   </section>
 

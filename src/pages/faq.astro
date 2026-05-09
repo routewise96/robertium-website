@@ -27,13 +27,19 @@ import Layout from '../layouts/Layout.astro';
         <div class="faq-item">
           <p class="faq-q">How do I know the hypotheses are real and not hallucinated?</p>
           <p>Every hypothesis is a chain of evidence with PMIDs to peer-reviewed papers. You can click any PMID on the <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> page and verify the claim against the original abstract.</p>
-          <p>If a claim doesn't match its source paper, that's a bug — please report it via GitHub or email. We do regular spot-checks and have ~85% precision on top-scored hypotheses, but errors exist and we want to know about them.</p>
+          <p>If a claim doesn't match its source paper, that's a bug — please report it via GitHub or email. We do regular manual spot-checks of top-scored hypotheses and the majority capture meaningful relationships, but precision and recall have not been systematically evaluated yet — that work is planned alongside the first preprint. Errors exist and we want to know about them.</p>
         </div>
 
         <div class="faq-item">
           <p class="faq-q">How is this different from existing drug repurposing tools?</p>
           <p>Most repurposing tools work in one of three ways: (1) molecular similarity to known drugs, (2) gene expression signature matching, or (3) clinical trial data mining. Robertium uses <strong>literature-based discovery (LBD)</strong> — surfacing connections that exist in published research but haven't been explicitly studied.</p>
           <p>Specifically, our cross-domain approach (drug from one disease literature, target/mediator shared with another disease literature) is rarely automated systematically. Most LBD tools work in single domains.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">How is Robertium different from existing literature mining tools (PubTator, BERN2, SemMedDB)?</p>
+          <p>Robertium operates at a higher abstraction level. Tools like PubTator and BERN2 perform named-entity recognition; SemMedDB extracts semantic predications via SemRep. Robertium consumes these as inputs (we use PubTator for the L1 biomedical-relevance filter) and adds two layers on top: (1) LLM-based structured claim extraction with explicit subject–predicate–object triples and confidence scores, and (2) cross-domain Swanson ABC chains across multiple disease graphs simultaneously.</p>
+          <p>The output is not entity tags or single-sentence relations, but candidate repurposing hypotheses with full evidence chains spanning two literatures.</p>
         </div>
 
         <div class="faq-item">
@@ -55,14 +61,20 @@ import Layout from '../layouts/Layout.astro';
         </div>
 
         <div class="faq-item">
-          <p class="faq-q">Why these specific 6 domains?</p>
-          <p>Chosen for a combination of:</p>
+          <p class="faq-q">What are the known limitations and false-positive sources?</p>
+          <p>Three main sources of noise:</p>
           <ul>
-            <li><strong>Clinical urgency</strong> — diseases with poor current outcomes (glioblastoma, ALS, MDD)</li>
-            <li><strong>Sufficient literature</strong> — domains with 5,000–15,000 OA papers</li>
-            <li><strong>Mechanistic overlap potential</strong> — diseases sharing molecular pathways (neurological + oncology cross-talk is well-documented)</li>
+            <li><strong>Entity resolution is lexical.</strong> "EGFR" and "Epidermal Growth Factor Receptor" remain separate nodes in the current graph, pending UMLS-based normalization.</li>
+            <li><strong>The LLM occasionally extracts secondary mentions</strong> — control-arm drugs, citation references — as primary claims, especially in densely written abstracts.</li>
+            <li><strong>Some mediators are highly generic</strong> (TNF-α, IL-6, NF-κB, autophagy, oxidative stress) and connect any inflammatory drug to any inflammation-associated disease. These are filtered out from outreach-quality hypotheses but remain in the raw graph for downstream research uses.</li>
           </ul>
-          <p>New domains will be added based on scientific case and community input. If you have a strong argument for a specific domain, please reach out.</p>
+          <p>Systematic precision evaluation is planned for the first preprint. In the meantime, every hypothesis links to its source PMIDs so reviewers can verify claims independently.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">Why these specific therapeutic domains?</p>
+          <p>The current six domains were chosen for diversity and tractability: three neurological (epilepsy, ALS, Alzheimer's), one psychiatric (major depressive disorder), two oncological (glioblastoma, pancreatic cancer). They share enough molecular biology to produce meaningful cross-domain bridges (EGFR signaling, BDNF, autophagy, mitochondrial dysfunction) while being distinct enough that cross-pollination of literature is non-trivial.</p>
+          <p>Practical considerations: each domain has 5,000–15,000 open-access papers — enough signal without overwhelming the corpus. Adding a new domain takes about 30 minutes of pipeline runtime per 5,000 papers, so the corpus can be expanded based on user demand. If you have a strong argument for a specific domain, please reach out.</p>
         </div>
 
         <div class="faq-item">
@@ -96,6 +108,17 @@ import Layout from '../layouts/Layout.astro';
             <li>Wellcome Trust Discovery Awards</li>
           </ul>
           <p>If your foundation supports open biomedical infrastructure, please reach out.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">How can I contribute or collaborate?</p>
+          <p>Several entry points depending on what you want to do:</p>
+          <ul>
+            <li><strong>Methodology contributions</strong> — see open issues on <a href="https://github.com/routewise96/robertium" style="color:#1e40af;">github.com/routewise96/robertium</a>. Pull requests for filters, predicates, or pipeline improvements are welcome.</li>
+            <li><strong>Experimental validation</strong> — for collaborations on validating specific hypotheses in the lab, contact <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a> directly.</li>
+            <li><strong>Catalog feedback</strong> — corrections on specific hypotheses or claims can come via email or a GitHub issue. Both work; both get acted on.</li>
+            <li><strong>New domain or replication</strong> — the full pipeline is open-source. Clone the repo and follow the README; happy to help debug if you hit something unclear.</li>
+          </ul>
         </div>
 
         <div class="faq-item">

@@ -88,7 +88,7 @@ import Layout from '../layouts/Layout.astro';
   `}<span class="json-key">"confidence"</span>: <span class="json-num">0.85</span>{`
 }`}</pre>
       </div>
-      <p>Across 33,000 papers in our current corpus, we extract on average 2.7–3.4 claims per abstract. Total claims in the database: ~90,000 across six therapeutic domains. All claims are linked to source PMIDs for verification.</p>
+      <p>Across the 47,370 papers in the current corpus, we extract an average of 3.0 claims per abstract that passes the L1 biomedical-relevance filter. Total: 82,708 structured claims across six therapeutic domains. All claims are linked to source PMIDs for verification.</p>
     </div>
   </section>
 
@@ -101,11 +101,11 @@ import Layout from '../layouts/Layout.astro';
       <p>Claims are imported into a Kuzu graph database. Each unique entity becomes a node; each claim becomes an edge with the predicate as label. Entities mentioned in multiple domains are merged at the lexical level (with planned upgrades to UMLS-based normalization).</p>
       <div class="method-stat-pair">
         <div class="stat-card">
-          <div class="stat-num">~25,000</div>
-          <div class="stat-label">unique<br>nodes</div>
+          <div class="stat-num">~53,000</div>
+          <div class="stat-label">unique entity<br>mentions</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">~90,000</div>
+          <div class="stat-num">82,708</div>
           <div class="stat-label">claim<br>edges</div>
         </div>
       </div>
@@ -142,12 +142,12 @@ import Layout from '../layouts/Layout.astro';
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
         <h2>Cross-domain discovery</h2>
       </div>
-      <p>The most powerful application of the ABC model emerges when we combine multiple disease domains in one graph. A drug used in epilepsy may share a mediator with a glioblastoma pathway — pointing to a non-obvious repurposing opportunity that no single-domain literature review would surface.</p>
+      <p>The most powerful application of the ABC model emerges when multiple disease domains share one graph. A drug studied in glioblastoma may share a molecular target with pancreatic cancer literature — pointing to a non-obvious repurposing opportunity that no single-domain literature review would surface.</p>
       <div class="method-chain">
-        <span>zonisamide (epilepsy) </span><span class="chain-pred">--[downregulates]--&gt;</span><span> Cx43 (protein)<br></span><span class="chain-pred">                        --[associated_with]--&gt;</span><span> glioma progression (glioblastoma)</span>
+        <span>osimertinib (glioblastoma lit.) </span><span class="chain-pred">--[inhibits]--&gt;</span><span> EGFR (protein)<br></span><span class="chain-pred">                              --[associated_with]--&gt;</span><span> pancreatic ductal adenocarcinoma</span>
       </div>
-      <p>Zonisamide is an FDA-approved antiepileptic drug. Cx43 (connexin 43) is a known mediator of glioma cell migration and chemoresistance. Robertium surfaces this connection automatically — no human reviewer was looking for it.</p>
-      <p>The current cross-domain pair (epilepsy ↔ glioblastoma) yielded 383 such hypotheses. With the addition of four more domains (ALS, Alzheimer's, pancreatic cancer, depression), we expect 2,000+ cross-domain candidates across 15 domain pairs.</p>
+      <p>Osimertinib is a third-generation FDA-approved EGFR inhibitor used in non-small-cell lung cancer and frequently studied as a glioblastoma candidate. EGFR is an established oncogenic driver in pancreatic ductal adenocarcinoma. The two literatures rarely overlap; Robertium surfaces the connection automatically through the shared mediator. Direct co-mentions of osimertinib and PDAC: zero. Indirect chain: 3 + 2 supporting papers, outreach-grade score 0.373.</p>
+      <p>The cross-domain orchestrator analyzes all 30 directional pairs across the six therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder). Raw output: 4,593 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), 328 hypotheses pass outreach-quality criteria, of which 19 are scored as high-confidence and 309 as mid-confidence.</p>
     </div>
   </section>
 
@@ -160,8 +160,8 @@ import Layout from '../layouts/Layout.astro';
       <p>Robertium is research infrastructure, not a clinical decision tool. Generated hypotheses require expert review and experimental validation. Known limitations:</p>
       <ul class="simple-list">
         <li><strong>Entity resolution.</strong> Lexical merging means "EGFR" and "Epidermal Growth Factor Receptor" are still separate nodes in the current graph. UMLS-based normalization is planned.</li>
-        <li><strong>Extraction noise.</strong> The LLM occasionally extracts secondary mentions as primary claims (e.g., a control arm drug instead of the focus drug). Manual spot-checking shows ~85% precision on top-scored hypotheses.</li>
-        <li><strong>Score formula is naive.</strong> Currently uses logarithmic combination of evidence counts. We are working on entity-quality-aware ranking that demotes generic terms (nanoparticles, cell lines) in favor of specific compounds.</li>
+        <li><strong>Extraction noise.</strong> The LLM occasionally extracts secondary mentions as primary claims (for example, a control arm drug rather than the focus drug). Precision has not been systematically evaluated; manual spot-checks of top-scored hypotheses suggest the majority capture meaningful drug–target relationships, but rigorous precision/recall measurement is planned alongside the first preprint.</li>
+        <li><strong>Mediator and drug-vocabulary filters.</strong> Hypothesis ranking now incorporates a mediator-specificity filter that excludes generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway mediators (inflammation, cell death, autophagy), plus a drug vocabulary filter that removes botanical extracts and undefined nano-formulations. See <code style="font-family:var(--font-mono); font-size:14px;">classify_outreach_quality.py</code> in the public repo for the full logic.</li>
         <li><strong>Direct A→C filter is heuristic.</strong> A hypothesis with one direct co-mention may still be novel if the co-mention is incidental. We surface but don't auto-exclude these.</li>
       </ul>
       <p>We document these limitations openly. Methodology improvements happen in public — see GitHub for current issues and roadmap.</p>
