@@ -6,6 +6,7 @@ export default defineConfig({
   output: 'static',
   build: {
     format: 'directory',
+    inlineStylesheets: 'always',
   },
   compressHTML: true,
   integrations: [sitemap()],

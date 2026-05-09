@@ -100,7 +100,7 @@ const domainPairs = new Set(
   </div>
 
   <div class="container">
-    <div id="hyp-status" class="hyp-status"></div>
+    <p id="hyp-counter" class="hyp-status">Showing 0 of 0 hypotheses</p>
     <table class="hyp-table" id="hyp-table">
       <thead>
         <tr>
@@ -114,7 +114,13 @@ const domainPairs = new Set(
           <th class="num">Evidence</th>
         </tr>
       </thead>
-      <tbody id="hyp-tbody"></tbody>
+      <tbody id="hyp-tbody">
+        <tr id="hyp-load-trigger" aria-hidden="true">
+          <td colspan="8" style="padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+            Loading more…
+          </td>
+        </tr>
+      </tbody>
     </table>
     <div id="hyp-empty" class="hyp-empty" hidden>
       No hypotheses match your filters. Try a different search or
@@ -130,8 +136,8 @@ const domainPairs = new Set(
 
   <script is:inline>
     (() => {
-      const dataEl = document.getElementById('hyp-data');
-      const HYPOTHESES = JSON.parse(dataEl.textContent);
+      const PAGE_SIZE = 100;
+      const HYPOTHESES = JSON.parse(document.getElementById('hyp-data').textContent);
 
       const $ = (id) => document.getElementById(id);
       const search = $('hyp-search');
@@ -142,18 +148,19 @@ const domainPairs = new Set(
       const reset = $('hyp-reset');
       const emptyReset = $('hyp-empty-reset');
       const tbody = $('hyp-tbody');
-      const status = $('hyp-status');
+      const trigger = $('hyp-load-trigger');
+      const counter = $('hyp-counter');
       const empty = $('hyp-empty');
       const table = $('hyp-table');
 
+      let filtered = [];
+      let currentRendered = 0;
       let openId = null;
 
       const escapeHtml = (s) =>
         String(s ?? '').replace(/[&<>"']/g, (c) => ({
           '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
         })[c]);
-
-      const escapeAttr = escapeHtml;
 
       const domainTagClass = (d) => {
         if (!d) return '';
@@ -163,14 +170,12 @@ const domainPairs = new Set(
       };
 
       const domainTag = (d) =>
-        d
-          ? `<span class="hyp-domain-tag${domainTagClass(d)}">${escapeHtml(d)}</span>`
-          : '';
+        d ? `<span class="hyp-domain-tag${domainTagClass(d)}">${escapeHtml(d)}</span>` : '';
 
       const renderRow = (h, index) => {
         const score = h.score != null ? h.score.toFixed(3) : '—';
         const evidence = `${h.ab_count ?? 0} + ${h.bc_count ?? 0}`;
-        return `
+        let html = `
           <tr class="hyp-row" data-id="${h.id}">
             <td class="num">${index + 1}</td>
             <td class="drug">${escapeHtml(h.drug)}${domainTag(h.drug_domain)}</td>
@@ -180,8 +185,9 @@ const domainPairs = new Set(
             <td class="outcome">${escapeHtml(h.outcome)}${domainTag(h.outcome_domain)}</td>
             <td class="num score">${score}</td>
             <td class="num evidence">${evidence}</td>
-          </tr>
-        `;
+          </tr>`;
+        if (h.id === openId) html += renderDetail(h);
+        return html;
       };
 
       const renderDetail = (h) => {
@@ -233,11 +239,10 @@ const domainPairs = new Set(
                 </button>
               </div>
             </td>
-          </tr>
-        `;
+          </tr>`;
       };
 
-      const filtered = () => {
+      const computeFiltered = () => {
         const q = (search.value || '').trim().toLowerCase();
         const dd = drugDomain.value;
         const od = outcomeDomain.value;
@@ -262,23 +267,56 @@ const domainPairs = new Set(
         return list;
       };
 
-      const render = () => {
-        const list = filtered();
-        status.textContent = `Showing ${list.length} of ${HYPOTHESES.length} hypotheses`;
-        if (!list.length) {
-          tbody.innerHTML = '';
+      const updateCounter = () => {
+        counter.textContent = `Showing ${currentRendered} of ${filtered.length} hypotheses`;
+      };
+
+      const clearRenderedRows = () => {
+        const rows = tbody.querySelectorAll('tr.hyp-row, tr.hyp-detail-row');
+        rows.forEach((r) => r.remove());
+      };
+
+      const renderNextPage = () => {
+        if (currentRendered >= filtered.length) {
+          trigger.style.display = 'none';
+          updateCounter();
+          return;
+        }
+        const slice = filtered.slice(currentRendered, currentRendered + PAGE_SIZE);
+        const html = slice.map((h, i) => renderRow(h, currentRendered + i)).join('');
+        trigger.insertAdjacentHTML('beforebegin', html);
+        currentRendered += slice.length;
+        if (currentRendered >= filtered.length) {
+          trigger.style.display = 'none';
+        } else {
+          trigger.style.display = '';
+        }
+        updateCounter();
+      };
+
+      const renderUntilId = (id) => {
+        const idx = filtered.findIndex((h) => h.id === id);
+        if (idx < 0) return -1;
+        while (currentRendered <= idx && currentRendered < filtered.length) {
+          renderNextPage();
+        }
+        return idx;
+      };
+
+      const resetAndRender = () => {
+        filtered = computeFiltered();
+        clearRenderedRows();
+        currentRendered = 0;
+        if (!filtered.length) {
+          trigger.style.display = 'none';
           empty.hidden = false;
           table.style.display = 'none';
+          updateCounter();
           return;
         }
         empty.hidden = true;
         table.style.display = '';
-        const fragments = [];
-        list.forEach((h, i) => {
-          fragments.push(renderRow(h, i));
-          if (h.id === openId) fragments.push(renderDetail(h));
-        });
-        tbody.innerHTML = fragments.join('');
+        renderNextPage();
       };
 
       const debounce = (fn, ms) => {
@@ -296,6 +334,27 @@ const domainPairs = new Set(
         const qs = params.toString();
         const url = qs ? `?${qs}` : window.location.pathname;
         history.replaceState(null, '', url);
+      };
+
+      const closeOpenDetail = () => {
+        const detail = tbody.querySelector('tr.hyp-detail-row');
+        if (detail) detail.remove();
+      };
+
+      const toggleDetailFor = (id) => {
+        if (openId === id) {
+          openId = null;
+          closeOpenDetail();
+          updateUrl();
+          return;
+        }
+        closeOpenDetail();
+        openId = id;
+        const row = tbody.querySelector(`tr.hyp-row[data-id="${id}"]`);
+        if (!row) return;
+        const detailHtml = renderDetail(HYPOTHESES.find((h) => h.id === id));
+        row.insertAdjacentHTML('afterend', detailHtml);
+        updateUrl();
       };
 
       tbody.addEventListener('click', (e) => {
@@ -320,16 +379,20 @@ const domainPairs = new Set(
         const row = target.closest('.hyp-row');
         if (!row) return;
         const id = Number(row.getAttribute('data-id'));
-        openId = openId === id ? null : id;
-        render();
-        updateUrl();
+        toggleDetailFor(id);
       });
 
-      search.addEventListener('input', debounce(() => { render(); updateUrl(); }, 200));
-      drugDomain.addEventListener('change', () => { render(); });
-      outcomeDomain.addEventListener('change', () => { render(); });
-      sortBy.addEventListener('change', () => { render(); });
-      multi.addEventListener('change', () => { render(); });
+      const onFilterChange = () => {
+        openId = null;
+        resetAndRender();
+        updateUrl();
+      };
+
+      search.addEventListener('input', debounce(onFilterChange, 200));
+      drugDomain.addEventListener('change', onFilterChange);
+      outcomeDomain.addEventListener('change', onFilterChange);
+      sortBy.addEventListener('change', onFilterChange);
+      multi.addEventListener('change', onFilterChange);
 
       const doReset = () => {
         search.value = '';
@@ -338,26 +401,40 @@ const domainPairs = new Set(
         sortBy.value = 'score-desc';
         multi.checked = false;
         openId = null;
-        render();
+        resetAndRender();
         updateUrl();
       };
       reset.addEventListener('click', doReset);
       emptyReset.addEventListener('click', doReset);
 
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && currentRendered < filtered.length) {
+            renderNextPage();
+          }
+        },
+        { rootMargin: '300px' }
+      );
+      observer.observe(trigger);
+
       const params = new URLSearchParams(window.location.search);
       if (params.has('q')) search.value = params.get('q') || '';
-      if (params.has('id')) {
-        const id = Number(params.get('id'));
-        if (!Number.isNaN(id)) openId = id;
-      }
+      const urlIdRaw = params.get('id');
+      const urlId = urlIdRaw != null ? Number(urlIdRaw) : null;
+      if (urlId != null && !Number.isNaN(urlId)) openId = urlId;
 
-      render();
+      resetAndRender();
 
       if (openId != null) {
-        requestAnimationFrame(() => {
-          const row = document.querySelector(`.hyp-row[data-id="${openId}"]`);
-          if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        });
+        const idx = renderUntilId(openId);
+        if (idx >= 0) {
+          requestAnimationFrame(() => {
+            const row = tbody.querySelector(`tr.hyp-row[data-id="${openId}"]`);
+            if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          });
+        } else {
+          openId = null;
+        }
       }
     })();
   </script>
