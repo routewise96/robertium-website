@@ -1,0 +1,145 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="FAQ — Robertium"
+  description="Common questions from researchers, contributors, and the curious about Robertium's drug repurposing methodology, data, and reliability."
+  current="faq"
+  ogImage="/og/faq.svg"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>FAQ</h1>
+      <p class="subtitle">Common questions from researchers, contributors, and the curious</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <p class="faq-q">Is this just another GPT wrapper?</p>
+          <p>No. Robertium uses LLMs (DeepSeek V4 Flash) for one specific task: extracting structured claims from abstracts according to a controlled vocabulary. The LLM doesn't generate hypotheses — it only converts unstructured text into a graph format.</p>
+          <p>The hypothesis generation uses Don R. Swanson's literature-based discovery model from the 1980s, applied to a knowledge graph. This is a deterministic graph algorithm, not LLM inference.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">How do I know the hypotheses are real and not hallucinated?</p>
+          <p>Every hypothesis is a chain of evidence with PMIDs to peer-reviewed papers. You can click any PMID on the <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> page and verify the claim against the original abstract.</p>
+          <p>If a claim doesn't match its source paper, that's a bug — please report it via GitHub or email. We do regular spot-checks and have ~85% precision on top-scored hypotheses, but errors exist and we want to know about them.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">How is this different from existing drug repurposing tools?</p>
+          <p>Most repurposing tools work in one of three ways: (1) molecular similarity to known drugs, (2) gene expression signature matching, or (3) clinical trial data mining. Robertium uses <strong>literature-based discovery (LBD)</strong> — surfacing connections that exist in published research but haven't been explicitly studied.</p>
+          <p>Specifically, our cross-domain approach (drug from one disease literature, target/mediator shared with another disease literature) is rarely automated systematically. Most LBD tools work in single domains.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">Can I use this in my research?</p>
+          <p>Yes. The /hypotheses catalog is freely browsable. The full code is MIT licensed. The dataset will be released under CC-BY-4.0 alongside the first preprint.</p>
+          <p>If you want to:</p>
+          <ul>
+            <li><strong>Validate a hypothesis experimentally</strong> — please cite the project and let us know the results (positive or negative).</li>
+            <li><strong>Use the methodology in your own corpus</strong> — clone the repo, configure a new domain, run the pipeline.</li>
+            <li><strong>Collaborate on improving the methodology</strong> — open an issue on GitHub or email <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a>.</li>
+          </ul>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">What's the validation rate of generated hypotheses?</p>
+          <p>This is an open research question. We are early-stage and don't yet have systematic experimental validation of top hypotheses.</p>
+          <p>Anecdotally, several top hypotheses match published findings — for example, vortioxetine (antidepressant) → glioblastoma efficacy was published in <em>Nature Medicine</em> 2024 (Lee et al.) and is automatically surfaced by Robertium from epilepsy ↔ glioblastoma analysis. This suggests the methodology surfaces real signal, not noise.</p>
+          <p>Systematic validation requires lab partnerships, which we are actively seeking. Top hypotheses prioritized for validation will be flagged on /hypotheses.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">Why these specific 6 domains?</p>
+          <p>Chosen for a combination of:</p>
+          <ul>
+            <li><strong>Clinical urgency</strong> — diseases with poor current outcomes (glioblastoma, ALS, MDD)</li>
+            <li><strong>Sufficient literature</strong> — domains with 5,000–15,000 OA papers</li>
+            <li><strong>Mechanistic overlap potential</strong> — diseases sharing molecular pathways (neurological + oncology cross-talk is well-documented)</li>
+          </ul>
+          <p>New domains will be added based on scientific case and community input. If you have a strong argument for a specific domain, please reach out.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">Can I run this on my own corpus?</p>
+          <p>Yes. The pipeline is domain-agnostic. To add a new domain:</p>
+          <ul>
+            <li>Find your OpenAlex concept ID</li>
+            <li>Create a new YAML config under <code style="font-family:var(--font-mono); font-size:14px;">config/domains/</code></li>
+            <li>Run <code style="font-family:var(--font-mono); font-size:14px;">scripts/run_full_pipeline.py --domains your_domain</code></li>
+          </ul>
+          <p>The README has detailed setup instructions. Total cost on cloud LLM APIs: ~$5–10 per domain (DeepSeek V4 Flash is the cheapest option that gives good extraction quality).</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">What about clinical trial data, drug-target databases, etc.?</p>
+          <p>Currently Robertium uses only literature. Integration with structured biomedical databases is planned for late 2026:</p>
+          <ul>
+            <li><strong>DrugBank</strong> — for drug-target validation and metadata</li>
+            <li><strong>ChEMBL</strong> — for binding affinity data</li>
+            <li><strong>ClinicalTrials.gov</strong> — for known clinical investigations</li>
+          </ul>
+          <p>These will be additional evidence layers, not replacements for literature-based discovery.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">How is this funded?</p>
+          <p>Currently self-funded by the maintainer. We are actively pursuing open science grants:</p>
+          <ul>
+            <li>Mozilla Open Source AI Fund</li>
+            <li>Chan Zuckerberg Initiative Open Science</li>
+            <li>Wellcome Trust Discovery Awards</li>
+          </ul>
+          <p>If your foundation supports open biomedical infrastructure, please reach out.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">Who validates the methodology?</p>
+          <p>A preprint with detailed methodology and validation will be submitted to bioRxiv in mid-2026. Pre-publication, the methodology is open for review by the research community — please open issues on GitHub for technical concerns.</p>
+          <p>We welcome critique. The project gets better when domain experts find problems.</p>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">I'm a journalist. Can I cite or quote Robertium?</p>
+          <p>Yes, with attribution. For technical accuracy please reach out before publication — a five-minute conversation prevents misrepresentation. <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a>.</p>
+          <p>We particularly welcome stories about:</p>
+          <ul>
+            <li>Open science infrastructure</li>
+            <li>Cross-domain biomedical research</li>
+            <li>Drug repurposing as alternative to traditional drug discovery</li>
+            <li>AI/ML in scientific research (responsibly framed)</li>
+          </ul>
+        </div>
+
+        <div class="faq-item">
+          <p class="faq-q">I'm a clinician, can I make decisions based on this?</p>
+          <p><strong>No.</strong> Robertium generates hypotheses for research investigation, not clinical guidance. Generated candidates require:</p>
+          <ul>
+            <li>Expert review by domain specialists</li>
+            <li>Preclinical validation (cell lines, animal models)</li>
+            <li>Phase I–III clinical trials before any clinical application</li>
+          </ul>
+          <p>Please don't change your treatment decisions based on /hypotheses content. This is research infrastructure, not medical advice.</p>
+        </div>
+
+      </div>
+
+      <p style="margin-top:32px;">Don't see your question? Email <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a> or open an issue on GitHub. Frequently asked questions get added to this page.</p>
+      <div class="data-cta">
+        <a href="mailto:daniel@robertium.com" class="btn btn--primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Contact
+        </a>
+        <a href="https://github.com/routewise96/robertium/issues" class="btn btn--secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub Issues
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

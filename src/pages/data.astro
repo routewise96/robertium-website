@@ -1,0 +1,330 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="Data — Robertium"
+  description="Sources, filters, and exact composition of our biomedical corpus. Open data sources, OpenAlex concept IDs, L1 pass rates, and claim extraction statistics."
+  current="data"
+  ogImage="/og/data.svg"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Data</h1>
+      <p class="subtitle">Sources, filters, and exact composition of our biomedical corpus</p>
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+        Every domain in Robertium is built from open-access biomedical literature, retrieved via OpenAlex API,
+        filtered through PubTator for biomedical relevance, and processed through the same pipeline.
+        This page documents the exact sources and parameters for full reproducibility.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <h2>Six therapeutic domains</h2>
+      </div>
+      <p>Each domain is a separate corpus, retrieved using a specific OpenAlex concept ID. We targeted high-impact areas where drug repurposing has clinical urgency.</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th>OpenAlex Concept ID</th>
+            <th class="num">Target size</th>
+            <th class="num">Year filter</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Glioblastoma</td>
+            <td class="mono">C2776194525</td>
+            <td class="num">10,000</td>
+            <td class="num">≥2018</td>
+          </tr>
+          <tr>
+            <td>Epilepsy</td>
+            <td class="mono">C2778186239</td>
+            <td class="num">10,000</td>
+            <td class="num">≥2018</td>
+          </tr>
+          <tr>
+            <td>ALS (Amyotrophic Lateral Sclerosis)</td>
+            <td class="mono">C2780596555</td>
+            <td class="num">5,000</td>
+            <td class="num">≥2015</td>
+          </tr>
+          <tr>
+            <td>Alzheimer's disease</td>
+            <td class="mono">C502032728</td>
+            <td class="num">10,000</td>
+            <td class="num">≥2018</td>
+          </tr>
+          <tr>
+            <td>Pancreatic cancer</td>
+            <td class="mono">C2780210213</td>
+            <td class="num">6,000</td>
+            <td class="num">≥2015</td>
+          </tr>
+          <tr>
+            <td>Major Depressive Disorder</td>
+            <td class="mono">C2780051608</td>
+            <td class="num">7,000</td>
+            <td class="num">≥2018</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>All concepts were verified via the OpenAlex API to confirm display name and works count before ingest. The exact YAML configuration files are available in the <a href="https://github.com/routewise96/robertium/tree/main/config/domains" style="color:#1e40af;">GitHub repository</a> under <code style="font-family:var(--font-mono); font-size:14px;">config/domains/</code>.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div>
+        <h2>Biomedical relevance filter</h2>
+      </div>
+      <p>After ingest, every paper passes through NCBI's PubTator service, which tags biomedical entities (genes, chemicals, diseases). Papers that don't contain at least two recognized biomedical entities are excluded from downstream processing.</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th class="num">Papers ingested</th>
+            <th class="num">L1 passed</th>
+            <th class="num">Pass rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Glioblastoma</td>
+            <td class="num">9,933</td>
+            <td class="num">4,728</td>
+            <td class="num">47.6%</td>
+          </tr>
+          <tr>
+            <td>Epilepsy</td>
+            <td class="num">9,953</td>
+            <td class="num">4,914</td>
+            <td class="num">49.4%</td>
+          </tr>
+          <tr>
+            <td>ALS</td>
+            <td class="num">4,975</td>
+            <td class="num">3,204</td>
+            <td class="num">64.4%</td>
+          </tr>
+          <tr>
+            <td>Alzheimer's</td>
+            <td class="num">9,707</td>
+            <td class="num">7,208</td>
+            <td class="num">74.3%</td>
+          </tr>
+          <tr>
+            <td>Pancreatic cancer</td>
+            <td class="num">5,846</td>
+            <td class="num">4,594</td>
+            <td class="num">78.6%</td>
+          </tr>
+          <tr>
+            <td>Depression (MDD)</td>
+            <td class="num">6,956</td>
+            <td class="num">2,671</td>
+            <td class="num">38.4%</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num">47,370</td>
+            <td class="num">27,319</td>
+            <td class="num">57.7%</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p>Pass rates vary by domain. Oncology and neurodegenerative literature is densely biomedical (high pass rate). Psychiatric literature like depression has more behavioral/sociological papers without specific molecular entities (lower pass rate). This is expected and documented for transparency.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
+        <h2>Structured claims via DeepSeek</h2>
+      </div>
+      <p>Each filtered abstract is processed by DeepSeek V4 Flash language model with a structured YAML prompt. The model returns claims as triples: (subject, predicate, object) with entity types, polarity, and confidence.</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th class="num">Filtered papers</th>
+            <th class="num">Claims extracted</th>
+            <th class="num">Avg claims/paper</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Glioblastoma</td>
+            <td class="num">4,728</td>
+            <td class="num">12,601</td>
+            <td class="num">2.7</td>
+          </tr>
+          <tr>
+            <td>Epilepsy</td>
+            <td class="num">4,914</td>
+            <td class="num">14,798</td>
+            <td class="num">3.0</td>
+          </tr>
+          <tr>
+            <td>ALS</td>
+            <td class="num">3,204</td>
+            <td class="num">9,324</td>
+            <td class="num">2.9</td>
+          </tr>
+          <tr>
+            <td>Alzheimer's</td>
+            <td class="num">7,208</td>
+            <td class="num">22,693</td>
+            <td class="num">3.1</td>
+          </tr>
+          <tr>
+            <td>Pancreatic cancer</td>
+            <td class="num">4,594</td>
+            <td class="num">15,525</td>
+            <td class="num">3.4</td>
+          </tr>
+          <tr>
+            <td>Depression (MDD)<span class="data-pending">in progress</span></td>
+            <td class="num">2,671</td>
+            <td class="num">~8,800</td>
+            <td class="num">~3.3</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total (projected)</td>
+            <td class="num">27,319</td>
+            <td class="num">~83,700</td>
+            <td class="num">3.1</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p>Variation in claims-per-paper reflects literature density: review papers and detailed mechanistic studies yield more claims than short clinical correspondences. Total: ~83,000 structured claims across 6 domains, all linked to source PMIDs.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><line x1="8.7" y1="7.5" x2="15.3" y2="10.5"/><line x1="8.7" y1="16.5" x2="15.3" y2="13.5"/></svg></div>
+        <h2>Knowledge graph composition</h2>
+      </div>
+      <p>All claims are imported into a Kuzu graph database. Each unique entity (after lexical normalization) becomes a node; each claim becomes an edge with the predicate as label.</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num">~25,000</div>
+          <div class="stat-label">total<br>nodes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">~83,000</div>
+          <div class="stat-label">claim<br>edges</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">6</div>
+          <div class="stat-label">domains<br>in graph</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">~3,500</div>
+          <div class="stat-label">cross-domain<br>shared entities</div>
+        </div>
+      </div>
+      <p>Cross-domain shared entities — entities mentioned in two or more domains — are the seeds of repurposing hypotheses. A protein appearing in both glioblastoma and epilepsy literature creates a bridge that the ABC model can traverse.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <h2>Controlled vocabulary</h2>
+      </div>
+      <p>To ensure consistency, the LLM extracts only predicates and entity types from a fixed vocabulary.</p>
+      <h3 style="font-size:14px; font-weight:600; color:#1e40af; text-transform:uppercase; letter-spacing:0.06em; margin-top:24px;">Predicates (21)</h3>
+      <div class="vocab-list">
+        <span class="vocab-tag">inhibits</span>
+        <span class="vocab-tag">activates</span>
+        <span class="vocab-tag">induces</span>
+        <span class="vocab-tag">suppresses</span>
+        <span class="vocab-tag">upregulates</span>
+        <span class="vocab-tag">downregulates</span>
+        <span class="vocab-tag">phosphorylates</span>
+        <span class="vocab-tag">binds_to</span>
+        <span class="vocab-tag">increases</span>
+        <span class="vocab-tag">decreases</span>
+        <span class="vocab-tag">correlates_with</span>
+        <span class="vocab-tag">associated_with</span>
+        <span class="vocab-tag">predicts</span>
+        <span class="vocab-tag">prevents</span>
+        <span class="vocab-tag">causes</span>
+        <span class="vocab-tag">treats</span>
+        <span class="vocab-tag">improves</span>
+        <span class="vocab-tag">reverses</span>
+        <span class="vocab-tag">exacerbates</span>
+        <span class="vocab-tag">sensitizes_to</span>
+        <span class="vocab-tag">confers_resistance_to</span>
+      </div>
+      <h3 style="font-size:14px; font-weight:600; color:#1e40af; text-transform:uppercase; letter-spacing:0.06em; margin-top:24px;">Entity types (9)</h3>
+      <div class="vocab-list">
+        <span class="vocab-tag">drug</span>
+        <span class="vocab-tag">gene</span>
+        <span class="vocab-tag">protein</span>
+        <span class="vocab-tag">pathway</span>
+        <span class="vocab-tag">disease</span>
+        <span class="vocab-tag">phenotype</span>
+        <span class="vocab-tag">cell_type</span>
+        <span class="vocab-tag">tissue</span>
+        <span class="vocab-tag">biomarker</span>
+      </div>
+      <p>This controlled vocabulary makes claims comparable across domains and amenable to graph queries. Adding new predicates requires careful evaluation — we keep the vocabulary small intentionally.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg></div>
+        <h2>Open data release plan</h2>
+      </div>
+      <p>All data — claims, knowledge graph, and configuration — will be released under CC-BY-4.0 alongside the first preprint (planned for Q3 2026). Currently:</p>
+      <ul class="simple-list">
+        <li><strong>GitHub repository</strong> with source code (MIT) and config files: <a href="https://github.com/routewise96/robertium" style="color:#1e40af;">github.com/routewise96/robertium</a></li>
+        <li><strong>Hypothesis catalog</strong> publicly available at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> — cross-domain candidates with full evidence chains</li>
+        <li><strong>Full claim dataset</strong> and <strong>knowledge graph dump</strong> will be released as a Zenodo deposit with persistent DOI on preprint publication</li>
+        <li><strong>API access</strong> for programmatic queries — planned for late 2026</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
+        <h2>Data updates</h2>
+      </div>
+      <p>This corpus is a snapshot. The biomedical literature publishes ~4,000 papers per day, and our domains will be re-ingested periodically:</p>
+      <ul class="simple-list">
+        <li><strong>Quarterly re-ingest</strong> of all 6 domains to capture new publications</li>
+        <li><strong>Monthly cross-domain hypothesis recomputation</strong> to incorporate new data</li>
+        <li><strong>New domains</strong> added when there is a clear scientific case (request via <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a>)</li>
+      </ul>
+      <p>The knowledge graph version will be tagged in the repository at each re-ingest. Old versions remain accessible for reproducibility.</p>
+      <div class="data-cta">
+        <a href="/method" class="btn btn--secondary">Read the methodology &rarr;</a>
+        <a href="/hypotheses" class="btn btn--secondary">Browse hypotheses &rarr;</a>
+        <a href="https://github.com/routewise96/robertium" class="btn btn--primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
