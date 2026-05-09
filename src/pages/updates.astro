@@ -20,8 +20,23 @@ import Layout from '../layouts/Layout.astro';
 
         <article class="update-post">
           <div class="update-date">2026-05-09</div>
-          <h2>Six therapeutic domains, 90,000 claims</h2>
-          <p>Robertium pipeline now covers six therapeutic domains: glioblastoma, epilepsy, ALS, Alzheimer's disease, pancreatic cancer, and major depressive disorder. Total: 33,000 papers ingested, 27,000 passed biomedical filtering, 90,000 structured claims extracted, 25,000 unique entities in the knowledge graph.</p>
+          <h2>All six domains live: 4,593 cross-domain hypotheses now searchable</h2>
+          <p>Major depressive disorder is now ingested and processed — the last of the six target domains. With depression in place, the cross-domain orchestrator ran the full 30 directional pairs (each domain as drug source × each other domain as outcome) and produced <strong>4,593 cross-domain hypotheses</strong> with complete evidence chains, all browsable on the <a href="/hypotheses" style="color:#1e40af;">hypotheses page</a>.</p>
+          <p>Final corpus numbers: 47,370 papers ingested, 27,177 passed the L1 biomedical-relevance filter, 82,708 structured claims extracted, six therapeutic domains in the knowledge graph (glioblastoma, epilepsy, ALS, Alzheimer's disease, pancreatic cancer, major depressive disorder).</p>
+          <p>For researchers: the catalog now lets you ask, for any pair of these diseases, which drugs from one literature might modulate outcomes in the other through a shared molecular mediator — even when no paper has ever co-mentioned the drug and the target disease. Filter by drug domain, outcome domain, or search by gene/protein/drug name; each hypothesis links to the underlying PubMed evidence on both legs of the chain.</p>
+          <p>One implementation note worth documenting: the orchestrator initially deadlocked on the second pair. Root cause was a transaction-lock conflict — the parent process held an idle <code>SELECT</code> transaction (psycopg3 defaults to <code>autocommit=False</code>) while child processes attempted <code>ALTER TABLE … ADD COLUMN IF NOT EXISTS</code> inside their save path. <code>AccessShareLock</code> from the parent blocked <code>AccessExclusiveLock</code> from the child indefinitely. Fix: schema moved into a one-time SQL migration, save-path runs INSERT-only, parent connection switched to autocommit, statement timeouts added. All 30 pairs now complete in ~30 seconds.</p>
+          <div class="update-tags">
+            <span class="update-tag">pipeline</span>
+            <span class="update-tag">cross-domain</span>
+            <span class="update-tag">depression</span>
+            <span class="update-tag">postmortem</span>
+          </div>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-09</div>
+          <h2>Six therapeutic domains, 82,000+ claims</h2>
+          <p>Robertium pipeline now covers six therapeutic domains: glioblastoma, epilepsy, ALS, Alzheimer's disease, pancreatic cancer, and major depressive disorder. Total: 47,370 papers ingested, 27,177 passed biomedical filtering, 82,708 structured claims extracted across all six domains in the knowledge graph.</p>
           <p>The expansion validates that the methodology works across both oncology and neurology, with cross-domain hypothesis discovery now possible across 30 directional pairs of domains.</p>
           <div class="update-tags">
             <span class="update-tag">pipeline</span>
