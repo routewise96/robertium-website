@@ -52,6 +52,36 @@ import Layout from '../layouts/Layout.astro';
           <p>The remaining 15 hypotheses from the original top-20 will be reviewed under the same protocol, with full results published as a follow-up. Beyond that, the obvious next improvement is integrating curated drug-class metadata (DrugBank, ChEMBL, RxNorm) so the rule-based blacklist becomes a derived classifier driven by ontology.</p>
         </article>
 
+        <article class="update-post" id="top20-breakdown">
+          <div class="update-date">2026-05-10</div>
+          <h2>Top-20 manual validation: full breakdown</h2>
+          <p>Earlier today I published a self-assessment post about reviewing the top-5 high-confidence cross-domain hypotheses by hand. The exercise produced classifier v2 with six new exclusion categories and a refined 633-candidate catalog. As promised, here is the breakdown for the remaining hypotheses in the top-20.</p>
+          <p>After classifier v2 cleanup (PBB3, 1D9-LIRΔTP53INP2, ALS-CSF, and similar artifacts removed), the current top-20 by outreach score collapsed into about 10 distinct biological hypotheses. The rest are variant phrasings of the same drug-mediator-outcome chain surfaced from different domain pair directions, or different outcome wording (e.g. "Alzheimer's disease" vs "Alzheimer disease", "pancreatic ductal adenocarcinoma" vs "pancreatic adenocarcinoma"). This is the next obvious improvement on the roadmap: outcome normalization via UMLS or similar.</p>
+          <p><strong>Distribution across the 10 distinct hypotheses:</strong></p>
+          <ul class="simple-list">
+            <li><strong>Reproduces FDA-approved indication: 1.</strong> erlotinib + EGFR + pancreatic cancer. FDA-approved in 2005 in combination with gemcitabine (NCIC-CTG PA.3 trial, Moore et al. 2005). Strong sanity check that the pipeline surfaces real repurposing directions.</li>
+            <li><strong>Reproduces ongoing or completed clinical investigation: 3.</strong> erlotinib + EGFR + glioblastoma (multiple Phase II trials, largely negative); metformin + α-synuclein + Parkinson's (active trials NCT07055958, NCT03685357, NCT05781711); valproic acid + HDAC + ALS (NCT03204500, NCT00136110, Phase III negative per Piepers et al., Neurology 2009).</li>
+            <li><strong>Mechanistically plausible, novel: 4.</strong> carbamazepine + KRAS + pancreatic ductal adenocarcinoma (KRAS-carbamazepine link documented in colorectal cancer per Berliner et al. PMC10944448); osimertinib + EGFR + Alzheimer's disease (drug with documented superior BBB penetrance, Kpuu 0.21 vs ≤0.12 for other EGFR-TKIs); valproic acid + PKM2 + pancreatic cancer survival (VPA has documented anti-PDAC activity through other pathways but PKM2-specific link is novel); osimertinib + EGFR + pancreatic adenocarcinoma (basket trial NCT02465060, direct PDAC indication not established).</li>
+            <li><strong>Preclinical evidence, no human trials: 2.</strong> auraptene + MMP-9 + epilepsy (citrus-derived coumarin with documented PTZ-kindling protection per Mardani et al. 2019, PMC6934955; MMP-9 implicated in epileptic focus formation per Pijet et al. 2018); apigenin + GFAP + Alzheimer's disease (reproduces known preclinical direction — apigenin/GFAP/AD studied in GFAP-IL6 mouse models, this is sanity check not novel).</li>
+            <li><strong>Variants through entity-resolution gaps: ~10 hypotheses.</strong> Same biology, different outcome phrasing or domain-pair routing. UMLS or RxNorm normalization would collapse these.</li>
+          </ul>
+          <p><strong>What this tells us:</strong></p>
+          <ul class="simple-list">
+            <li>The pipeline reproduces real repurposing directions. 4 of 10 distinct hypotheses match documented clinical or FDA-approved use.</li>
+            <li>Genuinely novel mechanistically-plausible candidates exist. 4 of 10. Each has the mediator pathway documented in one literature, the drug action in another, and no direct study connecting them.</li>
+            <li>Entity normalization is the next improvement. ~10 of 20 top-quality hypotheses being variants of the same biological idea is a meaningful signal that outcome and drug normalization would improve catalog clarity.</li>
+          </ul>
+          <p><strong>Refined top-5 for researcher attention:</strong></p>
+          <ul class="simple-list">
+            <li><strong>carbamazepine → KRAS → pancreatic ductal adenocarcinoma.</strong> Strongest example of cross-domain discovery in the catalog.</li>
+            <li><strong>osimertinib → EGFR → Alzheimer's disease.</strong> Drug with proven BBB penetrance, target with emerging neurodegeneration relevance.</li>
+            <li><strong>valproic acid → PKM2 → pancreatic cancer survival.</strong> Established HDAC inhibitor, specific PKM2-PDAC survival link is novel.</li>
+            <li><strong>osimertinib → EGFR → pancreatic adenocarcinoma.</strong> Refinement of a known direction with a newer drug.</li>
+            <li><strong>auraptene → MMP-9 → epilepsy.</strong> Natural product with documented PTZ-kindling protection in mice.</li>
+          </ul>
+          <p>If you work in any of these areas, feedback (including disagreement) is the most useful response. Full evidence chains: <a href="/hypotheses">/hypotheses</a>.</p>
+        </article>
+
         <article class="update-post">
           <div class="update-date">2026-05-10</div>
           <h2>The catalog is mostly EGFR</h2>
