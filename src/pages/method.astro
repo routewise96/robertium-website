@@ -154,6 +154,22 @@ import Layout from '../layouts/Layout.astro';
   <section class="section">
     <div class="container--narrow">
       <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2>Validation enrichment</h2>
+      </div>
+      <p>Each outreach-quality hypothesis is enriched with two external signals so a researcher can immediately tell what kind of candidate they are looking at.</p>
+      <ul class="simple-list">
+        <li><strong>Clinical trial status</strong> (via the public ClinicalTrials.gov v2 API). For each drug–outcome pair we run a query and bucket the result into <em>active</em>, <em>completed</em>, <em>preclinical_only</em>, <em>none</em>, or <em>unknown</em> (when the drug name is a combination, identifier, or otherwise not searchable). When trials exist, the top three NCT IDs are linked from the expanded view of the hypothesis.</li>
+        <li><strong>Literature status</strong> (via PubMed E-utilities). Two queries are issued per hypothesis: a direct co-mention <code style="font-family:var(--font-mono); font-size:14px;">"{'{drug}'}"[tiab] AND "{'{outcome}'}"[tiab]</code> and the same query restricted to <em>repurposing/treatment/therapy</em>. The result is bucketed into <em>reproduces_known</em> (≥5 repurposing-style mentions), <em>partial_evidence</em>, <em>novel_signal</em> (no repurposing mention and no more than two co-mentions), or <em>unknown</em>.</li>
+      </ul>
+      <p>This lets the catalog distinguish hypotheses that reproduce known associations (a sanity check on the methodology) from genuinely novel signals worth investigating. The combination <em>novel signal + no clinical trial</em> is the most useful starting point — those are candidates that Robertium surfaced and that nobody appears to have followed up on yet.</p>
+      <p>Enrichment is rate-limited (5 req/s for ClinicalTrials.gov, ~2.5 req/s for PubMed without an API key), idempotent, and runs only against the 672 outreach-quality hypotheses. Source: <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_clinical_trials.py</code> and <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_literature_status.py</code>.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
         <h2>What Robertium is not</h2>
       </div>
@@ -169,7 +185,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section section--gray">
+  <section class="section">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
@@ -186,7 +202,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--gray">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
@@ -209,7 +225,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section section--gray">
+  <section class="section">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div>

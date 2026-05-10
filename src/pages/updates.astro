@@ -20,6 +20,25 @@ import Layout from '../layouts/Layout.astro';
 
         <article class="update-post">
           <div class="update-date">2026-05-10</div>
+          <h2>Validation enrichment: clinical-trial and literature status for every outreach-quality hypothesis</h2>
+          <p>Each of the 672 outreach-quality cross-domain hypotheses is now annotated with two external signals so a researcher can see at a glance what kind of candidate they are looking at: whether a clinical trial exists for the drug–outcome pair (via the public ClinicalTrials.gov v2 API), and whether the connection is already documented in the literature (via PubMed E-utilities).</p>
+          <p>Distribution after enrichment:</p>
+          <ul>
+            <li>Clinical trials: <strong>50 active</strong>, 55 completed, 8 preclinical-only, 544 with no registered trial, 15 unknown (drug name not searchable as a single intervention).</li>
+            <li>Literature: <strong>361 novel signals</strong> (no PubMed paper proposes the drug as treatment/repurposing for this outcome), 117 partial evidence, 179 reproduces a documented association, 15 unknown.</li>
+          </ul>
+          <p>The most useful combination for outreach is <em>novel literature signal</em> together with <em>no clinical trial</em> — those are candidates that Robertium surfaced and that nobody appears to have followed up on yet. The catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> now shows badges on every row and a "Show novel signals only" button that filters the table to those candidates.</p>
+          <p>Implementation: <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_clinical_trials.py</code> and <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_literature_status.py</code>. Both scripts are rate-limited (5 req/s for ClinicalTrials.gov, ~2.5 req/s for PubMed without an API key), idempotent, and run only against outreach-quality hypotheses to keep the API budget bounded. Drug names that are combinations or identifiers (for example "ALA/AUR combination" or "1D9-LIRΔTP53INP2") are flagged <em>unknown</em> without making a request. Trials enrichment took ~4 minutes; literature enrichment took ~10 minutes.</p>
+          <div class="update-tags">
+            <span class="update-tag">validation</span>
+            <span class="update-tag">clinical-trials</span>
+            <span class="update-tag">pubmed</span>
+            <span class="update-tag">novel-signals</span>
+          </div>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-10</div>
           <h2>Corpus doubled: 99,132 papers, 7,957 cross-domain hypotheses</h2>
           <p>Re-ingest expansion across all six domains is complete. <code style="font-family:var(--font-mono); font-size:14px;">size_target</code> was raised to 15,000–18,000 per domain and the <code style="font-family:var(--font-mono); font-size:14px;">is_oa: "true"</code> OpenAlex filter was removed (closed-access papers still ship metadata + abstracts, which is all the pipeline needs). The corpus roughly doubled and the cross-domain orchestrator was re-run on the rebuilt knowledge graph.</p>
           <p>Before → after, in raw counts:</p>

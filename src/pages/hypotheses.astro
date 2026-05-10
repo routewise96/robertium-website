@@ -65,6 +65,15 @@ const domainCounts = allDomains.map((d) => ({
 const highCount = data.hypotheses.filter(
   (h) => (h as any).outreach_quality === 'high',
 ).length;
+
+const novelCount = data.hypotheses.filter(
+  (h) => (h as any).literature_status === 'novel_signal',
+).length;
+const noTrialNovelCount = data.hypotheses.filter(
+  (h) =>
+    (h as any).literature_status === 'novel_signal' &&
+    ((h as any).clinical_trial_status === 'none' || (h as any).clinical_trial_status == null),
+).length;
 ---
 <Layout
   title="Drug Repurposing Hypotheses — Cross-domain Catalog"
@@ -97,9 +106,18 @@ const highCount = data.hypotheses.filter(
         entity rather than a generic pathway. They are the strongest candidates for further
         investigation.
       </p>
-      <button type="button" id="hyp-show-high" class="btn btn--primary hyp-callout-btn">
-        Show high-confidence only ({highCount})
-      </button>
+      <div class="hyp-callout-actions">
+        <button type="button" id="hyp-show-high" class="btn btn--primary hyp-callout-btn">
+          Show high-confidence only ({highCount})
+        </button>
+        <button type="button" id="hyp-show-novel" class="btn btn--secondary hyp-callout-btn">
+          Show novel signals only ({novelCount})
+        </button>
+      </div>
+      <p class="hyp-callout-foot">
+        <strong>{noTrialNovelCount}</strong> hypotheses combine a novel literature signal with no existing
+        clinical trial — the candidates Robertium surfaced that no one has investigated yet.
+      </p>
     </div>
   </section>
 
@@ -156,6 +174,10 @@ const highCount = data.hypotheses.filter(
           <input type="checkbox" id="hyp-high" />
           High-confidence only
         </label>
+        <label class="hyp-checkbox">
+          <input type="checkbox" id="hyp-novel" />
+          Novel signals only
+        </label>
         <button type="button" id="hyp-reset" class="hyp-reset">Reset</button>
       </div>
     </div>
@@ -172,13 +194,14 @@ const highCount = data.hypotheses.filter(
           <th>Mediator</th>
           <th></th>
           <th>Outcome</th>
+          <th>Validation</th>
           <th class="num">Score</th>
           <th class="num">Evidence</th>
         </tr>
       </thead>
       <tbody id="hyp-tbody">
         <tr id="hyp-load-trigger" aria-hidden="true">
-          <td colspan="8" style="padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+          <td colspan="9" style="padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
             Loading more…
           </td>
         </tr>
@@ -208,7 +231,9 @@ const highCount = data.hypotheses.filter(
       const sortBy = $('hyp-sort');
       const multi = $('hyp-multi');
       const highOnly = $('hyp-high');
+      const novelOnly = $('hyp-novel');
       const showHighBtn = $('hyp-show-high');
+      const showNovelBtn = $('hyp-show-novel');
       const reset = $('hyp-reset');
       const emptyReset = $('hyp-empty-reset');
       const tbody = $('hyp-tbody');
@@ -238,9 +263,30 @@ const highCount = data.hypotheses.filter(
       const domainTag = (d) =>
         d ? `<span class="hyp-domain-tag${domainTagClass(d)}">${escapeHtml(d)}</span>` : '';
 
+      const TRIAL_BADGE = {
+        active: { cls: 'hyp-badge--trial-active', label: 'trial active' },
+        completed: { cls: 'hyp-badge--trial-completed', label: 'trial completed' },
+        preclinical_only: { cls: 'hyp-badge--trial-pre', label: 'preclinical' },
+        none: { cls: 'hyp-badge--trial-none', label: 'no trial' },
+      };
+      const LIT_BADGE = {
+        novel_signal: { cls: 'hyp-badge--lit-novel', label: 'novel' },
+        partial_evidence: { cls: 'hyp-badge--lit-partial', label: 'partial' },
+        reproduces_known: { cls: 'hyp-badge--lit-known', label: 'known' },
+      };
+      const trialBadge = (s) => {
+        const b = TRIAL_BADGE[s];
+        return b ? `<span class="hyp-badge ${b.cls}">${b.label}</span>` : '';
+      };
+      const litBadge = (s) => {
+        const b = LIT_BADGE[s];
+        return b ? `<span class="hyp-badge ${b.cls}">${b.label}</span>` : '';
+      };
+
       const renderRow = (h, index) => {
         const score = h.score != null ? h.score.toFixed(3) : '—';
         const evidence = `${h.ab_count ?? 0} + ${h.bc_count ?? 0}`;
+        const badges = `${trialBadge(h.clinical_trial_status)}${litBadge(h.literature_status)}`;
         let html = `
           <tr class="hyp-row" data-id="${h.id}">
             <td class="num">${index + 1}</td>
@@ -249,6 +295,7 @@ const highCount = data.hypotheses.filter(
             <td class="mediator">${escapeHtml(h.mediator)}</td>
             <td class="arrow">→</td>
             <td class="outcome">${escapeHtml(h.outcome)}${domainTag(h.outcome_domain)}</td>
+            <td class="hyp-validation-cell">${badges}</td>
             <td class="num score">${score}</td>
             <td class="num evidence">${evidence}</td>
           </tr>`;
@@ -274,9 +321,26 @@ const highCount = data.hypotheses.filter(
             : `<p class="hyp-evidence-empty">No PMID-linked papers in this leg.</p>`;
 
         const score = h.score != null ? h.score.toFixed(3) : '—';
+        const trialDescr = ({
+          active: 'A clinical trial for this drug–outcome pair is currently recruiting or active.',
+          completed: 'A clinical trial for this drug–outcome pair has been completed, terminated, or withdrawn.',
+          preclinical_only: 'A study exists for this pair but is observational or has not started enrolling.',
+          none: 'No clinical trial registered on ClinicalTrials.gov for this drug–outcome pair.',
+          unknown: 'Drug name not suitable for the trial registry query (combination, identifier, or special characters).',
+        })[h.clinical_trial_status] || '';
+        const litDescr = ({
+          reproduces_known: 'Five or more PubMed papers explicitly discuss this drug as treatment/therapy/repurposing for this outcome — Robertium reproduces a documented association.',
+          partial_evidence: 'A handful of PubMed papers mention both the drug and outcome, but the connection is not yet systematic in the literature.',
+          novel_signal: 'No PubMed paper explicitly proposes this drug as treatment/therapy/repurposing for this outcome — a candidate worth investigating.',
+          unknown: 'Drug name not suitable for the literature query (combination, identifier, or special characters).',
+        })[h.literature_status] || '';
+        const ncts = (h.clinical_trial_nct_ids || []).slice(0, 3);
+        const nctLine = ncts.length
+          ? `<div class="hyp-detail-nct">NCT IDs: ${ncts.map(n => `<a href="https://clinicaltrials.gov/study/${encodeURIComponent(n)}" target="_blank" rel="noopener">${escapeHtml(n)}</a>`).join(', ')}</div>`
+          : '';
         return `
           <tr class="hyp-detail-row">
-            <td colspan="8" class="hyp-detail">
+            <td colspan="9" class="hyp-detail">
               <div class="hyp-detail-inner">
                 <div class="hyp-chain">
                   <span class="chain-node">${escapeHtml(h.drug)}</span>
@@ -291,6 +355,17 @@ const highCount = data.hypotheses.filter(
                   <span>Evidence B→C: <strong>${h.bc_count ?? 0}</strong></span>
                   <span>Direct A→C: <strong>${h.direct_count ?? 0}</strong></span>
                   <span>ID: <strong>${h.id}</strong></span>
+                </div>
+                <div class="hyp-validation-block">
+                  <div class="hyp-validation-row">
+                    ${trialBadge(h.clinical_trial_status)}
+                    <span class="hyp-validation-text">${escapeHtml(trialDescr)}</span>
+                  </div>
+                  ${nctLine}
+                  <div class="hyp-validation-row">
+                    ${litBadge(h.literature_status)}
+                    <span class="hyp-validation-text">${escapeHtml(litDescr)}</span>
+                  </div>
                 </div>
                 <div class="hyp-evidence-section">
                   <h4>Evidence: ${escapeHtml(h.drug)} ${escapeHtml(h.predicate_ab ?? '?')} ${escapeHtml(h.mediator)}</h4>
@@ -316,11 +391,13 @@ const highCount = data.hypotheses.filter(
         const od = outcomeDomain.value;
         const m = multi.checked;
         const hi = highOnly.checked;
+        const nv = novelOnly.checked;
         let list = HYPOTHESES.filter((h) => {
           if (dd && h.drug_domain !== dd) return false;
           if (od && h.outcome_domain !== od) return false;
           if (domainAny && h.drug_domain !== domainAny && h.outcome_domain !== domainAny) return false;
           if (hi && h.outreach_quality !== 'high') return false;
+          if (nv && h.literature_status !== 'novel_signal') return false;
           if (m && !((h.ab_count || 0) >= 2 || (h.bc_count || 0) >= 2)) return false;
           if (q) {
             const blob = `${h.drug} ${h.mediator} ${h.outcome}`.toLowerCase();
@@ -412,6 +489,7 @@ const highCount = data.hypotheses.filter(
         if (search.value) params.set('q', search.value);
         if (domainAny) params.set('domain', domainAny);
         if (highOnly.checked) params.set('quality', 'high');
+        if (novelOnly.checked) params.set('lit', 'novel');
         const qs = params.toString();
         const url = qs ? `?${qs}` : window.location.pathname;
         history.replaceState(null, '', url);
@@ -475,6 +553,7 @@ const highCount = data.hypotheses.filter(
       sortBy.addEventListener('change', onFilterChange);
       multi.addEventListener('change', onFilterChange);
       highOnly.addEventListener('change', onFilterChange);
+      novelOnly.addEventListener('change', onFilterChange);
 
       browseTiles.forEach((tile) => {
         tile.addEventListener('click', () => {
@@ -491,6 +570,18 @@ const highCount = data.hypotheses.filter(
       if (showHighBtn) {
         showHighBtn.addEventListener('click', () => {
           highOnly.checked = true;
+          novelOnly.checked = false;
+          domainAny = '';
+          updateBrowseTiles();
+          onFilterChange();
+          const tableEl = document.getElementById('hyp-table');
+          if (tableEl) tableEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
+      }
+      if (showNovelBtn) {
+        showNovelBtn.addEventListener('click', () => {
+          novelOnly.checked = true;
+          highOnly.checked = false;
           domainAny = '';
           updateBrowseTiles();
           onFilterChange();
@@ -506,6 +597,7 @@ const highCount = data.hypotheses.filter(
         sortBy.value = 'score-desc';
         multi.checked = false;
         highOnly.checked = false;
+        novelOnly.checked = false;
         domainAny = '';
         updateBrowseTiles();
         openId = null;
@@ -534,6 +626,9 @@ const highCount = data.hypotheses.filter(
       }
       if (params.get('quality') === 'high') {
         highOnly.checked = true;
+      }
+      if (params.get('lit') === 'novel') {
+        novelOnly.checked = true;
       }
       const urlIdRaw = params.get('id');
       const urlId = urlIdRaw != null ? Number(urlIdRaw) : null;
