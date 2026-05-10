@@ -54,13 +54,15 @@ const DOMAIN_LABEL: Record<string, string> = {
   glioblastoma: 'Glioblastoma',
   pancreatic_cancer: 'Pancreatic cancer',
 };
-const domainCounts = allDomains.map((d) => ({
-  key: d,
-  label: DOMAIN_LABEL[d] ?? d,
-  count: data.hypotheses.filter(
-    (h) => h.drug_domain === d || h.outcome_domain === d,
-  ).length,
-}));
+const domainCounts = allDomains
+  .map((d) => ({
+    key: d,
+    label: DOMAIN_LABEL[d] ?? d,
+    count: data.hypotheses.filter(
+      (h) => h.drug_domain === d || h.outcome_domain === d,
+    ).length,
+  }))
+  .sort((a, b) => b.count - a.count);
 
 const highCount = data.hypotheses.filter(
   (h) => (h as any).outreach_quality === 'high',
@@ -77,7 +79,7 @@ const noTrialNovelCount = data.hypotheses.filter(
 ---
 <Layout
   title="Drug Repurposing Hypotheses — Cross-domain Catalog"
-  description="Browse drug repurposing candidates discovered through literature-based discovery. 7,957 cross-domain hypotheses across six therapeutic domains and 30 directional pairs (672 outreach-quality, 62 high-confidence), with full evidence chains from PubMed."
+  description="Browse drug repurposing candidates discovered through literature-based discovery. 7,957 cross-domain hypotheses across six therapeutic domains and 30 directional pairs (633 outreach-quality, 59 high-confidence), with full evidence chains from PubMed."
   current="hypotheses"
   ogImage="/og/hypotheses.png"
 >
@@ -125,7 +127,8 @@ const noTrialNovelCount = data.hypotheses.filter(
     <div class="container">
       <h2 class="hyp-browse-title">Browse by therapeutic area</h2>
       <p class="hyp-browse-sub">
-        Filters the catalog to hypotheses where the chosen domain is either the drug source or the outcome.
+        Counts include hypotheses where the domain is either drug source or outcome,
+        so a single hypothesis is counted under two domains.
       </p>
       <div class="hyp-browse-grid">
         {domainCounts.map((d) => (

@@ -69,7 +69,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Swanson ABC discovery</div>
               <div class="pipe-step-source">30 directional pairs · mediator + drug-vocabulary filters</div>
-              <div class="pipe-step-stat"><strong>7,957</strong> candidates · <strong>672</strong> outreach-quality (62 high + 610 mid)</div>
+              <div class="pipe-step-stat"><strong>7,957</strong> candidates · <strong>633</strong> outreach-quality (59 high + 574 mid)</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -196,7 +196,7 @@ import Layout from '../layouts/Layout.astro';
         <li><strong>Literature status</strong> (via PubMed E-utilities). Two queries are issued per hypothesis: a direct co-mention <code style="font-family:var(--font-mono); font-size:14px;">"{'{drug}'}"[tiab] AND "{'{outcome}'}"[tiab]</code> and the same query restricted to <em>repurposing/treatment/therapy</em>. The result is bucketed into <em>reproduces_known</em> (≥5 repurposing-style mentions), <em>partial_evidence</em>, <em>novel_signal</em> (no repurposing mention and no more than two co-mentions), or <em>unknown</em>.</li>
       </ul>
       <p>This lets the catalog distinguish hypotheses that reproduce known associations (a sanity check on the methodology) from genuinely novel signals worth investigating. The combination <em>novel signal + no clinical trial</em> is the most useful starting point — those are candidates that Robertium surfaced and that nobody appears to have followed up on yet.</p>
-      <p>Enrichment is rate-limited (5 req/s for ClinicalTrials.gov, ~2.5 req/s for PubMed without an API key), idempotent, and runs only against the 672 outreach-quality hypotheses. Source: <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_clinical_trials.py</code> and <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_literature_status.py</code>.</p>
+      <p>Enrichment is rate-limited (5 req/s for ClinicalTrials.gov, ~2.5 req/s for PubMed without an API key), idempotent, and runs only against the outreach-quality hypotheses. </p>
     </div>
   </section>
 

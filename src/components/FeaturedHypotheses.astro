@@ -47,7 +47,7 @@ const midQuality = data.hypotheses
 // Prefer high-quality picks; if fewer than TARGET diverse picks, top up with mid.
 const cleanCrossDomain: Hypothesis[] = [...highQuality, ...midQuality];
 
-const TARGET = 5;
+const TARGET = 6;
 
 function pickDiverse(pool: Hypothesis[]): Hypothesis[] {
   const picked: Hypothesis[] = [];
@@ -162,7 +162,7 @@ function summary(h: Hypothesis): string {
       ))}
     </div>
     <p class="featured-cta">
-      <a href="/hypotheses">Browse all 4,593 cross-domain hypotheses →</a>
+      <a href="/hypotheses">Browse the full catalog →</a>
     </p>
   </div>
 </section>
@@ -178,7 +178,7 @@ function summary(h: Hypothesis): string {
   }
   .featured-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
   }
   .featured-card {
@@ -263,6 +263,9 @@ function summary(h: Hypothesis): string {
   }
   .featured-cta a:hover { text-decoration: underline; }
 
+  @media (max-width: 1024px) {
+    .featured-grid { grid-template-columns: repeat(2, 1fr); }
+  }
   @media (max-width: 640px) {
     .featured-grid { grid-template-columns: 1fr; }
     .featured-chain { font-size: 14px; }
