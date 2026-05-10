@@ -59,7 +59,10 @@ const ogImageURL = new URL(ogImage, Astro.site).toString();
       "https://www.linkedin.com/in/danieltrofimov"
     ]
   })} />
-</head>
+<!-- Cloudflare Web Analytics -->
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "94bdbf5542564638aa0ff2c8d67cdbb2"}'></script>
+    <!-- End Cloudflare Web Analytics -->
+  </head>
 <body>
   <Header current={current} />
   <main>
