@@ -25,30 +25,63 @@ import Layout from '../layouts/Layout.astro';
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
         <h2>Pipeline overview</h2>
       </div>
-      <p>The pipeline runs in four phases for each therapeutic domain: ingest, filter, extract, and connect. Each phase is independently reproducible — given the same input, you get the same output.</p>
-    </div>
-    <div class="container">
-      <div class="pipeline pipeline--four">
-        <div class="pipeline-card">
-          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-          <h3>Ingest</h3>
-          <p>Fetch open-access biomedical literature from OpenAlex by domain concept ID. Typical corpus: 5,000–10,000 papers per disease.</p>
-        </div>
-        <div class="pipeline-card">
-          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div>
-          <h3>Filter</h3>
-          <p>Pass papers through PubTator (NCBI) for biomedical relevance. The L1 filter keeps only abstracts with recognized genes, chemicals, or diseases.</p>
-        </div>
-        <div class="pipeline-card">
-          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
-          <h3>Extract</h3>
-          <p>Generate structured claims using DeepSeek V4 Flash with a controlled vocabulary of 18 predicates and 10 entity types.</p>
-        </div>
-        <div class="pipeline-card">
-          <div class="pipe-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/><line x1="5" y1="19" x2="19" y2="19"/></svg></div>
-          <h3>Connect</h3>
-          <p>Build a knowledge graph in Kuzu. Surface ABC-mediator chains that bridge therapeutic domains.</p>
-        </div>
+      <p>The pipeline runs end-to-end across six therapeutic domains. Each stage is independently reproducible: same input, same output. Numbers below reflect the current corpus.</p>
+      <div class="pipeline-diagram" role="img" aria-label="Robertium pipeline diagram from biomedical literature to novel candidates">
+        <ol class="pipeline-steps">
+          <li class="pipe-step">
+            <div class="pipe-step-num">1</div>
+            <div class="pipe-step-body">
+              <div class="pipe-step-title">Ingest</div>
+              <div class="pipe-step-source">OpenAlex API · 6 domain concept IDs</div>
+              <div class="pipe-step-stat"><strong>99,132</strong> papers</div>
+            </div>
+          </li>
+          <li class="pipe-arrow" aria-hidden="true">↓</li>
+          <li class="pipe-step">
+            <div class="pipe-step-num">2</div>
+            <div class="pipe-step-body">
+              <div class="pipe-step-title">L1 biomedical filter</div>
+              <div class="pipe-step-source">PubTator (NCBI) · ≥2 recognised entities</div>
+              <div class="pipe-step-stat"><strong>47,255</strong> papers passed</div>
+            </div>
+          </li>
+          <li class="pipe-arrow" aria-hidden="true">↓</li>
+          <li class="pipe-step">
+            <div class="pipe-step-num">3</div>
+            <div class="pipe-step-body">
+              <div class="pipe-step-title">Structured claim extraction</div>
+              <div class="pipe-step-source">DeepSeek V4 Flash · 21 predicates · 9 entity types</div>
+              <div class="pipe-step-stat"><strong>140,178</strong> claims (subject–predicate–object + PMID)</div>
+            </div>
+          </li>
+          <li class="pipe-arrow" aria-hidden="true">↓</li>
+          <li class="pipe-step">
+            <div class="pipe-step-num">4</div>
+            <div class="pipe-step-body">
+              <div class="pipe-step-title">Knowledge graph</div>
+              <div class="pipe-step-source">Kuzu · cross-domain bridges</div>
+              <div class="pipe-step-stat"><strong>81,328</strong> entities · <strong>140,178</strong> edges</div>
+            </div>
+          </li>
+          <li class="pipe-arrow" aria-hidden="true">↓</li>
+          <li class="pipe-step">
+            <div class="pipe-step-num">5</div>
+            <div class="pipe-step-body">
+              <div class="pipe-step-title">Swanson ABC discovery</div>
+              <div class="pipe-step-source">30 directional pairs · mediator + drug-vocabulary filters</div>
+              <div class="pipe-step-stat"><strong>7,957</strong> candidates · <strong>672</strong> outreach-quality (62 high + 610 mid)</div>
+            </div>
+          </li>
+          <li class="pipe-arrow" aria-hidden="true">↓</li>
+          <li class="pipe-step pipe-step--accent">
+            <div class="pipe-step-num">6</div>
+            <div class="pipe-step-body">
+              <div class="pipe-step-title">Validation enrichment</div>
+              <div class="pipe-step-source">ClinicalTrials.gov v2 · PubMed E-utilities</div>
+              <div class="pipe-step-stat"><strong>354</strong> novel candidates · <strong>50</strong> reproduce active trials</div>
+            </div>
+          </li>
+        </ol>
       </div>
     </div>
   </section>
@@ -231,10 +264,14 @@ import Layout from '../layouts/Layout.astro';
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div>
         <h2>Cite this work</h2>
       </div>
-      <p>If you reference Robertium in a manuscript, presentation, or grant proposal, please use the citation below. A formal preprint with full methodology and validation is in preparation.</p>
+      <p>If you reference Robertium in a manuscript, presentation, or grant proposal, please use the citation below. The hypothesis catalog is archived on Zenodo with a permanent DOI. A formal preprint with full methodology and validation is in preparation.</p>
       <div class="method-citation">
-        Trofimov, D. (2026). Robertium: open-source literature-based drug repurposing across multiple therapeutic domains. Software. https://robertium.com — Source: https://github.com/routewise96/robertium — Accessed: [date]
+        Trofimov, D. (2026). <em>Robertium hypothesis catalog: cross-domain drug repurposing candidates from biomedical literature</em> (Version 1.0.0) [Data set]. Zenodo. <a href="https://doi.org/10.5281/zenodo.20110977">https://doi.org/10.5281/zenodo.20110977</a>
       </div>
+      <p style="margin-top: 1em; font-size: 0.9em; color: var(--text-secondary);">
+        Source code: <a href="https://github.com/routewise96/robertium">github.com/routewise96/robertium</a> · 
+        Web interface: <a href="https://robertium.com">robertium.com</a>
+      </p>
       <p>For collaborations, dataset access, or methodology questions: <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a></p>
     </div>
   </section>
