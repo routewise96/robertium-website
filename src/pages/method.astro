@@ -154,6 +154,24 @@ import Layout from '../layouts/Layout.astro';
   <section class="section">
     <div class="container--narrow">
       <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+        <h2>What Robertium is not</h2>
+      </div>
+      <p>Calibrating expectations matters as much as describing capabilities. To be explicit about what this tool does and does not provide:</p>
+      <ul class="simple-list">
+        <li><strong>Not a replacement for systematic review.</strong> Robertium surfaces candidates worth investigating; rigorous evaluation of any specific hypothesis still requires manual literature review, expert assessment, and primary-source verification.</li>
+        <li><strong>Not a clinical decision tool.</strong> Generated hypotheses describe potential biological connections, not treatment recommendations. They have not been validated experimentally and must not influence patient care.</li>
+        <li><strong>Hypotheses are starting points, not findings.</strong> A high score means the evidence chain is well-supported in the published literature, not that the drug works for the proposed indication. Many high-scoring chains will turn out to be artifacts of co-mention, redundant evidence, or already-known associations.</li>
+        <li><strong>Not novel by default.</strong> Some surfaced hypotheses (for example, metformin's neuroprotective effects, or valproic acid as an HDAC inhibitor) are well-established in the literature. Robertium reproduces known cross-domain bridges as a sanity check; novelty assessment requires domain expertise.</li>
+        <li><strong>Not a substitute for primary literature.</strong> Each hypothesis links to source PMIDs; the burden of reading the actual papers, evaluating study design, and judging biological plausibility is on the researcher.</li>
+      </ul>
+      <p>We make this explicit because the value of the tool depends on calibrated expectations — Robertium helps you find candidates faster, not replace the work of evaluating them.</p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <h2>Quality and limitations</h2>
       </div>
@@ -168,7 +186,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section section--gray">
+  <section class="section">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
@@ -191,17 +209,15 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--gray">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div>
         <h2>Cite this work</h2>
       </div>
-      <p>A preprint describing the methodology and first batch of results will be submitted to bioRxiv in mid-2026. Until then, you can cite this work as:</p>
+      <p>If you reference Robertium in a manuscript, presentation, or grant proposal, please use the citation below. A formal preprint with full methodology and validation is in preparation.</p>
       <div class="method-citation">
-        Trofimov, D. (2026). Robertium: Open-Source Hypothesis Engine<br>
-        for Drug Repurposing through Literature-Based Discovery.<br>
-        Available at https://robertium.com.
+        Trofimov, D. (2026). Robertium: open-source literature-based drug repurposing across multiple therapeutic domains. Software. https://robertium.com — Source: https://github.com/routewise96/robertium — Accessed: [date]
       </div>
       <p>For collaborations, dataset access, or methodology questions: <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a></p>
     </div>

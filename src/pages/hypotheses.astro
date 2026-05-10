@@ -44,6 +44,27 @@ const outcomeDomains = Array.from(
 const domainPairs = new Set(
   data.hypotheses.map((h) => `${h.drug_domain ?? ''}→${h.outcome_domain ?? ''}`)
 );
+
+const allDomains = Array.from(new Set([...drugDomains, ...outcomeDomains])).sort();
+const DOMAIN_LABEL: Record<string, string> = {
+  als: 'ALS',
+  alzheimer: "Alzheimer's",
+  depression: 'Depression (MDD)',
+  epilepsy: 'Epilepsy',
+  glioblastoma: 'Glioblastoma',
+  pancreatic_cancer: 'Pancreatic cancer',
+};
+const domainCounts = allDomains.map((d) => ({
+  key: d,
+  label: DOMAIN_LABEL[d] ?? d,
+  count: data.hypotheses.filter(
+    (h) => h.drug_domain === d || h.outcome_domain === d,
+  ).length,
+}));
+
+const highCount = data.hypotheses.filter(
+  (h) => (h as any).outreach_quality === 'high',
+).length;
 ---
 <Layout
   title="Drug Repurposing Hypotheses — Cross-domain Catalog"
@@ -64,6 +85,42 @@ const domainPairs = new Set(
         ({data.metadata.domains.join(' ↔ ')}),
         backed by <strong>{data.metadata.evidence_papers}</strong> evidence papers
       </p>
+    </div>
+  </section>
+
+  <section class="hyp-callout">
+    <div class="container">
+      <h2 class="hyp-callout-title">Start here: {highCount} high-confidence hypotheses</h2>
+      <p class="hyp-callout-body">
+        These are hypotheses where multiple independent papers support both legs of the chain
+        (drug → mediator and mediator → outcome) and the mediator is a specific biological
+        entity rather than a generic pathway. They are the strongest candidates for further
+        investigation.
+      </p>
+      <button type="button" id="hyp-show-high" class="btn btn--primary hyp-callout-btn">
+        Show high-confidence only ({highCount})
+      </button>
+    </div>
+  </section>
+
+  <section class="hyp-browse">
+    <div class="container">
+      <h2 class="hyp-browse-title">Browse by therapeutic area</h2>
+      <p class="hyp-browse-sub">
+        Filters the catalog to hypotheses where the chosen domain is either the drug source or the outcome.
+      </p>
+      <div class="hyp-browse-grid">
+        {domainCounts.map((d) => (
+          <button
+            type="button"
+            class="hyp-browse-tile"
+            data-domain={d.key}
+          >
+            <span class="hyp-browse-tile-label">{d.label}</span>
+            <span class="hyp-browse-tile-count">{d.count.toLocaleString()} hypotheses</span>
+          </button>
+        ))}
+      </div>
     </div>
   </section>
 
@@ -94,6 +151,10 @@ const domainPairs = new Set(
         <label class="hyp-checkbox">
           <input type="checkbox" id="hyp-multi" />
           Multi-evidence
+        </label>
+        <label class="hyp-checkbox">
+          <input type="checkbox" id="hyp-high" />
+          High-confidence only
         </label>
         <button type="button" id="hyp-reset" class="hyp-reset">Reset</button>
       </div>
@@ -146,6 +207,8 @@ const domainPairs = new Set(
       const outcomeDomain = $('hyp-outcome-domain');
       const sortBy = $('hyp-sort');
       const multi = $('hyp-multi');
+      const highOnly = $('hyp-high');
+      const showHighBtn = $('hyp-show-high');
       const reset = $('hyp-reset');
       const emptyReset = $('hyp-empty-reset');
       const tbody = $('hyp-tbody');
@@ -153,6 +216,8 @@ const domainPairs = new Set(
       const counter = $('hyp-counter');
       const empty = $('hyp-empty');
       const table = $('hyp-table');
+      const browseTiles = document.querySelectorAll('.hyp-browse-tile');
+      const SHARE_ORIGIN = 'https://robertium.com';
 
       let filtered = [];
       let currentRendered = 0;
@@ -243,14 +308,19 @@ const domainPairs = new Set(
           </tr>`;
       };
 
+      let domainAny = '';
+
       const computeFiltered = () => {
         const q = (search.value || '').trim().toLowerCase();
         const dd = drugDomain.value;
         const od = outcomeDomain.value;
         const m = multi.checked;
+        const hi = highOnly.checked;
         let list = HYPOTHESES.filter((h) => {
           if (dd && h.drug_domain !== dd) return false;
           if (od && h.outcome_domain !== od) return false;
+          if (domainAny && h.drug_domain !== domainAny && h.outcome_domain !== domainAny) return false;
+          if (hi && h.outreach_quality !== 'high') return false;
           if (m && !((h.ab_count || 0) >= 2 || (h.bc_count || 0) >= 2)) return false;
           if (q) {
             const blob = `${h.drug} ${h.mediator} ${h.outcome}`.toLowerCase();
@@ -266,6 +336,14 @@ const domainPairs = new Set(
           return (b.score || 0) - (a.score || 0);
         });
         return list;
+      };
+
+      const updateBrowseTiles = () => {
+        browseTiles.forEach((t) => {
+          const d = t.getAttribute('data-domain');
+          if (d === domainAny) t.classList.add('hyp-browse-tile--active');
+          else t.classList.remove('hyp-browse-tile--active');
+        });
       };
 
       const updateCounter = () => {
@@ -332,6 +410,8 @@ const domainPairs = new Set(
         const params = new URLSearchParams();
         if (openId != null) params.set('id', String(openId));
         if (search.value) params.set('q', search.value);
+        if (domainAny) params.set('domain', domainAny);
+        if (highOnly.checked) params.set('quality', 'high');
         const qs = params.toString();
         const url = qs ? `?${qs}` : window.location.pathname;
         history.replaceState(null, '', url);
@@ -365,7 +445,7 @@ const domainPairs = new Set(
         if (permaBtn) {
           e.stopPropagation();
           const id = permaBtn.getAttribute('data-permalink');
-          const link = `${window.location.origin}${window.location.pathname}?id=${id}`;
+          const link = `${SHARE_ORIGIN}/hypotheses?id=${id}`;
           navigator.clipboard.writeText(link).then(() => {
             permaBtn.textContent = 'Copied!';
             permaBtn.classList.add('hyp-permalink--copied');
@@ -394,6 +474,30 @@ const domainPairs = new Set(
       outcomeDomain.addEventListener('change', onFilterChange);
       sortBy.addEventListener('change', onFilterChange);
       multi.addEventListener('change', onFilterChange);
+      highOnly.addEventListener('change', onFilterChange);
+
+      browseTiles.forEach((tile) => {
+        tile.addEventListener('click', () => {
+          const d = tile.getAttribute('data-domain') || '';
+          domainAny = domainAny === d ? '' : d;
+          updateBrowseTiles();
+          onFilterChange();
+          // jump to results if the table is below the fold
+          const tableEl = document.getElementById('hyp-table');
+          if (tableEl) tableEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
+      });
+
+      if (showHighBtn) {
+        showHighBtn.addEventListener('click', () => {
+          highOnly.checked = true;
+          domainAny = '';
+          updateBrowseTiles();
+          onFilterChange();
+          const tableEl = document.getElementById('hyp-table');
+          if (tableEl) tableEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
+      }
 
       const doReset = () => {
         search.value = '';
@@ -401,6 +505,9 @@ const domainPairs = new Set(
         outcomeDomain.value = '';
         sortBy.value = 'score-desc';
         multi.checked = false;
+        highOnly.checked = false;
+        domainAny = '';
+        updateBrowseTiles();
         openId = null;
         resetAndRender();
         updateUrl();
@@ -420,6 +527,14 @@ const domainPairs = new Set(
 
       const params = new URLSearchParams(window.location.search);
       if (params.has('q')) search.value = params.get('q') || '';
+      const urlDomain = params.get('domain') || '';
+      if (urlDomain) {
+        domainAny = urlDomain;
+        updateBrowseTiles();
+      }
+      if (params.get('quality') === 'high') {
+        highOnly.checked = true;
+      }
       const urlIdRaw = params.get('id');
       const urlId = urlIdRaw != null ? Number(urlIdRaw) : null;
       if (urlId != null && !Number.isNaN(urlId)) openId = urlId;
@@ -431,7 +546,11 @@ const domainPairs = new Set(
         if (idx >= 0) {
           requestAnimationFrame(() => {
             const row = tbody.querySelector(`tr.hyp-row[data-id="${openId}"]`);
-            if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            if (row) {
+              row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              row.classList.add('hyp-row--highlight');
+              setTimeout(() => row.classList.remove('hyp-row--highlight'), 2400);
+            }
           });
         } else {
           openId = null;
