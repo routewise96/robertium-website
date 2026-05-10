@@ -19,6 +19,27 @@ import Layout from '../layouts/Layout.astro';
       <div class="updates-list">
 
         <article class="update-post">
+          <div class="update-date">2026-05-10</div>
+          <h2>Corpus doubled: 99,132 papers, 7,957 cross-domain hypotheses</h2>
+          <p>Re-ingest expansion across all six domains is complete. <code style="font-family:var(--font-mono); font-size:14px;">size_target</code> was raised to 15,000–18,000 per domain and the <code style="font-family:var(--font-mono); font-size:14px;">is_oa: "true"</code> OpenAlex filter was removed (closed-access papers still ship metadata + abstracts, which is all the pipeline needs). The corpus roughly doubled and the cross-domain orchestrator was re-run on the rebuilt knowledge graph.</p>
+          <p>Before → after, in raw counts:</p>
+          <ul>
+            <li>Papers ingested: 47,370 → <strong>99,132</strong></li>
+            <li>L1-passed (PubTator biomedical filter): 27,177 → <strong>47,255</strong></li>
+            <li>Structured claims: 82,708 → <strong>140,178</strong></li>
+            <li>Cross-domain hypotheses (raw): 4,593 → <strong>7,957</strong></li>
+            <li>Outreach-quality hypotheses: 328 → <strong>672</strong> (62 high-confidence + 610 mid-confidence)</li>
+          </ul>
+          <p>For researchers: more papers per domain produces stronger cross-domain bridges. New high-confidence candidates surfaced in the top: <em>erlotinib → EGFR → glioblastoma</em> (now #1 at score 0.457), <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective signal via the ALS–Alzheimer's mediator chain), and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature). The full ranked catalog is on <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>.</p>
+          <p>Pipeline footprint: 17.6 hours wall time (Phase 4 DeepSeek extraction was the bottleneck, ~15.7 hours), DeepSeek API cost ~$22 across all six domains. The cross-domain orchestrator (graph rebuild + 30 directional pairs + refilter + export) ran cleanly in ~46 minutes — the deadlock fix from the previous post held up at the doubled corpus size, no idle-in-transaction issues, no quality-gate failures.</p>
+          <div class="update-tags">
+            <span class="update-tag">pipeline</span>
+            <span class="update-tag">corpus-expansion</span>
+            <span class="update-tag">cross-domain</span>
+          </div>
+        </article>
+
+        <article class="update-post">
           <div class="update-date">2026-05-09</div>
           <h2>All six domains live: 4,593 cross-domain hypotheses now searchable</h2>
           <p>Major depressive disorder is now ingested and processed — the last of the six target domains. With depression in place, the cross-domain orchestrator ran the full 30 directional pairs (each domain as drug source × each other domain as outcome) and produced <strong>4,593 cross-domain hypotheses</strong> with complete evidence chains, all browsable on the <a href="/hypotheses" style="color:#1e40af;">hypotheses page</a>.</p>

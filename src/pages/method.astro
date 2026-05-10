@@ -88,7 +88,7 @@ import Layout from '../layouts/Layout.astro';
   `}<span class="json-key">"confidence"</span>: <span class="json-num">0.85</span>{`
 }`}</pre>
       </div>
-      <p>Across the 47,370 papers in the current corpus, we extract an average of 3.0 claims per abstract that passes the L1 biomedical-relevance filter. Total: 82,708 structured claims across six therapeutic domains. All claims are linked to source PMIDs for verification.</p>
+      <p>Across the 99,132 papers in the current corpus, we extract an average of 3.0 claims per abstract that passes the L1 biomedical-relevance filter. Total: 140,178 structured claims across six therapeutic domains. All claims are linked to source PMIDs for verification.</p>
     </div>
   </section>
 
@@ -101,11 +101,11 @@ import Layout from '../layouts/Layout.astro';
       <p>Claims are imported into a Kuzu graph database. Each unique entity becomes a node; each claim becomes an edge with the predicate as label. Entities mentioned in multiple domains are merged at the lexical level (with planned upgrades to UMLS-based normalization).</p>
       <div class="method-stat-pair">
         <div class="stat-card">
-          <div class="stat-num">~53,000</div>
-          <div class="stat-label">unique entity<br>mentions</div>
+          <div class="stat-num">81,328</div>
+          <div class="stat-label">unique<br>entities</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">82,708</div>
+          <div class="stat-num">140,178</div>
           <div class="stat-label">claim<br>edges</div>
         </div>
       </div>
@@ -147,7 +147,7 @@ import Layout from '../layouts/Layout.astro';
         <span>osimertinib (glioblastoma lit.) </span><span class="chain-pred">--[inhibits]--&gt;</span><span> EGFR (protein)<br></span><span class="chain-pred">                              --[associated_with]--&gt;</span><span> pancreatic ductal adenocarcinoma</span>
       </div>
       <p>Osimertinib is a third-generation FDA-approved EGFR inhibitor used in non-small-cell lung cancer and frequently studied as a glioblastoma candidate. EGFR is an established oncogenic driver in pancreatic ductal adenocarcinoma. The two literatures rarely overlap; Robertium surfaces the connection automatically through the shared mediator. Direct co-mentions of osimertinib and PDAC: zero. Indirect chain: 3 + 2 supporting papers, outreach-grade score 0.373.</p>
-      <p>The cross-domain orchestrator analyzes all 30 directional pairs across the six therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder). Raw output: 4,593 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), 328 hypotheses pass outreach-quality criteria, of which 19 are scored as high-confidence and 309 as mid-confidence.</p>
+      <p>The cross-domain orchestrator analyzes all 30 directional pairs across the six therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder). Raw output: 7,957 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), 672 hypotheses pass outreach-quality criteria, of which 62 are scored as high-confidence and 610 as mid-confidence. Other examples in the high-confidence tier include <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective candidate surfaced through the ALS–Alzheimer's mediator chain) and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature via matrix metalloproteinase signaling).</p>
     </div>
   </section>
 

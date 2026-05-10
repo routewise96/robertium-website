@@ -74,7 +74,7 @@ import Layout from '../layouts/Layout.astro';
         <div class="faq-item">
           <p class="faq-q">Why these specific therapeutic domains?</p>
           <p>The current six domains were chosen for diversity and tractability: three neurological (epilepsy, ALS, Alzheimer's), one psychiatric (major depressive disorder), two oncological (glioblastoma, pancreatic cancer). They share enough molecular biology to produce meaningful cross-domain bridges (EGFR signaling, BDNF, autophagy, mitochondrial dysfunction) while being distinct enough that cross-pollination of literature is non-trivial.</p>
-          <p>Practical considerations: each domain has 5,000–15,000 open-access papers — enough signal without overwhelming the corpus. Adding a new domain takes about 30 minutes of pipeline runtime per 5,000 papers, so the corpus can be expanded based on user demand. If you have a strong argument for a specific domain, please reach out.</p>
+          <p>Practical considerations: each domain in the current corpus has 14,000–18,000 papers — enough signal without overwhelming the L1 filter and downstream extraction. Adding or re-ingesting a domain takes a few hours of pipeline runtime per 18,000 papers (DeepSeek extraction is the bottleneck), so the corpus can be expanded based on user demand. If you have a strong argument for a specific domain, please reach out.</p>
         </div>
 
         <div class="faq-item">
