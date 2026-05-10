@@ -18,6 +18,40 @@ import Layout from '../layouts/Layout.astro';
     <div class="container--narrow">
       <div class="updates-list">
 
+        <article class="update-post" id="self-assessment">
+          <div class="update-date">2026-05-10</div>
+          <h2>Classifier v2: tighter drug-type filtering after manual review of the top 20 candidates</h2>
+          <p>The next step before reaching out to domain researchers was manual review of the top-20 high-confidence cross-domain hypotheses. The goal was to confirm that the catalog's strongest candidates are actionable for a researcher and to surface any classifier gaps before external feedback. The review produced a concrete improvement to the quality classifier.</p>
+          <p>Three patterns from the manual review:</p>
+          <ul class="simple-list">
+            <li><strong>Pipeline reproduces real repurposing directions.</strong> erlotinib → EGFR → glioblastoma matches Phase II trials NCT00720356, NCT00124657, NCT00045110. metformin → α-synuclein → Parkinson's matches active trials NCT07055958, NCT03685357, NCT05781711. When the pipeline assigns "reproduces_known" status, the underlying NCT IDs check out.</li>
+            <li><strong>Genuine novel cross-domain signal exists in the catalog.</strong> The clearest example is carbamazepine → KRAS → pancreatic ductal adenocarcinoma. No direct PubMed studies of carbamazepine in pancreatic cancer exist, but the carbamazepine ↔ KRAS pathway link is documented in colorectal cancer (Berliner et al., PMC10944448, on SMARCA4/BRG1 modulation by KRAS status). KRAS drives over 90% of PDAC. The cross-domain inference (epilepsy literature → KRAS regulation → pancreatic application) is exactly the signal Swanson ABC reasoning is designed to surface.</li>
+            <li><strong>Several compound categories were passing the outreach-quality filter despite not being actionable repurposing candidates.</strong> The v1 classifier filtered for chemical-name patterns but did not separate therapeutic drugs from imaging tracers, biological samples, surgical procedures, internal pharma codes, or peptide constructs.</li>
+          </ul>
+          <p>Compound categories the v1 classifier did not separate:</p>
+          <ul class="simple-list">
+            <li><strong>PET imaging tracers</strong> (PBB3, 18F-PI-2620, APN-1607). Diagnostic compounds that bind disease markers, not therapeutics.</li>
+            <li><strong>Biological samples</strong> (ALS-CSF). Research material, not a drug.</li>
+            <li><strong>Surgical or device interventions</strong> (deep brain stimulation, focused ultrasound, transcranial magnetic stimulation). Procedures, not pharmaceuticals.</li>
+            <li><strong>Internal pharma research codes without an approved common name</strong> (WSD-0922, ABBV-221, NI113). The compound exists, but a researcher cannot obtain it.</li>
+            <li><strong>Vague natural-product mixtures</strong> ("evodiae fructus active components", "ALA/AUR combination"). Not a specific molecule.</li>
+            <li><strong>Peptide constructs identified by Greek letters or LIR-style notation</strong> (1D9-LIRΔTP53INP2). Research-stage constructs.</li>
+          </ul>
+          <p>None of these are extraction errors — the LLM correctly identified the drug mention in the source paper. They are gaps in downstream classification.</p>
+          <p>Six new exclusion categories added to the quality classifier: <code style="font-family:var(--font-mono); font-size:14px;">imaging_compound</code>, <code style="font-family:var(--font-mono); font-size:14px;">biological_sample</code>, <code style="font-family:var(--font-mono); font-size:14px;">procedure_not_drug</code>, <code style="font-family:var(--font-mono); font-size:14px;">research_code</code>, <code style="font-family:var(--font-mono); font-size:14px;">vague_compound</code>, <code style="font-family:var(--font-mono); font-size:14px;">peptide_construct</code>. A whitelist of approved drugs that look like research codes (osimertinib = AZD9291, abemaciclib = LY2835219, tacrolimus = FK506, plerixafor = AMD3100, and others) prevents over-exclusion of FDA-approved compounds that retain their development codes in the literature.</p>
+          <p>Totals after re-classification: high-confidence 62 → 59, mid-confidence 610 → 574, outreach-quality total 672 → 633, novel-signal with no existing trial 354 → 334 (homepage updated).</p>
+          <p>Five candidates worth domain-expert attention. All have novel-signal status, no existing clinical trial, and survived the v2 classifier:</p>
+          <ul class="simple-list">
+            <li><strong>carbamazepine → KRAS → pancreatic ductal adenocarcinoma.</strong> Cross-domain bridge from epilepsy to oncology through a validated PDAC driver.</li>
+            <li><strong>valproic acid → HDAC2 → cholinergic dysfunction in Alzheimer's.</strong> HDAC inhibition is established mechanistically; the link to nucleus basalis cholinergic neurons in AD is not a documented repurposing direction.</li>
+            <li><strong>osimertinib → EGFR → Alzheimer's disease.</strong> EGFR signaling in neurodegeneration is an emerging research area. Third-generation EGFR-TKIs have not been investigated for AD.</li>
+            <li><strong>ketamine / esketamine → NMDA receptor → ALS excitotoxicity.</strong> NMDA-mediated excitotoxicity in ALS is well-studied; ketamine class drugs as a repurposing direction are not.</li>
+            <li><strong>valproic acid → PKM2 → poor overall survival in pancreatic cancer.</strong> VPA's metabolic effects via PKM2 are described; the specific PDAC survival association is not.</li>
+          </ul>
+          <p>If you work in any of these areas, feedback (including disagreement) is the most useful thing you can send. Open an issue at <a href="https://github.com/routewise96/robertium">github.com/routewise96/robertium</a> or email <a href="mailto:daniel@robertium.com">daniel@robertium.com</a>. The dataset is archived on Zenodo (<a href="https://doi.org/10.5281/zenodo.20110977">10.5281/zenodo.20110977</a>) so specific candidates can be cited directly.</p>
+          <p>The remaining 15 hypotheses from the original top-20 will be reviewed under the same protocol, with full results published as a follow-up. Beyond that, the obvious next improvement is integrating curated drug-class metadata (DrugBank, ChEMBL, RxNorm) so the rule-based blacklist becomes a derived classifier driven by ontology.</p>
+        </article>
+
         <article class="update-post">
           <div class="update-date">2026-05-10</div>
           <h2>Validation enrichment: clinical-trial and literature status for every outreach-quality hypothesis</h2>
@@ -88,7 +122,7 @@ import Layout from '../layouts/Layout.astro';
         <article class="update-post">
           <div class="update-date">2026-05-08</div>
           <h2>Cross-domain validation: epilepsy ↔ glioblastoma</h2>
-          <p>The first cross-domain analysis between two diseases — epilepsy and glioblastoma — yielded 383 hypotheses with full evidence chains. Top candidates include zonisamide → Cx43 → glioma progression, cannabidiol → P-glycoprotein → temozolomide resistance, and several others involving P2X7R, MMP-9, and ferroptosis pathways.</p>
+          <p>The first cross-domain analysis between two diseases — epilepsy and glioblastoma — yielded 383 hypotheses with full evidence chains. Top candidates included pairs through MMP-9, P2X7R, EGFR, and ferroptosis-related mediators — including several that were later confirmed in the post-expansion catalog.</p>
           <p>Notable: vortioxetine, an antidepressant published in <em>Nature Medicine</em> 2024 (Lee et al.) as showing anti-glioblastoma activity, automatically surfaces in our cross-domain catalog when depression is added — providing independent validation of the methodology.</p>
           <div class="update-tags">
             <span class="update-tag">results</span>
@@ -127,7 +161,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Reproducibility is fundamental to science. Closed systems break that.</li>
             <li>Researchers should inspect, modify, and improve the methods that surface hypotheses they spend years validating.</li>
           </ul>
-          <p>The Pro and Enterprise tiers fund the infrastructure, but the data, code, and methodology stay open.</p>
+          <p>Sustainability comes from collaboration with researchers, not lock-in.</p>
           <div class="update-tags">
             <span class="update-tag">philosophy</span>
             <span class="update-tag">open-source</span>

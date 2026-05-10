@@ -78,7 +78,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Validation enrichment</div>
               <div class="pipe-step-source">ClinicalTrials.gov v2 · PubMed E-utilities</div>
-              <div class="pipe-step-stat"><strong>354</strong> novel candidates · <strong>50</strong> reproduce active trials</div>
+              <div class="pipe-step-stat"><strong>334</strong> novel candidates · <strong>48</strong> reproduce active trials</div>
             </div>
           </li>
         </ol>
@@ -229,6 +229,7 @@ import Layout from '../layouts/Layout.astro';
         <li><strong>Entity resolution.</strong> Lexical merging means "EGFR" and "Epidermal Growth Factor Receptor" are still separate nodes in the current graph. UMLS-based normalization is planned.</li>
         <li><strong>Extraction noise.</strong> The LLM occasionally extracts secondary mentions as primary claims (for example, a control arm drug rather than the focus drug). Precision has not been systematically evaluated; manual spot-checks of top-scored hypotheses suggest the majority capture meaningful drug–target relationships, but rigorous precision/recall measurement is planned alongside the first preprint.</li>
         <li><strong>Mediator and drug-vocabulary filters.</strong> Hypothesis ranking now incorporates a mediator-specificity filter that excludes generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway mediators (inflammation, cell death, autophagy), plus a drug vocabulary filter that removes botanical extracts and undefined nano-formulations. See <code style="font-family:var(--font-mono); font-size:14px;">classify_outreach_quality.py</code> in the public repo for the full logic.</li>
+        <li><strong>Self-validation extensions (May 2026).</strong> Manual review of the top-20 high-confidence hypotheses surfaced several drug-name categories that were not actionable as repurposing candidates and have since been added to the excluded set: PET imaging tracers (e.g., PBB3, 18F-PI-2620), biological samples (e.g., ALS-CSF), surgical or device interventions (e.g., deep brain stimulation, focused ultrasound), internal pharma research codes without an approved common name (e.g., WSD-0922, ABBV-221), vague natural-product mixtures (e.g., "active components", slash-joined combinations), and peptide constructs identified by Greek letters or LIR/TP53INP-style identifiers. Drugs in these categories are valid mentions in the literature but are not things a researcher can repurpose, so excluding them improves the quality of the remaining catalog.</li>
         <li><strong>Direct A→C filter is heuristic.</strong> A hypothesis with one direct co-mention may still be novel if the co-mention is incidental. We surface but don't auto-exclude these.</li>
       </ul>
       <p>We document these limitations openly. Methodology improvements happen in public — see GitHub for current issues.</p>
