@@ -69,7 +69,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Swanson ABC discovery</div>
               <div class="pipe-step-source">30 directional pairs · mediator + drug-vocabulary filters</div>
-              <div class="pipe-step-stat"><strong>7,957</strong> candidates · <strong>633</strong> outreach-quality (59 high + 574 mid)</div>
+              <div class="pipe-step-stat"><strong>7,957</strong> candidates · <strong>613</strong> outreach-quality (56 high + 557 mid, after dedup)</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -78,7 +78,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Validation enrichment</div>
               <div class="pipe-step-source">ClinicalTrials.gov v2 · PubMed E-utilities</div>
-              <div class="pipe-step-stat"><strong>334</strong> novel candidates · <strong>48</strong> reproduce active trials</div>
+              <div class="pipe-step-stat"><strong>328</strong> novel candidates · <strong>45</strong> reproduce active trials</div>
             </div>
           </li>
         </ol>
@@ -180,7 +180,7 @@ import Layout from '../layouts/Layout.astro';
         <span>osimertinib (glioblastoma lit.) </span><span class="chain-pred">--[inhibits]--&gt;</span><span> EGFR (protein)<br></span><span class="chain-pred">                              --[associated_with]--&gt;</span><span> pancreatic ductal adenocarcinoma</span>
       </div>
       <p>Osimertinib is a third-generation FDA-approved EGFR inhibitor used in non-small-cell lung cancer and frequently studied as a glioblastoma candidate. EGFR is an established oncogenic driver in pancreatic ductal adenocarcinoma. The two literatures rarely overlap; Robertium surfaces the connection automatically through the shared mediator. Direct co-mentions of osimertinib and PDAC: zero. Indirect chain: 3 + 2 supporting papers, outreach-grade score 0.373.</p>
-      <p>The cross-domain orchestrator analyzes all 30 directional pairs across the six therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder). Raw output: 7,957 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), 672 hypotheses pass outreach-quality criteria, of which 62 are scored as high-confidence and 610 as mid-confidence. Other examples in the high-confidence tier include <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective candidate surfaced through the ALS–Alzheimer's mediator chain) and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature via matrix metalloproteinase signaling).</p>
+      <p>The cross-domain orchestrator analyzes all 30 directional pairs across the six therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder). Raw output: 7,957 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), and after collapsing 20 phrasing duplicates into their canonical entries, 613 hypotheses pass outreach-quality criteria, of which 56 are scored as high-confidence and 557 as mid-confidence. Other examples in the high-confidence tier include <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective candidate surfaced through the ALS–Alzheimer's mediator chain) and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature via matrix metalloproteinase signaling).</p>
     </div>
   </section>
 
