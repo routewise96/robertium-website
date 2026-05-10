@@ -20,7 +20,7 @@ import Layout from '../layouts/Layout.astro';
 
         <div class="faq-item">
           <p class="faq-q">Is this just another GPT wrapper?</p>
-          <p>No. Robertium uses LLMs (DeepSeek V4 Flash) for one specific task: extracting structured claims from abstracts according to a controlled vocabulary. The LLM doesn't generate hypotheses — it only converts unstructured text into a graph format.</p>
+          <p>No. Robertium uses LLMs for one specific task: extracting structured claims from abstracts according to a controlled vocabulary. The LLM doesn't generate hypotheses — it only converts unstructured text into a graph format.</p>
           <p>The hypothesis generation uses Don R. Swanson's literature-based discovery model from the 1980s, applied to a knowledge graph. This is a deterministic graph algorithm, not LLM inference.</p>
         </div>
 
@@ -74,7 +74,7 @@ import Layout from '../layouts/Layout.astro';
         <div class="faq-item">
           <p class="faq-q">Why these specific therapeutic domains?</p>
           <p>The current six domains were chosen for diversity and tractability: three neurological (epilepsy, ALS, Alzheimer's), one psychiatric (major depressive disorder), two oncological (glioblastoma, pancreatic cancer). They share enough molecular biology to produce meaningful cross-domain bridges (EGFR signaling, BDNF, autophagy, mitochondrial dysfunction) while being distinct enough that cross-pollination of literature is non-trivial.</p>
-          <p>Practical considerations: each domain in the current corpus has 14,000–18,000 papers — enough signal without overwhelming the L1 filter and downstream extraction. Adding or re-ingesting a domain takes a few hours of pipeline runtime per 18,000 papers (DeepSeek extraction is the bottleneck), so the corpus can be expanded based on user demand. If you have a strong argument for a specific domain, please reach out.</p>
+          <p>Practical considerations: each domain in the current corpus has 14,000–18,000 papers — enough signal without overwhelming the L1 filter and downstream extraction. Adding or re-ingesting a domain takes pipeline runtime proportional to corpus size, so the catalog can be expanded based on user demand. If you have a strong argument for a specific domain, please reach out.</p>
         </div>
 
         <div class="faq-item">
@@ -85,7 +85,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Create a new YAML config under <code style="font-family:var(--font-mono); font-size:14px;">config/domains/</code></li>
             <li>Run <code style="font-family:var(--font-mono); font-size:14px;">scripts/run_full_pipeline.py --domains your_domain</code></li>
           </ul>
-          <p>The README has detailed setup instructions. Total cost on cloud LLM APIs: ~$5–10 per domain (DeepSeek V4 Flash is the cheapest option that gives good extraction quality).</p>
+          <p>The README has detailed setup instructions. The pipeline is model-agnostic: any modern instruction-tuned LLM with structured-output support works for the extraction step.</p>
         </div>
 
         <div class="faq-item">

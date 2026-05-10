@@ -149,9 +149,9 @@ import Layout from '../layouts/Layout.astro';
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
-        <h2>Structured claims via DeepSeek</h2>
+        <h2>Structured claim extraction</h2>
       </div>
-      <p>Each filtered abstract is processed by DeepSeek V4 Flash language model with a structured YAML prompt. The model returns claims as triples: (subject, predicate, object) with entity types, polarity, and confidence.</p>
+      <p>Each filtered abstract is processed by an instruction-tuned LLM with a structured prompt. The model returns claims as triples: (subject, predicate, object) with entity types, polarity, and confidence.</p>
       <table class="data-table">
         <thead>
           <tr>

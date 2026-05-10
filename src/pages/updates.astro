@@ -21,7 +21,7 @@ import Layout from '../layouts/Layout.astro';
         <article class="update-post" id="self-assessment">
           <div class="update-date">2026-05-10</div>
           <h2>Classifier v2: tighter drug-type filtering after manual review of the top 20 candidates</h2>
-          <p>The next step before reaching out to domain researchers was manual review of the top-20 high-confidence cross-domain hypotheses. The goal was to confirm that the catalog's strongest candidates are actionable for a researcher and to surface any classifier gaps before external feedback. The review produced a concrete improvement to the quality classifier.</p>
+          <p>The catalog's top-20 high-confidence cross-domain hypotheses underwent manual review against PubMed and ClinicalTrials.gov to confirm that the strongest candidates are actionable for researchers. The review produced a concrete improvement to the quality classifier.</p>
           <p>Three patterns from the manual review:</p>
           <ul class="simple-list">
             <li><strong>Pipeline reproduces real repurposing directions.</strong> erlotinib → EGFR → glioblastoma matches Phase II trials NCT00720356, NCT00124657, NCT00045110. metformin → α-synuclein → Parkinson's matches active trials NCT07055958, NCT03685357, NCT05781711. When the pipeline assigns "reproduces_known" status, the underlying NCT IDs check out.</li>
@@ -50,6 +50,13 @@ import Layout from '../layouts/Layout.astro';
           </ul>
           <p>If you work in any of these areas, feedback (including disagreement) is the most useful thing you can send. Open an issue at <a href="https://github.com/routewise96/robertium">github.com/routewise96/robertium</a> or email <a href="mailto:daniel@robertium.com">daniel@robertium.com</a>. The dataset is archived on Zenodo (<a href="https://doi.org/10.5281/zenodo.20110977">10.5281/zenodo.20110977</a>) so specific candidates can be cited directly.</p>
           <p>The remaining 15 hypotheses from the original top-20 will be reviewed under the same protocol, with full results published as a follow-up. Beyond that, the obvious next improvement is integrating curated drug-class metadata (DrugBank, ChEMBL, RxNorm) so the rule-based blacklist becomes a derived classifier driven by ontology.</p>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-10</div>
+          <h2>The catalog is mostly EGFR</h2>
+          <p>Stepping back from the top-20 review: about half of the high-confidence list is variations on erlotinib or osimertinib hitting EGFR in some context. This is not a bug — EGFR is overexpressed in glioblastoma, the canonical driver of NSCLC, present in pancreatic adenocarcinoma, and increasingly implicated in Alzheimer's. The mediator is real and the cross-domain bridges through it are real.</p>
+          <p>But it does mean the catalog's diversity story depends on the long tail. Carbamazepine through KRAS, valproic acid through PKM2, ketamine through NMDA — these are the candidates that justify the cross-domain framing. The EGFR cluster is the sanity check.</p>
         </article>
 
         <article class="update-post">
@@ -84,7 +91,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Outreach-quality hypotheses: 328 → <strong>672</strong> (62 high-confidence + 610 mid-confidence)</li>
           </ul>
           <p>For researchers: more papers per domain produces stronger cross-domain bridges. New high-confidence candidates surfaced in the top: <em>erlotinib → EGFR → glioblastoma</em> (now #1 at score 0.457), <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective signal via the ALS–Alzheimer's mediator chain), and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature). The full ranked catalog is on <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>.</p>
-          <p>Pipeline footprint: 17.6 hours wall time (Phase 4 DeepSeek extraction was the bottleneck, ~15.7 hours), DeepSeek API cost ~$22 across all six domains. The cross-domain orchestrator (graph rebuild + 30 directional pairs + refilter + export) ran cleanly in ~46 minutes — the deadlock fix from the previous post held up at the doubled corpus size, no idle-in-transaction issues, no quality-gate failures.</p>
+          <p>Pipeline ran end-to-end across all six domains. Cross-domain orchestrator completed in under an hour with no quality-gate failures.</p>
           <div class="update-tags">
             <span class="update-tag">pipeline</span>
             <span class="update-tag">corpus-expansion</span>
@@ -117,6 +124,13 @@ import Layout from '../layouts/Layout.astro';
             <span class="update-tag">multi-domain</span>
             <span class="update-tag">methodology</span>
           </div>
+        </article>
+
+        <article class="update-post">
+          <div class="update-date">2026-05-08</div>
+          <h2>Didn't expect ketamine in the ALS list</h2>
+          <p>Running the depression × ALS pair surfaced ketamine and esketamine through NMDA receptor signaling in ALS excitotoxicity. NMDA-mediated excitotoxicity in ALS is well-established but I had not seen ketamine class drugs framed as a repurposing direction in the ALS literature. Riluzole, yes — that's the existing standard of care via glutamatergic modulation. But ketamine specifically, no.</p>
+          <p>Worth a closer look. Either the connection is genuinely under-explored, or there's a reason ALS researchers haven't pursued it that I'm not aware of yet. The pipeline is finding things; whether each finding is real is a separate question that requires domain knowledge I don't have.</p>
         </article>
 
         <article class="update-post">

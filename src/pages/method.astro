@@ -50,7 +50,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-num">3</div>
             <div class="pipe-step-body">
               <div class="pipe-step-title">Structured claim extraction</div>
-              <div class="pipe-step-source">DeepSeek V4 Flash · 21 predicates · 9 entity types</div>
+              <div class="pipe-step-source">instruction-tuned LLM · 21 predicates · 9 entity types</div>
               <div class="pipe-step-stat"><strong>140,178</strong> claims (subject–predicate–object + PMID)</div>
             </div>
           </li>
@@ -96,7 +96,7 @@ import Layout from '../layouts/Layout.astro';
       <ul class="simple-list">
         <li><strong>OpenAlex</strong> — Primary corpus source. Fetches metadata, abstracts, and DOIs for papers tagged with relevant biomedical concepts. We use OpenAlex concept IDs (e.g., C2780596555 for ALS) to retrieve focused, domain-specific corpora of 5,000–10,000 papers per disease.</li>
         <li><strong>PubTator (NCBI)</strong> — Biomedical entity tagger. Filters out papers without recognized biomedical entities (genes, chemicals, diseases). Typical pass rate: 50–80% per domain.</li>
-        <li><strong>Custom claim extractor</strong> — Built on DeepSeek V4 Flash with a structured YAML prompt. Extracts triples (subject, predicate, object) with entity types, polarity, and confidence scores.</li>
+        <li><strong>Custom claim extractor</strong> — Built on a modern instruction-tuned LLM with a structured YAML prompt. Extracts triples (subject, predicate, object) with entity types, polarity, and confidence scores.</li>
       </ul>
     </div>
   </section>
