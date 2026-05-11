@@ -76,19 +76,93 @@ def fetch_hypothesis(hyp_id: int) -> dict:
     return rows[0]
 
 
-def fetch_works(work_ids: list[int], limit: int = 5) -> list[dict]:
-    if not work_ids:
+def _sql_quote(s: str) -> str:
+    """Escape single quotes for safe interpolation in psql -c literals."""
+    return s.replace("'", "''")
+
+
+def _norm_aliases(*names: str | None) -> list[str]:
+    """Return the unique non-empty lowercased forms of the given names.
+    Used as the alias set for matching entity names against
+    claims.subject_normalized / claims.object_normalized."""
+    seen: list[str] = []
+    for n in names:
+        if not n:
+            continue
+        v = n.strip().lower()
+        if v and v not in seen:
+            seen.append(v)
+    return seen
+
+
+def fetch_leg_evidence(
+    work_ids: list[int],
+    anchor_aliases: list[str],
+    other_aliases: list[str],
+    limit: int = 50,
+) -> list[dict]:
+    """Fetch enriched evidence rows for one leg (AB or BC).
+
+    `anchor_aliases` is the shared endpoint (= mediator for both legs);
+    `other_aliases` is the leg's outer endpoint (= drug for AB, outcome for BC).
+    Each accepts multiple normalized forms (e.g. ALS canonical vs abbreviation)
+    because claims.subject_normalized / object_normalized vary in granularity.
+
+    For each work, picks the most-relevant claim via two tiers:
+      tier 1 — claim relates anchor AND other (in either direction);
+      tier 2 — claim mentions anchor on at least one side.
+    Works with no anchor mention are dropped (rare; the pipeline curates
+    work_ids by anchor presence).
+    Returns rows ordered newest year first.
+    """
+    if not work_ids or not anchor_aliases:
         return []
     ids_csv = ",".join(str(w) for w in work_ids[:limit])
+    anchor_list = ",".join(f"'{_sql_quote(a)}'" for a in anchor_aliases)
+    other_list = ",".join(f"'{_sql_quote(o)}'" for o in other_aliases) or "''"
     rows = psql_json(
         f"""
-        SELECT pmid, title, doi, publication_year AS year
-        FROM works
-        WHERE id IN ({ids_csv})
-        ORDER BY publication_year DESC NULLS LAST, id DESC
+        WITH cand AS (
+            SELECT
+                w.id AS work_id, w.pmid, w.title, w.doi,
+                w.publication_year AS year,
+                c.subject, c.predicate, c.object,
+                c.context AS claim_text, c.confidence,
+                er.started_at AS extracted_at,
+                CASE
+                    WHEN ((c.subject_normalized IN ({anchor_list})
+                            AND c.object_normalized IN ({other_list}))
+                       OR (c.subject_normalized IN ({other_list})
+                            AND c.object_normalized IN ({anchor_list})))
+                    THEN 1
+                    WHEN c.subject_normalized IN ({anchor_list})
+                      OR c.object_normalized IN ({anchor_list})
+                    THEN 2
+                    ELSE 3
+                END AS match_tier
+            FROM works w
+            JOIN claims c ON c.work_id = w.id
+            LEFT JOIN extraction_runs er ON er.id = c.extraction_run_id
+            WHERE w.id IN ({ids_csv})
+        )
+        SELECT DISTINCT ON (work_id)
+            pmid, title, doi, year,
+            subject, predicate, object, claim_text, confidence, extracted_at,
+            match_tier
+        FROM cand
+        WHERE match_tier <= 2
+        ORDER BY work_id, match_tier ASC, confidence DESC
         """
     )
-    return rows or []
+    out = []
+    for r in rows or []:
+        r.pop("match_tier", None)
+        out.append(r)
+    return sorted(
+        out,
+        key=lambda r: (r.get("year") if r.get("year") is not None else -1),
+        reverse=True,
+    )
 
 
 def load_catalog() -> list[dict]:
@@ -124,8 +198,21 @@ def find_related(
 
 def build_case(slug: str, hyp_id: int, section: str, catalog: list[dict]) -> dict:
     h = fetch_hypothesis(hyp_id)
-    ab_evidence = fetch_works(h.get("a_to_b_work_ids") or [], limit=5)
-    bc_evidence = fetch_works(h.get("b_to_c_work_ids") or [], limit=5)
+    drug_aliases = _norm_aliases(h.get("drug_canonical"), h.get("drug"))
+    mediator_aliases = _norm_aliases(h.get("mediator_canonical"), h.get("mediator"))
+    outcome_aliases = _norm_aliases(h.get("outcome_canonical"), h.get("outcome"))
+    ab_evidence = fetch_leg_evidence(
+        h.get("a_to_b_work_ids") or [],
+        anchor_aliases=mediator_aliases,
+        other_aliases=drug_aliases,
+        limit=50,
+    )
+    bc_evidence = fetch_leg_evidence(
+        h.get("b_to_c_work_ids") or [],
+        anchor_aliases=mediator_aliases,
+        other_aliases=outcome_aliases,
+        limit=50,
+    )
     related = find_related(
         catalog,
         h.get("drug_canonical") or h["drug"],

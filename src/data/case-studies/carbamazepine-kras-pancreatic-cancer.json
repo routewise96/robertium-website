@@ -45,7 +45,13 @@
         "pmid": "38446332",
         "title": "Impact of carbamazepine on SMARCA4 (BRG1) expression in colorectal cancer: modulation by KRAS mutation status",
         "doi": "10.1007/s10637-024-01418-2",
-        "year": 2024
+        "year": 2024,
+        "subject": "carbamazepine",
+        "predicate": "binds_to",
+        "object": "KRAS",
+        "claim_text": "in silico docking simulation",
+        "confidence": 0.7,
+        "extracted_at": "2026-05-09T21:45:25.810922+00:00"
       }
     ],
     "bc_claims": [
@@ -53,31 +59,109 @@
         "pmid": "39999309",
         "title": "Somatic Genomic Profiling of Pancreatic Ductal Adenocarcinomas From a Diverse Cohort of Patients",
         "doi": "10.1097/mpa.0000000000002408",
-        "year": 2025
+        "year": 2025,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "pancreatic ductal adenocarcinoma",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-09T03:43:44.581257+00:00"
       },
       {
-        "pmid": "34665935",
-        "title": "Evaluation and diagnostic value of next‐generation sequencing analysis of residual liquid‐based cytology specimens of pancreatic masses",
-        "doi": "10.1002/cncy.22525",
-        "year": 2021
+        "pmid": "39279379",
+        "title": "Hope on the Horizon: A Revolution in KRAS Inhibition Is Creating a New Treatment Paradigm for Patients with Pancreatic Cancer",
+        "doi": "10.1158/0008-5472.can-24-1926",
+        "year": 2024,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-10T07:14:24.112565+00:00"
+      },
+      {
+        "pmid": "35511415",
+        "title": "Comprehensive molecular profiling of pancreatic ductal adenocarcinoma in <scp>FNA</scp>, biopsy, and resection specimens",
+        "doi": "10.1002/cncy.22589",
+        "year": 2022,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "in PDAC specimens",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-10T07:14:24.112565+00:00"
       },
       {
         "pmid": "34905283",
         "title": "Adequacy evaluation and use of pancreatic adenocarcinoma specimens for next‐generation sequencing acquired by endoscopic ultrasound–guided FNA and FNB",
         "doi": "10.1002/cncy.22533",
-        "year": 2021
+        "year": 2021,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "pancreatic ductal adenocarcinoma",
+        "confidence": 0.8,
+        "extracted_at": "2026-05-10T07:14:24.112565+00:00"
+      },
+      {
+        "pmid": "34665935",
+        "title": "Evaluation and diagnostic value of next‐generation sequencing analysis of residual liquid‐based cytology specimens of pancreatic masses",
+        "doi": "10.1002/cncy.22525",
+        "year": 2021,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "in residual LBC specimens of pancreatic masses",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-10T07:14:24.112565+00:00"
+      },
+      {
+        "pmid": "30611220",
+        "title": "Mutation analysis by deep sequencing of pancreatic juice from patients with pancreatic ductal adenocarcinoma",
+        "doi": "10.1186/s12885-018-5195-7",
+        "year": 2019,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "in pancreatic juice from patients with PDAC",
+        "confidence": 0.8,
+        "extracted_at": "2026-05-10T07:14:24.112565+00:00"
+      },
+      {
+        "pmid": "28675654",
+        "title": "Bioinformatory‐assisted analysis of next‐generation sequencing data for precision medicine in pancreatic cancer",
+        "doi": "10.1002/1878-0261.12108",
+        "year": 2017,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "in PDAC patients",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-10T07:14:24.112565+00:00"
       },
       {
         "pmid": "27929127",
         "title": "Lipid-modified G4-decoy oligonucleotide anchored to nanoparticles: delivery and bioactivity in pancreatic cancer cells",
         "doi": "10.1038/srep38468",
-        "year": 2016
+        "year": 2016,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "mutated in >90% of cases",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-09T03:43:44.581257+00:00"
       },
       {
         "pmid": "26669280",
         "title": "Clinical utility of circulating tumor DNA for molecular assessment in pancreatic cancer",
         "doi": "10.1038/srep18425",
-        "year": 2015
+        "year": 2015,
+        "subject": "KRAS",
+        "predicate": "associated_with",
+        "object": "pancreatic ductal adenocarcinoma",
+        "claim_text": "in genomic landscape of PDAC",
+        "confidence": 0.8,
+        "extracted_at": "2026-05-09T03:43:44.581257+00:00"
       }
     ]
   },

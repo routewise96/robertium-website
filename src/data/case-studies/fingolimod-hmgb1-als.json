@@ -45,7 +45,13 @@
         "pmid": "39207074",
         "title": "Fingolimod Alleviates Inflammation after Cerebral Ischemia via HMGB1/TLR4/NF-κB Signaling Pathway",
         "doi": "10.31083/j.jin2308142",
-        "year": 2024
+        "year": 2024,
+        "subject": "fingolimod",
+        "predicate": "downregulates",
+        "object": "HMGB1",
+        "claim_text": "in hippocampus of MCAO/R rats",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-10T22:26:44.238958+00:00"
       }
     ],
     "bc_claims": [
@@ -53,13 +59,25 @@
         "pmid": "35216298",
         "title": "The Involvement of RAGE and Its Ligands during Progression of ALS in SOD1 G93A Transgenic Mice",
         "doi": "10.3390/ijms23042184",
-        "year": 2022
+        "year": 2022,
+        "subject": "HMGB1",
+        "predicate": "associated_with",
+        "object": "ALS",
+        "claim_text": "at onset in SOD1 G93A mouse lumbar spinal cord",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-08T21:48:06.510757+00:00"
       },
       {
         "pmid": "26733811",
         "title": "Receptor for Advanced Glycation End Products and its Inflammatory Ligands are Upregulated in Amyotrophic Lateral Sclerosis",
         "doi": "10.3389/fncel.2015.00485",
-        "year": 2015
+        "year": 2015,
+        "subject": "HMGB1",
+        "predicate": "correlates_with",
+        "object": "ALS",
+        "claim_text": "in spinal cords of ALS patients",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-08T21:48:06.510757+00:00"
       }
     ]
   },

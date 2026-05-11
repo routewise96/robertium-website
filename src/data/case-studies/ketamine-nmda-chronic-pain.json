@@ -42,34 +42,100 @@
   "evidence": {
     "ab_claims": [
       {
-        "pmid": "41690063",
-        "title": "Ketamine combined with psychotherapy for treatment-resistant depression: Real-world outcomes and the role of subjective experience",
-        "doi": "10.1016/j.genhosppsych.2026.02.001",
-        "year": 2026
+        "pmid": "41765199",
+        "title": "Ketamine pharmacotherapy for major depressive disorder: A narrative review",
+        "doi": "10.1016/j.pnpbp.2026.111651",
+        "year": 2026,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "mechanism of action",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-09T06:41:09.863644+00:00"
       },
       {
         "pmid": "41656677",
         "title": "Comparative Efficacy and Safety of Ketamine Versus Midazolam for Suicidality: A GRADE‐Assessed Systematic Review and Meta‐Analysis of Randomized Controlled Trials",
         "doi": "10.1002/brb3.71255",
-        "year": 2026
+        "year": 2026,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "general",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-10T11:12:35.089262+00:00"
       },
       {
-        "pmid": "41765199",
-        "title": "Ketamine pharmacotherapy for major depressive disorder: A narrative review",
-        "doi": "10.1016/j.pnpbp.2026.111651",
-        "year": 2026
+        "pmid": "41690063",
+        "title": "Ketamine combined with psychotherapy for treatment-resistant depression: Real-world outcomes and the role of subjective experience",
+        "doi": "10.1016/j.genhosppsych.2026.02.001",
+        "year": 2026,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "general",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-10T11:12:35.089262+00:00"
       },
       {
         "pmid": "35783539",
         "title": "Ketamine use disorder: preclinical, clinical, and neuroimaging evidence to support proposed mechanisms of actions",
         "doi": "10.1016/j.imed.2022.03.001",
-        "year": 2022
+        "year": 2022,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "mechanism of action",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-09T06:41:09.863644+00:00"
+      },
+      {
+        "pmid": "32209965",
+        "title": "Ketamine in Major Depressive Disorder: Mechanisms and Future Perspectives",
+        "doi": "10.30773/pi.2019.0236",
+        "year": 2020,
+        "subject": "Ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "sub-anesthetic doses",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-09T06:41:09.863644+00:00"
+      },
+      {
+        "pmid": "31579184",
+        "title": "Efficacy of ketamine therapy in the treatment of depression",
+        "doi": "10.4103/psychiatry.indianjpsychiatry_484_18",
+        "year": 2019,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "in vitro",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-09T06:41:09.863644+00:00"
       },
       {
         "pmid": "31617335",
         "title": "Effects of ketamine on circadian rhythm and synaptic homeostasis in patients with treatment‐resistant depression: A protocol for mechanistic studies of its rapid and sustained antidepressant actions in humans",
         "doi": "10.1002/brb3.1423",
-        "year": 2019
+        "year": 2019,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "in vitro or in vivo (general)",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-09T06:41:09.863644+00:00"
+      },
+      {
+        "pmid": "29722313",
+        "title": "Ketamine enhances structural plasticity in human dopaminergic neurons: possible relevance for treatment-resistant depression",
+        "doi": "10.4103/1673-5374.230288",
+        "year": 2018,
+        "subject": "ketamine",
+        "predicate": "inhibits",
+        "object": "NMDA receptor",
+        "claim_text": "as non-competitive antagonist",
+        "confidence": 0.9,
+        "extracted_at": "2026-05-09T06:41:09.863644+00:00"
       }
     ],
     "bc_claims": [
@@ -77,20 +143,25 @@
         "pmid": "33467407",
         "title": "Delayed Onset Muscle Soreness (DOMS): The Repeated Bout Effect and Chemotherapy-Induced Axonopathy May Help Explain the Dying-Back Mechanism in Amyotrophic Lateral Sclerosis and Other Neurodegenerative Diseases",
         "doi": "10.3390/brainsci11010108",
-        "year": 2021
+        "year": 2021,
+        "subject": "NMDA receptor",
+        "predicate": "associated_with",
+        "object": "pain",
+        "claim_text": "in DOMS and ALS according to gate control theory",
+        "confidence": 0.6,
+        "extracted_at": "2026-05-08T21:48:06.510757+00:00"
       }
     ]
   },
   "biological_context": {
-    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how ketamine normally works (NMDA antagonism, anesthetic + antidepressant context)",
-    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on NMDA receptor's role in pain signaling (peripheral + central sensitization, chronic vs acute)",
-    "TODO_novelty_argument": "TODO Daniel: this is a benchmark hit not a novel claim — ketamine for chronic/refractory pain is established clinical practice. Explain what the recovery validates.",
-    "TODO_limitations": "TODO Daniel: address the domain-routing artifact (see benchmark_context.TODO_domain_routing_artifact)"
+    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how the drug normally works",
+    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on mediator's known role in the outcome disease",
+    "TODO_novelty_argument": "TODO Daniel: why this drug-disease combination is novel and worth investigating",
+    "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
   },
   "benchmark_context": {
-    "TODO_why_benchmark": "TODO Daniel: ketamine for chronic/refractory pain is established off-label clinical practice — explain how it was selected as a benchmark target and what a successful recovery should look like",
-    "TODO_what_it_validates": "TODO Daniel: what aspect of the v2 pipeline this hit confirms (cross-domain bridging works even when the target domain isn't one of the 8 indexed)",
-    "TODO_domain_routing_artifact": "TODO Daniel: this hit appears as depression→als in our domain tags. That is a routing artifact, not a biological claim. Reasons: (1) ketamine's strongest A→B literature in our corpus comes from depression studies (treatment-resistant depression is the most-published ketamine use case in recent years), (2) NMDA receptor → pain signaling is co-indexed with ALS literature because excitotoxicity is the dominant B→C extraction signal for NMDA in our current 8-domain corpus, (3) pain itself is not one of the 8 Robertium domains, so the outcome got tagged with its nearest neighbor in extraction (ALS). The biology (ketamine modulates NMDA which is implicated in pain) is real; the domain labels just reflect what is and isn't in our current corpus."
+    "TODO_why_benchmark": "TODO Daniel: explain why this is a benchmark validation hit, not a novel surfacing",
+    "TODO_what_it_validates": "TODO Daniel: what aspect of the pipeline this hit confirms"
   },
   "related_hypotheses": [
     {
