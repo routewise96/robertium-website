@@ -1,0 +1,173 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dataPath = path.join(process.cwd(), 'public', 'data', 'hypotheses.json');
+const raw = fs.readFileSync(dataPath, 'utf-8');
+const data = JSON.parse(raw) as {
+  hypotheses: Array<{
+    drug_domain: string | null;
+    outcome_domain: string | null;
+  }>;
+};
+
+const ONCOLOGY = new Set(['pancreatic_cancer', 'glioblastoma']);
+const NEUROLOGY = new Set(['alzheimer', 'als', 'epilepsy', 'depression']);
+
+const inSet = (h: typeof data.hypotheses[number], s: Set<string>) =>
+  (h.drug_domain && s.has(h.drug_domain)) || (h.outcome_domain && s.has(h.outcome_domain));
+
+const oncoCount = data.hypotheses.filter((h) => inSet(h, ONCOLOGY)).length;
+const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
+---
+<Layout
+  title="Applications — Robertium drug repurposing hypotheses by therapeutic area"
+  description="Robertium applications: drug repurposing hypotheses by therapeutic area. Cross-domain candidates for oncology and neurology surfaced from biomedical literature."
+  current="applications"
+  ogImage="/og/home.png"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Applications</h1>
+      <p class="subtitle">Robertium's cross-domain methodology, applied to specific therapeutic areas</p>
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+        The full catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> lists every cross-domain
+        hypothesis Robertium has surfaced. These application pages narrow the view to one therapeutic area at a time,
+        so a researcher working on a specific disease can see what candidates exist for their domain
+        without scanning the whole catalog.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="apps-grid">
+        <a href="/applications/oncology" class="apps-card">
+          <div class="apps-card-eyebrow">Application area</div>
+          <h2>Oncology</h2>
+          <p class="apps-card-domains">Pancreatic ductal adenocarcinoma (PDAC) · Glioblastoma multiforme (GBM)</p>
+          <p class="apps-card-body">
+            Two cancers with limited treatment options and high unmet need. Robertium surfaces drug
+            candidates from other therapeutic literatures that share molecular mediators with these
+            tumors — including KRAS, EGFR, mTOR, and PKM2.
+          </p>
+          <div class="apps-card-footer">
+            <span class="apps-card-count">{oncoCount.toLocaleString()} hypotheses</span>
+            <span class="apps-card-link">View applications →</span>
+          </div>
+        </a>
+
+        <a href="/applications/neurology" class="apps-card">
+          <div class="apps-card-eyebrow">Application area</div>
+          <h2>Neurology &amp; psychiatry</h2>
+          <p class="apps-card-domains">Alzheimer's · ALS · Epilepsy · Depression</p>
+          <p class="apps-card-body">
+            Four neurological and psychiatric conditions that share substantial mechanistic overlap —
+            neuroinflammation, protein aggregation, neurotransmitter imbalance, neuronal excitability.
+            Rich substrate for cross-domain repurposing analysis.
+          </p>
+          <div class="apps-card-footer">
+            <span class="apps-card-count">{neuroCount.toLocaleString()} hypotheses</span>
+            <span class="apps-card-link">View applications →</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h2>More areas coming</h2>
+      </div>
+      <p>
+        Additional application pages will be added as the corpus expands to cover new therapeutic domains.
+        The methodology — Swanson ABC discovery across a shared knowledge graph — is the same for every
+        area; what differs is which diseases are represented in the literature corpus.
+      </p>
+      <p>
+        For the complete cross-domain catalog across every domain Robertium currently indexes, see
+        <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>. For the underlying methodology,
+        see <a href="/method" style="color:#1e40af;">/method</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .apps-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .apps-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 32px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .apps-card:hover {
+    border-color: #1e40af;
+    box-shadow: 0 6px 18px rgba(30, 64, 175, 0.08);
+    transform: translateY(-1px);
+  }
+  .apps-card-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1e40af;
+  }
+  .apps-card h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: #0a0a0a;
+  }
+  .apps-card-domains {
+    font-size: 14px;
+    color: #4a5568;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .apps-card-body {
+    font-size: 15px;
+    color: #374151;
+    line-height: 1.7;
+    margin: 0;
+  }
+  .apps-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 14px;
+  }
+  .apps-card-count {
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+  }
+  .apps-card-link {
+    color: #1e40af;
+    font-weight: 500;
+  }
+
+  @media (max-width: 768px) {
+    .apps-grid { grid-template-columns: 1fr; }
+    .apps-card { padding: 24px; }
+    .apps-card h2 { font-size: 24px; }
+  }
+</style>

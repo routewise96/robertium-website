@@ -1,0 +1,390 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface Hypothesis {
+  id: number;
+  drug: string;
+  drug_domain: string | null;
+  predicate_ab: string | null;
+  mediator: string;
+  mediator_type: string | null;
+  predicate_bc: string | null;
+  outcome: string;
+  outcome_domain: string | null;
+  outreach_score: number | null;
+  outreach_quality: 'high' | 'mid' | 'low' | 'excluded' | null;
+  ab_count: number | null;
+  bc_count: number | null;
+  direct_count: number | null;
+  literature_status: string | null;
+  clinical_trial_status: string | null;
+}
+
+const dataPath = path.join(process.cwd(), 'public', 'data', 'hypotheses.json');
+const raw = fs.readFileSync(dataPath, 'utf-8');
+const data = JSON.parse(raw) as { hypotheses: Hypothesis[] };
+
+const NEURO = new Set(['alzheimer', 'als', 'epilepsy', 'depression']);
+const inNeuro = (h: Hypothesis) =>
+  (h.drug_domain && NEURO.has(h.drug_domain)) ||
+  (h.outcome_domain && NEURO.has(h.outcome_domain));
+
+const neuroHyps = data.hypotheses.filter(inNeuro);
+
+const totalCount = neuroHyps.length;
+const highCount = neuroHyps.filter((h) => h.outreach_quality === 'high').length;
+const novelCount = neuroHyps.filter(
+  (h) =>
+    h.literature_status === 'novel_signal' &&
+    (h.clinical_trial_status === 'none' || h.clinical_trial_status == null),
+).length;
+const activeTrialCount = neuroHyps.filter(
+  (h) => h.clinical_trial_status === 'active',
+).length;
+
+const FEATURED_IDS = [1380, 6867, 7645, 6681, 1374, 4982, 8816, 5393, 5168];
+const featured: Hypothesis[] = FEATURED_IDS.map(
+  (id) => data.hypotheses.find((h) => h.id === id),
+).filter(Boolean) as Hypothesis[];
+
+const DOMAIN_LABEL: Record<string, string> = {
+  als: 'ALS',
+  alzheimer: "Alzheimer's",
+  depression: 'depression',
+  epilepsy: 'epilepsy',
+  glioblastoma: 'glioblastoma',
+  pancreatic_cancer: 'pancreatic cancer',
+};
+
+const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
+const article = (word: string) =>
+  VOWELS.has(word.charAt(0).toLowerCase()) ? 'an' : 'a';
+
+const fixVerb = (predicate: string | null): string => {
+  const p = (predicate ?? 'modulates').replace(/_/g, ' ');
+  if (p === 'associated with') return 'is associated with';
+  return p;
+};
+
+const summary = (h: Hypothesis): string => {
+  const drugLabel = DOMAIN_LABEL[h.drug_domain ?? ''] ?? (h.drug_domain ?? '').replace(/_/g, ' ');
+  const ab = fixVerb(h.predicate_ab);
+  const bc = fixVerb(h.predicate_bc);
+  return `Suggests ${h.drug} (${article(drugLabel)} ${drugLabel} drug) ${ab} ${h.mediator}, which ${bc} ${h.outcome}.`;
+};
+
+const TRIAL_LABEL: Record<string, string> = {
+  active: 'trial active',
+  completed: 'trial completed',
+  preclinical_only: 'preclinical',
+  none: 'no trial',
+  unknown: 'unknown',
+};
+const LIT_LABEL: Record<string, string> = {
+  novel_signal: 'novel',
+  partial_evidence: 'partial',
+  reproduces_known: 'known',
+  unknown: 'unknown',
+};
+---
+<Layout
+  title="Neurology applications — Robertium drug repurposing for Alzheimer's, ALS, epilepsy and depression"
+  description="Drug repurposing candidates for Alzheimer's disease, ALS, epilepsy, and depression from the Robertium catalog. Cross-domain hypotheses surfaced from biomedical literature."
+  current="applications"
+  ogImage="/og/home.png"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Neurology applications</h1>
+      <p class="subtitle">Alzheimer's · ALS · Epilepsy · Depression</p>
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+        Robertium has been applied across four neurological and psychiatric domains: Alzheimer's
+        disease, amyotrophic lateral sclerosis (ALS), epilepsy, and depression. These domains share
+        substantial mechanistic overlap — neuroinflammation, protein aggregation, neurotransmitter
+        imbalance, neuronal excitability — making them rich substrate for cross-domain drug
+        repurposing analysis.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-header" style="justify-content: center;">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h2>By the numbers</h2>
+      </div>
+      <div class="stats-grid" style="margin-top: 32px;">
+        <div class="stat-card">
+          <div class="stat-num">{totalCount.toLocaleString()}</div>
+          <div class="stat-label">cross-domain<br>hypotheses</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">{highCount.toLocaleString()}</div>
+          <div class="stat-label">high-confidence<br>candidates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">{novelCount.toLocaleString()}</div>
+          <div class="stat-label">novel candidates<br>(no existing trial)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">{activeTrialCount.toLocaleString()}</div>
+          <div class="stat-label">active clinical<br>trials reproduced</div>
+        </div>
+      </div>
+      <p class="stats-note">
+        Counts include hypotheses where any of the four neuro domains is either the drug-source
+        domain or the outcome domain. A single hypothesis may bridge into an oncology domain
+        (e.g. epilepsy drug → mediator → pancreatic cancer).
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container">
+      <div class="section-header" style="justify-content: center;">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <h2>Featured hypotheses</h2>
+      </div>
+      <p class="featured-intro">
+        Selected high-quality candidates surfaced through shared molecular mediators. Each card
+        links to the full evidence chain in the catalog.
+      </p>
+      <div class="featured-grid">
+        {featured.map((h) => (
+          <a class="featured-card" href={`/hypotheses?id=${h.id}`}>
+            <div class="featured-chain">
+              <span class="featured-node featured-node--drug">{h.drug}</span>
+              <span class="featured-arrow">→</span>
+              <span class="featured-node featured-node--mediator">{h.mediator}</span>
+              <span class="featured-arrow">→</span>
+              <span class="featured-node featured-node--outcome">{h.outcome}</span>
+            </div>
+            <div class="featured-domains">
+              <span class="featured-domain-tag">{(h.drug_domain ?? '').replace('_', ' ')}</span>
+              <span class="featured-arrow featured-arrow--small">→</span>
+              <span class="featured-domain-tag">{(h.outcome_domain ?? '').replace('_', ' ')}</span>
+              {h.mediator_type && (
+                <span class="featured-meta">via {h.mediator_type}</span>
+              )}
+            </div>
+            <p class="featured-summary">{summary(h)}</p>
+            <div class="featured-badges">
+              {h.literature_status && LIT_LABEL[h.literature_status] && (
+                <span class={`featured-badge featured-badge--lit-${h.literature_status}`}>{LIT_LABEL[h.literature_status]}</span>
+              )}
+              {h.clinical_trial_status && TRIAL_LABEL[h.clinical_trial_status] && (
+                <span class={`featured-badge featured-badge--trial-${h.clinical_trial_status}`}>{TRIAL_LABEL[h.clinical_trial_status]}</span>
+              )}
+            </div>
+            <div class="featured-footer">
+              <span class="featured-score">score {((h.outreach_score ?? 0)).toFixed(3)}</span>
+              <span class="featured-evidence">
+                {h.ab_count ?? 0} + {h.bc_count ?? 0} evidence papers
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+      <p class="featured-cta">
+        <a href="/hypotheses?domain=alzheimer">Alzheimer's →</a>
+        <span class="featured-cta-sep">·</span>
+        <a href="/hypotheses?domain=als">ALS →</a>
+        <span class="featured-cta-sep">·</span>
+        <a href="/hypotheses?domain=epilepsy">Epilepsy →</a>
+        <span class="featured-cta-sep">·</span>
+        <a href="/hypotheses?domain=depression">Depression →</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><line x1="8.7" y1="7.5" x2="15.3" y2="10.5"/><line x1="8.7" y1="16.5" x2="15.3" y2="13.5"/></svg>
+        </div>
+        <h2>Methodology note</h2>
+      </div>
+      <p>
+        These hypotheses were surfaced using the same Swanson ABC reasoning applied across all of
+        Robertium's domains: identifying cases where a drug literature and a disease literature share
+        an intermediate mediator but rarely cite each other. Full methodology is described at
+        <a href="/method" style="color:#1e40af;">/method</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <h2>Why this matters</h2>
+      </div>
+      <p>
+        Alzheimer's disease affects 55 million people globally with no disease-modifying treatments
+        widely available. ALS has a median survival of 3–5 years from diagnosis with only two
+        FDA-approved drugs (riluzole, edaravone) showing modest effect. Epilepsy remains
+        pharmacologically uncontrolled in approximately one-third of patients. Treatment-resistant
+        depression affects roughly 30% of patients with major depressive disorder. Cross-domain
+        literature analysis can surface candidates that mainstream neurology research has not
+        prioritized.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <h2>Open data</h2>
+      </div>
+      <ul class="simple-list">
+        <li><strong>Full catalog</strong> — the complete cross-domain hypothesis set is at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>, filterable by drug or outcome domain.</li>
+        <li><strong>Archived dataset</strong> — the hypothesis catalog is permanently archived on Zenodo: <a href="https://doi.org/10.5281/zenodo.20110977" style="color:#1e40af;">10.5281/zenodo.20110977</a>.</li>
+        <li><strong>License</strong> — source code under MIT, extracted data under CC-BY-4.0.</li>
+        <li><strong>Contact</strong> — if you research Alzheimer's, ALS, epilepsy, or depression and want to discuss specific candidates, reach out to <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a>.</li>
+      </ul>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .featured-intro {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 32px;
+    color: #4a5568;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .featured-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .featured-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px 22px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .featured-card:hover {
+    border-color: #1e40af;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08);
+    transform: translateY(-1px);
+  }
+  .featured-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .featured-node { font-weight: 600; color: #0a0a0a; }
+  .featured-node--mediator { color: #1e40af; }
+  .featured-arrow { color: #cbd5e1; font-size: 13px; padding: 0 2px; }
+  .featured-arrow--small { font-size: 11px; }
+  .featured-domains {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .featured-domain-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+  }
+  .featured-meta {
+    color: #64748b;
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  .featured-summary {
+    font-size: 14px;
+    color: #4a5568;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .featured-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .featured-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+  }
+  .featured-badge--lit-novel_signal { background: #dbeafe; color: #1e40af; }
+  .featured-badge--lit-partial_evidence { background: #fef3c7; color: #92400e; }
+  .featured-badge--lit-reproduces_known { background: #f1f5f9; color: #475569; }
+  .featured-badge--trial-active { background: #dcfce7; color: #166534; }
+  .featured-badge--trial-completed { background: #e0e7ff; color: #4338ca; }
+  .featured-badge--trial-none { background: #fce7f3; color: #be185d; }
+  .featured-badge--trial-preclinical_only { background: #fef3c7; color: #92400e; }
+  .featured-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 12px;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+  }
+  .featured-score { font-weight: 600; color: #1e40af; }
+  .featured-cta {
+    text-align: center;
+    margin-top: 28px;
+    font-size: 15px;
+  }
+  .featured-cta a {
+    color: #1e40af;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .featured-cta a:hover { text-decoration: underline; }
+  .featured-cta-sep {
+    color: #cbd5e1;
+    margin: 0 10px;
+  }
+
+  @media (max-width: 1024px) {
+    .featured-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .featured-grid { grid-template-columns: 1fr; }
+    .featured-chain { font-size: 14px; }
+    .featured-cta-sep { display: block; height: 8px; }
+  }
+</style>
