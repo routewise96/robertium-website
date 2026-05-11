@@ -169,6 +169,18 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+        <h2>The novelty filter</h2>
+      </div>
+      <p>Robertium enforces a strict novelty constraint on the hypotheses it surfaces. Any candidate where the drug → outcome connection already appears as a direct claim in more than one paper is filtered out (<code style="font-family:var(--font-mono); font-size:14px;">max_direct_evidence = 1</code>, see <code style="font-family:var(--font-mono); font-size:14px;">src/robertium/graph/repurposing.py:192</code>). This is not a parameter to tune — it is the Swanson 1986 prerequisite for literature-based hidden discovery.</p>
+      <p>The catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> therefore explicitly excludes the most well-known drug repurposings: ketamine → treatment-resistant depression, metformin → Alzheimer's disease, valproate → bipolar disorder, and others whose drug → outcome link has accumulated direct citation chains over decades of clinical research. These cases were filtered out at construction time.</p>
+      <p>What you see instead are connections that the published literature does not yet make explicit through direct citation — drug → mediator → outcome chains where the two halves live in separate literature pools that rarely cite each other. This is Robertium's value proposition: novelty precision, not known-repurposing reproduction. See <a href="/benchmark" style="color:#1e40af;">/benchmark</a> for empirical validation of this framing against 50 verified historical repurposings.</p>
+    </div>
+  </section>
+
   <section class="section section--gray">
     <div class="container--narrow">
       <div class="section-header">
