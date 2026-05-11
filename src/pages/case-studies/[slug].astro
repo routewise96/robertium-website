@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import EvidenceNetwork from '../../components/EvidenceNetwork.astro';
 import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +10,13 @@ interface PmidEntry {
   title: string;
   doi: string | null;
   year: number | null;
+  // Enriched fields (added 2026-05): present on all newly-generated JSONs.
+  subject?: string;
+  predicate?: string;
+  object?: string;
+  claim_text?: string;
+  confidence?: number;
+  extracted_at?: string;
 }
 interface CaseStudy {
   slug: string;
@@ -284,6 +292,34 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
           <div class="cs-facts-meta">papers</div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8.5" y1="7.5" x2="15.5" y2="7.5"/><line x1="7.5" y1="8.5" x2="11" y2="15.5"/><line x1="16.5" y1="8.5" x2="13" y2="15.5"/></svg>
+        </div>
+        <h2>Evidence network</h2>
+      </div>
+      <p class="cs-evnet-intro">
+        The full set of scientific papers supporting this hypothesis, visualized
+        as a force-directed graph. Each gray node is one paper; hover for the
+        extracted claim, click to open it on PubMed.
+      </p>
+      <EvidenceNetwork
+        slug={data.slug}
+        drug={data.drug.name}
+        mediator={data.mediator.name}
+        outcome={data.outcome.name}
+        predicateAb={data.metrics.predicate_ab ?? 'modulates'}
+        predicateBc={data.metrics.predicate_bc ?? 'associated with'}
+        abClaims={data.evidence.ab_claims}
+        bcClaims={data.evidence.bc_claims}
+        abMetric={data.metrics.ab_count}
+        bcMetric={data.metrics.bc_count}
+      />
     </div>
   </section>
 
@@ -977,6 +1013,15 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
     line-height: var(--leading-normal);
     margin: var(--space-4) 0 0;
     max-width: 760px;
+  }
+
+  /* ===== Evidence network intro ===== */
+  .cs-evnet-intro {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    margin: 0 0 var(--space-6);
+    max-width: 720px;
   }
 
   /* ===== Related cards ===== */

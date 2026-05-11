@@ -15,7 +15,8 @@
     "@astrojs/sitemap": "^3.7.2",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "cytoscape": "^3.33.3"
   },
   "devDependencies": {
     "sharp": "^0.34.5"

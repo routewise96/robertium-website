@@ -1,0 +1,888 @@
+---
+// Interactive evidence-network visualization for a single case study.
+// Force-directed graph (Cytoscape COSE) of papers supporting drug → mediator
+// and mediator → outcome legs. Lazy-loaded via IntersectionObserver.
+export interface Claim {
+  pmid: string | null;
+  title: string;
+  doi?: string | null;
+  year: number | null;
+  subject?: string;
+  predicate?: string;
+  object?: string;
+  claim_text?: string;
+  confidence?: number;
+  extracted_at?: string;
+}
+
+interface Props {
+  slug: string;
+  drug: string;
+  mediator: string;
+  outcome: string;
+  predicateAb: string;
+  predicateBc: string;
+  abClaims: Claim[];
+  bcClaims: Claim[];
+  abMetric: number | null;
+  bcMetric: number | null;
+}
+
+const {
+  slug,
+  drug,
+  mediator,
+  outcome,
+  predicateAb,
+  predicateBc,
+  abClaims,
+  bcClaims,
+  abMetric,
+  bcMetric,
+} = Astro.props as Props;
+
+const fmtPredicate = (p: string | null | undefined) =>
+  (p ?? 'modulates').replace(/_/g, ' ');
+
+const allClaims = [...abClaims, ...bcClaims];
+const years = allClaims.map((c) => c.year).filter((y): y is number => y != null);
+const yearMin = years.length ? Math.min(...years) : 2000;
+const yearMax = years.length ? Math.max(...years) : new Date().getFullYear();
+
+const totalPapers = abClaims.length + bcClaims.length;
+const isSparse = totalPapers < 10;
+
+const abMismatch =
+  abMetric != null && abMetric !== abClaims.length ? abMetric : null;
+const bcMismatch =
+  bcMetric != null && bcMetric !== bcClaims.length ? bcMetric : null;
+
+// Data passed to client-side script via JSON-encoded data attribute.
+const networkData = {
+  drug,
+  mediator,
+  outcome,
+  predicateAb,
+  predicateBc,
+  abClaims: abClaims.map((c) => ({
+    pmid: c.pmid,
+    title: c.title,
+    year: c.year,
+    claim_text: c.claim_text ?? '',
+    confidence: c.confidence ?? null,
+    subject: c.subject ?? drug,
+    predicate: c.predicate ?? predicateAb,
+    object: c.object ?? mediator,
+  })),
+  bcClaims: bcClaims.map((c) => ({
+    pmid: c.pmid,
+    title: c.title,
+    year: c.year,
+    claim_text: c.claim_text ?? '',
+    confidence: c.confidence ?? null,
+    subject: c.subject ?? mediator,
+    predicate: c.predicate ?? predicateBc,
+    object: c.object ?? outcome,
+  })),
+};
+
+const networkLabel = `Evidence network: ${drug}, ${mediator}, ${outcome}. ${totalPapers} papers total.`;
+---
+
+<figure class="evnet" aria-labelledby={`evnet-caption-${slug}`}>
+  <div class="evnet-controls" role="group" aria-label="Filter evidence network">
+    <div class="evnet-chipgroup" role="radiogroup" aria-label="Show evidence for">
+      <button class="evnet-chip is-active" data-filter="all" role="radio" aria-checked="true">All</button>
+      <button class="evnet-chip" data-filter="ab" role="radio" aria-checked="false">A→B only</button>
+      <button class="evnet-chip" data-filter="bc" role="radio" aria-checked="false">B→C only</button>
+    </div>
+
+    <label class="evnet-year">
+      <span class="evnet-year-label">Year range:</span>
+      <input
+        type="number"
+        class="evnet-year-input evnet-year-min"
+        min={yearMin}
+        max={yearMax}
+        value={yearMin}
+        aria-label="Earliest year"
+      />
+      <span class="evnet-year-sep">–</span>
+      <input
+        type="number"
+        class="evnet-year-input evnet-year-max"
+        min={yearMin}
+        max={yearMax}
+        value={yearMax}
+        aria-label="Latest year"
+      />
+    </label>
+
+    <label class="evnet-quality">
+      <input type="checkbox" class="evnet-quality-toggle" checked aria-label="Show low-confidence claims" />
+      <span>Include confidence &lt; 0.7</span>
+    </label>
+  </div>
+
+  <div
+    class="evnet-canvas-wrap"
+    role="img"
+    aria-label={networkLabel}
+  >
+    <div
+      class="evnet-canvas"
+      id={`evnet-cy-${slug}`}
+      data-network={JSON.stringify(networkData)}
+    >
+      <div class="evnet-loading" aria-hidden="true">
+        <div class="evnet-spinner"></div>
+        <div class="evnet-loading-text">Building network…</div>
+      </div>
+    </div>
+    <div class="evnet-tooltip" role="tooltip" aria-hidden="true"></div>
+  </div>
+
+  <figcaption class="evnet-caption" id={`evnet-caption-${slug}`}>
+    <strong>Figure 2.</strong> Evidence network for {drug} → {mediator} → {outcome}.
+    Each gray node represents a scientific paper from the Robertium extraction.
+    A→B edges show {drug} → {mediator} claims; B→C edges show {mediator} → {outcome} claims.
+    Hover for details, click a paper to open PubMed.
+    {isSparse && (
+      <span class="evnet-caption-note">Sparse evidence — {totalPapers} paper{totalPapers === 1 ? '' : 's'} total. See Limitations section for context.</span>
+    )}
+    {abMismatch != null && (
+      <span class="evnet-caption-note">
+        Showing {abClaims.length} unique A→B paper{abClaims.length === 1 ? '' : 's'} with extracted claims (metric reports {abMismatch} total work{abMismatch === 1 ? '' : 's'} for this leg; difference is extraction artifact).
+      </span>
+    )}
+    {bcMismatch != null && (
+      <span class="evnet-caption-note">
+        Showing {bcClaims.length} unique B→C paper{bcClaims.length === 1 ? '' : 's'} with extracted claims (metric reports {bcMismatch} total work{bcMismatch === 1 ? '' : 's'} for this leg; difference is extraction artifact).
+      </span>
+    )}
+  </figcaption>
+
+  <details class="evnet-fallback">
+    <summary>View as text list</summary>
+    <div class="evnet-fallback-body">
+      <h4>A→B papers ({abClaims.length})</h4>
+      {abClaims.length === 0 ? (
+        <p class="evnet-fallback-empty">No papers in this leg.</p>
+      ) : (
+        <ul>
+          {abClaims.map((c) => (
+            <li>
+              {c.pmid ? (
+                <a href={`https://pubmed.ncbi.nlm.nih.gov/${c.pmid}/`} target="_blank" rel="noopener">PMID {c.pmid}</a>
+              ) : (<span>no PMID</span>)}
+              <span> — {c.title}</span>
+              {c.year && <span> ({c.year})</span>}
+              {c.claim_text && <em> · {c.claim_text}</em>}
+              {c.confidence != null && <span class="evnet-fallback-conf"> conf {c.confidence.toFixed(2)}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <h4>B→C papers ({bcClaims.length})</h4>
+      {bcClaims.length === 0 ? (
+        <p class="evnet-fallback-empty">No papers in this leg.</p>
+      ) : (
+        <ul>
+          {bcClaims.map((c) => (
+            <li>
+              {c.pmid ? (
+                <a href={`https://pubmed.ncbi.nlm.nih.gov/${c.pmid}/`} target="_blank" rel="noopener">PMID {c.pmid}</a>
+              ) : (<span>no PMID</span>)}
+              <span> — {c.title}</span>
+              {c.year && <span> ({c.year})</span>}
+              {c.claim_text && <em> · {c.claim_text}</em>}
+              {c.confidence != null && <span class="evnet-fallback-conf"> conf {c.confidence.toFixed(2)}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </details>
+</figure>
+
+<script>
+  // Cytoscape is dynamically imported on intersection — keeps it out of the
+  // initial page bundle for users who never scroll to the network.
+  type ClaimNode = {
+    pmid: string | null;
+    title: string;
+    year: number | null;
+    claim_text: string;
+    confidence: number | null;
+    subject: string;
+    predicate: string;
+    object: string;
+  };
+  type NetworkData = {
+    drug: string;
+    mediator: string;
+    outcome: string;
+    predicateAb: string;
+    predicateBc: string;
+    abClaims: ClaimNode[];
+    bcClaims: ClaimNode[];
+  };
+
+  const COLOR_DRUG = '#0891b2';
+  const COLOR_MEDIATOR = '#1e2a4a';
+  const COLOR_OUTCOME = '#0891b2';
+  const COLOR_PAPER = '#94a3b8';
+  const COLOR_PAPER_HIGHLIGHT = '#0e7490';
+  const COLOR_EDGE = '#cbd5e1';
+  const COLOR_EDGE_HIGHLIGHT = '#0891b2';
+
+  function fmtPredicate(p: string) {
+    return (p || 'modulates').replace(/_/g, ' ');
+  }
+
+  function truncate(s: string, n: number) {
+    if (!s) return '';
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+
+  async function initNetwork(container: HTMLElement) {
+    const dataStr = container.dataset.network;
+    if (!dataStr) return;
+    const data = JSON.parse(dataStr) as NetworkData;
+
+    const isMobile = window.matchMedia('(max-width: 720px)').matches;
+
+    const cytoscapeMod = await import('cytoscape');
+    const cytoscape = cytoscapeMod.default;
+
+    // Build elements
+    const nodes: any[] = [
+      { data: { id: 'drug', label: data.drug, kind: 'entity', subtype: 'drug' } },
+      { data: { id: 'mediator', label: data.mediator, kind: 'entity', subtype: 'mediator' } },
+      { data: { id: 'outcome', label: data.outcome, kind: 'entity', subtype: 'outcome' } },
+    ];
+    const edges: any[] = [];
+
+    data.abClaims.forEach((c, i) => {
+      const id = `ab-${i}`;
+      nodes.push({
+        data: {
+          id,
+          label: '',
+          kind: 'paper',
+          leg: 'ab',
+          pmid: c.pmid,
+          title: c.title,
+          year: c.year,
+          claim_text: c.claim_text,
+          confidence: c.confidence,
+          subject: c.subject,
+          predicate: c.predicate,
+          object: c.object,
+        },
+      });
+      edges.push({ data: { id: `e-drug-${id}`, source: 'drug', target: id, leg: 'ab' } });
+      edges.push({ data: { id: `e-${id}-med`, source: id, target: 'mediator', leg: 'ab' } });
+    });
+
+    data.bcClaims.forEach((c, i) => {
+      const id = `bc-${i}`;
+      nodes.push({
+        data: {
+          id,
+          label: '',
+          kind: 'paper',
+          leg: 'bc',
+          pmid: c.pmid,
+          title: c.title,
+          year: c.year,
+          claim_text: c.claim_text,
+          confidence: c.confidence,
+          subject: c.subject,
+          predicate: c.predicate,
+          object: c.object,
+        },
+      });
+      edges.push({ data: { id: `e-med-${id}`, source: 'mediator', target: id, leg: 'bc' } });
+      edges.push({ data: { id: `e-${id}-out`, source: id, target: 'outcome', leg: 'bc' } });
+    });
+
+    // Remove loading state
+    const loadingEl = container.querySelector('.evnet-loading');
+    if (loadingEl) loadingEl.remove();
+
+    const cy = cytoscape({
+      container,
+      elements: [...nodes, ...edges],
+      style: [
+        {
+          selector: 'node[kind="entity"]',
+          style: {
+            'background-color': (e: any) => {
+              const st = e.data('subtype');
+              if (st === 'drug') return COLOR_DRUG;
+              if (st === 'outcome') return COLOR_OUTCOME;
+              return COLOR_MEDIATOR;
+            },
+            'label': 'data(label)',
+            'color': '#0f172a',
+            'text-valign': 'bottom',
+            'text-halign': 'center',
+            'text-margin-y': 6,
+            'text-wrap': 'wrap',
+            'text-max-width': '140px',
+            'font-family': 'Inter, sans-serif',
+            'font-weight': 700,
+            'font-size': 12,
+            'text-outline-color': '#f8fafc',
+            'text-outline-width': 2,
+            'width': isMobile ? 44 : 52,
+            'height': isMobile ? 44 : 52,
+            'border-width': 3,
+            'border-color': '#ffffff',
+            'shape': 'ellipse',
+          },
+        },
+        {
+          selector: 'node[kind="paper"]',
+          style: {
+            'background-color': COLOR_PAPER,
+            'width': isMobile ? 24 : 16,
+            'height': isMobile ? 24 : 16,
+            'shape': 'round-rectangle',
+            'border-width': 1,
+            'border-color': '#ffffff',
+          },
+        },
+        {
+          selector: 'node[kind="paper"].faded',
+          style: { 'opacity': 0.15 },
+        },
+        {
+          selector: 'node.highlighted',
+          style: {
+            'background-color': COLOR_PAPER_HIGHLIGHT,
+            'border-color': COLOR_PAPER_HIGHLIGHT,
+            'border-width': 2,
+          },
+        },
+        {
+          selector: 'edge',
+          style: {
+            'width': 1,
+            'line-color': COLOR_EDGE,
+            'curve-style': 'bezier',
+            'target-arrow-shape': 'none',
+            'opacity': 0.7,
+          },
+        },
+        {
+          selector: 'edge.faded',
+          style: { 'opacity': 0.1 },
+        },
+        {
+          selector: 'edge.highlighted',
+          style: {
+            'line-color': COLOR_EDGE_HIGHLIGHT,
+            'width': 2,
+            'opacity': 1,
+          },
+        },
+      ],
+      layout: {
+        name: 'cose',
+        randomize: false,
+        animate: false,
+        nodeRepulsion: () => 4500,
+        idealEdgeLength: () => 90,
+        edgeElasticity: () => 100,
+        gravity: 80,
+        numIter: 1500,
+        fit: true,
+        padding: 30,
+      },
+      wheelSensitivity: 0.2,
+      minZoom: 0.3,
+      maxZoom: 2.5,
+      userPanningEnabled: !isMobile || true,
+    });
+
+    // Tooltip wiring
+    const wrap = container.parentElement as HTMLElement;
+    const tooltip = wrap.querySelector('.evnet-tooltip') as HTMLElement;
+
+    function showTooltip(node: any, evt: any) {
+      const d = node.data();
+      if (d.kind !== 'paper') return;
+      const titleStr = truncate(d.title || '', 80);
+      const claimStr = truncate(d.claim_text || '', 150);
+      const confStr =
+        d.confidence != null
+          ? `<span class="evnet-tt-conf">conf ${Number(d.confidence).toFixed(2)}</span>`
+          : '';
+      const pmidPart = d.pmid
+        ? `<span class="evnet-tt-pmid">PMID ${d.pmid}</span>`
+        : `<span class="evnet-tt-pmid">no PMID</span>`;
+      const yearPart = d.year
+        ? `<span class="evnet-tt-year">· ${d.year}</span>`
+        : '';
+      const metaStr = `<span class="evnet-tt-meta">${pmidPart}${yearPart}</span>`;
+      const relStr =
+        d.subject && d.object
+          ? `<span class="evnet-tt-rel">${d.subject} <span class="evnet-tt-pred">${fmtPredicate(d.predicate)}</span> ${d.object}</span>`
+          : '';
+      const claimHtml = claimStr
+        ? `<div class="evnet-tt-claim">"${claimStr}"</div>`
+        : '';
+      tooltip.innerHTML = `
+        <div class="evnet-tt-head">${metaStr}${confStr}</div>
+        ${relStr ? `<div class="evnet-tt-relwrap">${relStr}</div>` : ''}
+        <div class="evnet-tt-title">${titleStr}</div>
+        ${claimHtml}
+      `;
+      tooltip.setAttribute('aria-hidden', 'false');
+      tooltip.classList.add('is-visible');
+
+      if (isMobile) {
+        // Mobile: tooltip pinned to bottom of viewport as drawer
+        tooltip.classList.add('is-drawer');
+        return;
+      }
+
+      // Desktop: position near cursor within the canvas
+      const wrapRect = wrap.getBoundingClientRect();
+      const x = evt.originalEvent.clientX - wrapRect.left;
+      const y = evt.originalEvent.clientY - wrapRect.top;
+      const tooltipW = 320;
+      const tooltipH = tooltip.offsetHeight || 140;
+      let left = x + 12;
+      let top = y + 12;
+      if (left + tooltipW > wrapRect.width - 8) left = x - tooltipW - 12;
+      if (top + tooltipH > wrapRect.height - 8) top = y - tooltipH - 12;
+      if (left < 8) left = 8;
+      if (top < 8) top = 8;
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    }
+
+    function hideTooltip() {
+      tooltip.setAttribute('aria-hidden', 'true');
+      tooltip.classList.remove('is-visible', 'is-drawer');
+    }
+
+    cy.on('mouseover', 'node[kind="paper"]', (evt) => {
+      const node = evt.target;
+      node.addClass('highlighted');
+      node.connectedEdges().addClass('highlighted');
+      showTooltip(node, evt);
+    });
+    cy.on('mouseout', 'node[kind="paper"]', (evt) => {
+      const node = evt.target;
+      node.removeClass('highlighted');
+      node.connectedEdges().removeClass('highlighted');
+      hideTooltip();
+    });
+
+    // Mobile tap support: tap to show tooltip, tap again to open PubMed.
+    let lastTapped: any = null;
+    cy.on('tap', 'node[kind="paper"]', (evt) => {
+      const node = evt.target;
+      if (isMobile && lastTapped !== node) {
+        lastTapped = node;
+        showTooltip(node, evt);
+        return;
+      }
+      const pmid = node.data('pmid');
+      if (pmid) window.open(`https://pubmed.ncbi.nlm.nih.gov/${pmid}/`, '_blank', 'noopener');
+      lastTapped = null;
+    });
+
+    cy.on('tap', 'node[kind="entity"]', () => {
+      // No-op (could scroll to corresponding "About" section in future)
+    });
+
+    cy.on('tap', (evt) => {
+      if (evt.target === cy) hideTooltip();
+    });
+
+    // Filter logic
+    const controls = wrap.parentElement as HTMLElement;
+    const chips = controls.querySelectorAll('.evnet-chip');
+    const yearMinInput = controls.querySelector('.evnet-year-min') as HTMLInputElement;
+    const yearMaxInput = controls.querySelector('.evnet-year-max') as HTMLInputElement;
+    const qualityToggle = controls.querySelector('.evnet-quality-toggle') as HTMLInputElement;
+
+    let mode: 'all' | 'ab' | 'bc' = 'all';
+
+    function applyFilters() {
+      const yMin = parseInt(yearMinInput.value, 10);
+      const yMax = parseInt(yearMaxInput.value, 10);
+      const includeLow = qualityToggle.checked;
+      cy.batch(() => {
+        cy.nodes('[kind="paper"]').forEach((n) => {
+          const leg = n.data('leg');
+          const yr = n.data('year');
+          const conf = n.data('confidence');
+          let visible = true;
+          if (mode === 'ab' && leg !== 'ab') visible = false;
+          if (mode === 'bc' && leg !== 'bc') visible = false;
+          if (visible && yr != null && (yr < yMin || yr > yMax)) visible = false;
+          if (visible && conf != null && !includeLow && conf < 0.7) visible = false;
+          n.style('display', visible ? 'element' : 'none');
+          n.connectedEdges().style('display', visible ? 'element' : 'none');
+        });
+      });
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        chips.forEach((c) => {
+          c.classList.remove('is-active');
+          c.setAttribute('aria-checked', 'false');
+        });
+        chip.classList.add('is-active');
+        chip.setAttribute('aria-checked', 'true');
+        mode = (chip as HTMLElement).dataset.filter as 'all' | 'ab' | 'bc';
+        applyFilters();
+      });
+    });
+
+    yearMinInput.addEventListener('input', applyFilters);
+    yearMaxInput.addEventListener('input', applyFilters);
+    qualityToggle.addEventListener('change', applyFilters);
+  }
+
+  function observe(el: HTMLElement) {
+    let initiated = false;
+    const tryInit = () => {
+      if (initiated) return true;
+      const rect = el.getBoundingClientRect();
+      const margin = 200;
+      const inView =
+        rect.top < window.innerHeight + margin && rect.bottom > -margin;
+      if (!inView) return false;
+      initiated = true;
+      initNetwork(el).catch((err) =>
+        console.error('Failed to initialize evidence network', err)
+      );
+      return true;
+    };
+
+    // Immediate check covers deep-links to the section + environments where
+    // IntersectionObserver is unreliable (some headless browsers).
+    if (tryInit()) return;
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries, obs) => {
+          for (const e of entries) {
+            if (e.isIntersecting && tryInit()) {
+              obs.unobserve(e.target);
+            }
+          }
+        },
+        { rootMargin: '200px' }
+      );
+      io.observe(el);
+    }
+
+    const onScrollOrResize = () => {
+      if (tryInit()) {
+        window.removeEventListener('scroll', onScrollOrResize);
+        window.removeEventListener('resize', onScrollOrResize);
+      }
+    };
+    window.addEventListener('scroll', onScrollOrResize, { passive: true });
+    window.addEventListener('resize', onScrollOrResize, { passive: true });
+  }
+
+  document.querySelectorAll<HTMLElement>('.evnet-canvas').forEach(observe);
+</script>
+
+<style>
+  .evnet {
+    margin: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+  }
+
+  /* === Controls === */
+  .evnet-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .evnet-chipgroup {
+    display: inline-flex;
+    gap: var(--space-1);
+    background: var(--bg-section);
+    padding: 4px;
+    border-radius: var(--radius-md);
+  }
+  .evnet-chip {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .evnet-chip:hover { color: var(--text-primary); }
+  .evnet-chip.is-active {
+    background: var(--bg-card);
+    color: var(--accent);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+  .evnet-chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .evnet-year {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+  .evnet-year-label {
+    font-weight: var(--weight-medium);
+  }
+  .evnet-year-input {
+    width: 64px;
+    padding: var(--space-1) var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+  }
+  .evnet-year-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .evnet-year-sep { color: var(--text-muted); }
+
+  .evnet-quality {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .evnet-quality-toggle { accent-color: var(--accent); }
+
+  /* === Canvas === */
+  .evnet-canvas-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .evnet-canvas {
+    width: 100%;
+    height: 600px;
+    background: var(--bg-section);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    position: relative;
+    overflow: hidden;
+  }
+  .evnet-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+  }
+  .evnet-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-subtle);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: evnet-spin 0.8s linear infinite;
+  }
+  @keyframes evnet-spin { to { transform: rotate(360deg); } }
+
+  /* === Tooltip === */
+  .evnet-tooltip {
+    position: absolute;
+    z-index: 10;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-snug);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .evnet-tooltip.is-visible { opacity: 1; }
+  .evnet-tooltip.is-drawer {
+    position: fixed;
+    left: var(--space-3) !important;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    top: auto !important;
+    width: auto;
+    max-width: none;
+  }
+  /* Tooltip inner content is created via JS innerHTML, so it has no
+     Astro-scoped class hash. Use :global() so the rules still match. */
+  .evnet-tooltip :global(.evnet-tt-head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+  .evnet-tooltip :global(.evnet-tt-meta) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .evnet-tooltip :global(.evnet-tt-pmid) {
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
+  }
+  .evnet-tooltip :global(.evnet-tt-year) {
+    color: var(--text-tertiary);
+  }
+  .evnet-tooltip :global(.evnet-tt-conf) {
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+  .evnet-tooltip :global(.evnet-tt-relwrap) { margin-bottom: var(--space-2); }
+  .evnet-tooltip :global(.evnet-tt-rel) {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-primary);
+    background: var(--accent-bg);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+  .evnet-tooltip :global(.evnet-tt-pred) {
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
+  }
+  .evnet-tooltip :global(.evnet-tt-title) {
+    color: var(--text-primary);
+    font-weight: var(--weight-medium);
+    margin-bottom: var(--space-2);
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
+  }
+  .evnet-tooltip :global(.evnet-tt-claim) {
+    color: var(--text-tertiary);
+    font-style: italic;
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+  }
+
+  /* === Caption === */
+  .evnet-caption {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    line-height: var(--leading-normal);
+    margin: var(--space-4) auto 0;
+    max-width: 760px;
+    text-align: left;
+  }
+  .evnet-caption strong { color: var(--text-secondary); font-weight: var(--weight-semibold); }
+  .evnet-caption-note {
+    display: block;
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  /* === Text fallback === */
+  .evnet-fallback {
+    margin-top: var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--space-4);
+  }
+  .evnet-fallback summary {
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-tertiary);
+    list-style: revert;
+  }
+  .evnet-fallback summary:hover { color: var(--accent); }
+  .evnet-fallback-body { padding-top: var(--space-3); }
+  .evnet-fallback h4 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--text-secondary);
+    margin: var(--space-3) 0 var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+  }
+  .evnet-fallback ul {
+    list-style: disc;
+    padding-left: var(--space-5);
+    margin: 0;
+  }
+  .evnet-fallback li {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    margin-bottom: var(--space-2);
+  }
+  .evnet-fallback li a {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .evnet-fallback li a:hover { text-decoration: underline; }
+  .evnet-fallback em {
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+  .evnet-fallback-conf {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .evnet-fallback-empty {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* === Mobile === */
+  @media (max-width: 720px) {
+    .evnet { padding: var(--space-4); }
+    .evnet-controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-3);
+    }
+    .evnet-chipgroup { justify-content: center; }
+    .evnet-canvas { height: 400px; }
+  }
+</style>
