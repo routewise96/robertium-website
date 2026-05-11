@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -49,14 +50,9 @@ const featured: Hypothesis[] = FEATURED_IDS.map(
   (id) => data.hypotheses.find((h) => h.id === id),
 ).filter(Boolean) as Hypothesis[];
 
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'depression',
-  epilepsy: 'epilepsy',
-  glioblastoma: 'glioblastoma',
-  pancreatic_cancer: 'pancreatic cancer',
-};
+const DOMAIN_LABEL = new Proxy({} as Record<string, string>, {
+  get: (_, key: string) => formatDomainName(key),
+});
 
 const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
 const article = (word: string) =>
@@ -99,7 +95,7 @@ const LIT_LABEL: Record<string, string> = {
     <div class="container">
       <h1>Neurology applications</h1>
       <p class="subtitle">Alzheimer's · ALS · Epilepsy · Depression</p>
-      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
         Robertium has been applied across four neurological and psychiatric domains: Alzheimer's
         disease, amyotrophic lateral sclerosis (ALS), epilepsy, and depression. These domains share
         substantial mechanistic overlap — neuroinflammation, protein aggregation, neurotransmitter
@@ -215,7 +211,7 @@ const LIT_LABEL: Record<string, string> = {
         These hypotheses were surfaced using the same Swanson ABC reasoning applied across all of
         Robertium's domains: identifying cases where a drug literature and a disease literature share
         an intermediate mediator but rarely cite each other. Full methodology is described at
-        <a href="/method" style="color:#1e40af;">/method</a>.
+        <a href="/method" style="color:var(--accent);">/method</a>.
       </p>
     </div>
   </section>
@@ -247,10 +243,10 @@ const LIT_LABEL: Record<string, string> = {
         <h2>Open data</h2>
       </div>
       <ul class="simple-list">
-        <li><strong>Full catalog</strong> — the complete cross-domain hypothesis set is at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>, filterable by drug or outcome domain.</li>
-        <li><strong>Archived dataset</strong> — the hypothesis catalog is permanently archived on Zenodo: <a href="https://doi.org/10.5281/zenodo.20110977" style="color:#1e40af;">10.5281/zenodo.20110977</a>.</li>
+        <li><strong>Full catalog</strong> — the complete cross-domain hypothesis set is at <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a>, filterable by drug or outcome domain.</li>
+        <li><strong>Archived dataset</strong> — the hypothesis catalog is permanently archived on Zenodo: <a href="https://doi.org/10.5281/zenodo.20110977" style="color:var(--accent);">10.5281/zenodo.20110977</a>.</li>
         <li><strong>License</strong> — source code under MIT, extracted data under CC-BY-4.0.</li>
-        <li><strong>Contact</strong> — if you research Alzheimer's, ALS, epilepsy, or depression and want to discuss specific candidates, reach out to <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a>.</li>
+        <li><strong>Contact</strong> — if you research Alzheimer's, ALS, epilepsy, or depression and want to discuss specific candidates, reach out to <a href="mailto:daniel@robertium.com" style="color:var(--accent);">daniel@robertium.com</a>.</li>
       </ul>
     </div>
   </section>
@@ -261,7 +257,7 @@ const LIT_LABEL: Record<string, string> = {
     text-align: center;
     max-width: 720px;
     margin: 0 auto 32px;
-    color: #4a5568;
+    color: var(--text-secondary);
     font-size: 16px;
     line-height: 1.7;
   }
@@ -272,7 +268,7 @@ const LIT_LABEL: Record<string, string> = {
   }
   .featured-card {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     padding: 20px 22px;
     text-decoration: none;
@@ -283,7 +279,7 @@ const LIT_LABEL: Record<string, string> = {
     transition: border-color .15s, box-shadow .15s, transform .15s;
   }
   .featured-card:hover {
-    border-color: #1e40af;
+    border-color: var(--accent);
     box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08);
     transform: translateY(-1px);
   }
@@ -295,9 +291,9 @@ const LIT_LABEL: Record<string, string> = {
     font-size: 15px;
     line-height: 1.5;
   }
-  .featured-node { font-weight: 600; color: #0a0a0a; }
-  .featured-node--mediator { color: #1e40af; }
-  .featured-arrow { color: #cbd5e1; font-size: 13px; padding: 0 2px; }
+  .featured-node { font-weight: 600; color: var(--text-primary); }
+  .featured-node--mediator { color: var(--accent); }
+  .featured-arrow { color: var(--border-default); font-size: 13px; padding: 0 2px; }
   .featured-arrow--small { font-size: 11px; }
   .featured-domains {
     display: flex;
@@ -314,17 +310,17 @@ const LIT_LABEL: Record<string, string> = {
     letter-spacing: 0.05em;
     padding: 2px 6px;
     border-radius: 4px;
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--bg-section);
+    color: var(--text-secondary);
   }
   .featured-meta {
-    color: #64748b;
+    color: var(--text-tertiary);
     font-size: 12px;
     margin-left: 4px;
   }
   .featured-summary {
     font-size: 14px;
-    color: #4a5568;
+    color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
   }
@@ -341,41 +337,41 @@ const LIT_LABEL: Record<string, string> = {
     letter-spacing: 0.04em;
     padding: 2px 8px;
     border-radius: 4px;
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--bg-section);
+    color: var(--text-secondary);
   }
-  .featured-badge--lit-novel_signal { background: #dbeafe; color: #1e40af; }
-  .featured-badge--lit-partial_evidence { background: #fef3c7; color: #92400e; }
-  .featured-badge--lit-reproduces_known { background: #f1f5f9; color: #475569; }
-  .featured-badge--trial-active { background: #dcfce7; color: #166534; }
+  .featured-badge--lit-novel_signal { background: var(--accent-bg); color: var(--accent); }
+  .featured-badge--lit-partial_evidence { background: var(--state-warning-bg); color: var(--state-warning); }
+  .featured-badge--lit-reproduces_known { background: var(--bg-section); color: var(--text-secondary); }
+  .featured-badge--trial-active { background: var(--state-success-bg); color: var(--state-success); }
   .featured-badge--trial-completed { background: #e0e7ff; color: #4338ca; }
-  .featured-badge--trial-none { background: #fce7f3; color: #be185d; }
-  .featured-badge--trial-preclinical_only { background: #fef3c7; color: #92400e; }
+  .featured-badge--trial-none { background: var(--state-error-bg); color: var(--state-error); }
+  .featured-badge--trial-preclinical_only { background: var(--state-warning-bg); color: var(--state-warning); }
   .featured-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-top: auto;
     padding-top: 8px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--bg-section);
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-tertiary);
     font-variant-numeric: tabular-nums;
   }
-  .featured-score { font-weight: 600; color: #1e40af; }
+  .featured-score { font-weight: 600; color: var(--accent); }
   .featured-cta {
     text-align: center;
     margin-top: 28px;
     font-size: 15px;
   }
   .featured-cta a {
-    color: #1e40af;
+    color: var(--accent);
     text-decoration: none;
     font-weight: 500;
   }
   .featured-cta a:hover { text-decoration: underline; }
   .featured-cta-sep {
-    color: #cbd5e1;
+    color: var(--border-default);
     margin: 0 10px;
   }
 

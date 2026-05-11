@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import DomainModal from '../components/DomainModal.astro';
+import { formatDomainName } from '../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -46,23 +48,18 @@ const domainPairs = new Set(
 );
 
 const allDomains = Array.from(new Set([...drugDomains, ...outcomeDomains])).sort();
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'Depression (MDD)',
-  epilepsy: 'Epilepsy',
-  glioblastoma: 'Glioblastoma',
-  pancreatic_cancer: 'Pancreatic cancer',
-};
 const domainCounts = allDomains
   .map((d) => ({
     key: d,
-    label: DOMAIN_LABEL[d] ?? d,
+    label: formatDomainName(d),
     count: data.hypotheses.filter(
       (h) => h.drug_domain === d || h.outcome_domain === d,
     ).length,
   }))
   .sort((a, b) => b.count - a.count);
+const TOP_DOMAINS = 6;
+const topDomains = domainCounts.slice(0, TOP_DOMAINS);
+const hasMoreDomains = domainCounts.length > TOP_DOMAINS;
 
 const highCount = data.hypotheses.filter(
   (h) => (h as any).outreach_quality === 'high',
@@ -131,7 +128,7 @@ const noTrialNovelCount = data.hypotheses.filter(
         so a single hypothesis is counted under two domains.
       </p>
       <div class="hyp-browse-grid">
-        {domainCounts.map((d) => (
+        {topDomains.map((d) => (
           <button
             type="button"
             class="hyp-browse-tile"
@@ -142,6 +139,20 @@ const noTrialNovelCount = data.hypotheses.filter(
           </button>
         ))}
       </div>
+      {hasMoreDomains && (
+        <div class="hyp-browse-more">
+          <button
+            type="button"
+            id="hyp-show-all-domains"
+            class="hyp-browse-more-btn"
+            aria-haspopup="dialog"
+            aria-controls="domain-modal"
+          >
+            Show all domains ({domainCounts.length})
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      )}
     </div>
   </section>
 
@@ -158,11 +169,11 @@ const noTrialNovelCount = data.hypotheses.filter(
         />
         <select id="hyp-drug-domain" class="hyp-select" aria-label="Drug domain">
           <option value="">All drug domains</option>
-          {drugDomains.map((d) => <option value={d}>{d}</option>)}
+          {drugDomains.map((d) => <option value={d}>{formatDomainName(d)}</option>)}
         </select>
         <select id="hyp-outcome-domain" class="hyp-select" aria-label="Outcome domain">
           <option value="">All outcome domains</option>
-          {outcomeDomains.map((d) => <option value={d}>{d}</option>)}
+          {outcomeDomains.map((d) => <option value={d}>{formatDomainName(d)}</option>)}
         </select>
         <select id="hyp-sort" class="hyp-select" aria-label="Sort">
           <option value="score-desc">Score (high to low)</option>
@@ -204,7 +215,7 @@ const noTrialNovelCount = data.hypotheses.filter(
       </thead>
       <tbody id="hyp-tbody">
         <tr id="hyp-load-trigger" aria-hidden="true">
-          <td colspan="9" style="padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+          <td colspan="9" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
             Loading more…
           </td>
         </tr>
@@ -215,6 +226,8 @@ const noTrialNovelCount = data.hypotheses.filter(
       <button type="button" id="hyp-empty-reset" class="hyp-reset" style="display:inline-block; margin-left:6px;">reset filters</button>.
     </div>
   </div>
+
+  {hasMoreDomains && <DomainModal domains={domainCounts} />}
 
   <script
     type="application/json"
@@ -263,8 +276,25 @@ const noTrialNovelCount = data.hypotheses.filter(
         return '';
       };
 
+      // Mirror of src/lib/format.ts → formatDomainName so client-rendered rows
+      // show "Multiple sclerosis" instead of "multiple_sclerosis". Sentence case.
+      const UPPERCASE_ACRONYMS = new Set(['als','mdd','gbm','cte','ftd','ibd','ra']);
+      const formatDomain = (slug) => {
+        if (!slug) return '';
+        return String(slug)
+          .split('_')
+          .map((w, idx) => {
+            const lower = w.toLowerCase();
+            if (UPPERCASE_ACRONYMS.has(lower)) return lower.toUpperCase();
+            if (/^\d+$/.test(w)) return w;
+            if (idx === 0) return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+            return w.toLowerCase();
+          })
+          .join(' ');
+      };
+
       const domainTag = (d) =>
-        d ? `<span class="hyp-domain-tag${domainTagClass(d)}">${escapeHtml(d)}</span>` : '';
+        d ? `<span class="hyp-domain-tag${domainTagClass(d)}">${escapeHtml(formatDomain(d))}</span>` : '';
 
       const TRIAL_BADGE = {
         active: { cls: 'hyp-badge--trial-active', label: 'trial active' },
@@ -329,7 +359,7 @@ const noTrialNovelCount = data.hypotheses.filter(
                     <li>
                       <a href="${pubmedUrl(e.pmid)}" target="_blank" rel="noopener">PMID ${escapeHtml(e.pmid)}</a>
                       <span class="ev-title">${escapeHtml(e.title)}</span>${
-                        e.year ? ` <span style="color:#94a3b8">(${e.year})</span>` : ''
+                        e.year ? ` <span style="color:var(--text-muted)">(${e.year})</span>` : ''
                       }
                     </li>`
                 )

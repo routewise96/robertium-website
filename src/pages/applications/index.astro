@@ -31,8 +31,8 @@ const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
     <div class="container">
       <h1>Applications</h1>
       <p class="subtitle">Robertium's cross-domain methodology, applied to specific therapeutic areas</p>
-      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
-        The full catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> lists every cross-domain
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
+        The full catalog at <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a> lists every cross-domain
         hypothesis Robertium has surfaced. These application pages narrow the view to one therapeutic area at a time,
         so a researcher working on a specific disease can see what candidates exist for their domain
         without scanning the whole catalog.
@@ -91,8 +91,8 @@ const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
       </p>
       <p>
         For the complete cross-domain catalog across every domain Robertium currently indexes, see
-        <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>. For the underlying methodology,
-        see <a href="/method" style="color:#1e40af;">/method</a>.
+        <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a>. For the underlying methodology,
+        see <a href="/method" style="color:var(--accent);">/method</a>.
       </p>
     </div>
   </section>
@@ -106,7 +106,7 @@ const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
   }
   .apps-card {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 10px;
     padding: 32px;
     text-decoration: none;
@@ -117,7 +117,7 @@ const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
     transition: border-color .15s, box-shadow .15s, transform .15s;
   }
   .apps-card:hover {
-    border-color: #1e40af;
+    border-color: var(--accent);
     box-shadow: 0 6px 18px rgba(30, 64, 175, 0.08);
     transform: translateY(-1px);
   }
@@ -126,24 +126,24 @@ const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #1e40af;
+    color: var(--accent);
   }
   .apps-card h2 {
     font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.02em;
     margin: 0;
-    color: #0a0a0a;
+    color: var(--text-primary);
   }
   .apps-card-domains {
     font-size: 14px;
-    color: #4a5568;
+    color: var(--text-secondary);
     margin: 0;
     line-height: 1.5;
   }
   .apps-card-body {
     font-size: 15px;
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.7;
     margin: 0;
   }
@@ -153,15 +153,15 @@ const neuroCount = data.hypotheses.filter((h) => inSet(h, NEUROLOGY)).length;
     align-items: center;
     margin-top: auto;
     padding-top: 12px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--bg-section);
     font-size: 14px;
   }
   .apps-card-count {
-    color: #64748b;
+    color: var(--text-tertiary);
     font-variant-numeric: tabular-nums;
   }
   .apps-card-link {
-    color: #1e40af;
+    color: var(--accent);
     font-weight: 500;
   }
 

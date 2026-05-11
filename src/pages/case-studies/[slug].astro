@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -55,18 +56,107 @@ export async function getStaticPaths() {
 
 const { data } = Astro.props as { data: CaseStudy };
 
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'depression',
-  epilepsy: 'epilepsy',
-  glioblastoma: 'glioblastoma',
-  multiple_sclerosis: 'multiple sclerosis',
-  pancreatic_cancer: 'pancreatic cancer',
-};
 const fmtDomain = (d: string | null | undefined) =>
-  d ? DOMAIN_LABEL[d] ?? d.replace(/_/g, ' ') : 'cross-domain';
+  d ? formatDomainName(d) : 'cross-domain';
 const fmtPredicate = (p: string | null) => (p ?? 'modulates').replace(/_/g, ' ');
+
+// ===== Chain SVG: auto-size nodes =====
+// Approximate text width avoiding canvas/getBBox (this is SSR). Bold sans-
+// serif averages ~0.62× font size per character; regular ~0.55×.
+const estimateTextWidth = (text: string, fontSize: number, bold: boolean) => {
+  const avgCharWidth = (bold ? 0.62 : 0.55) * fontSize;
+  return text.length * avgCharWidth;
+};
+
+interface NodeLayout {
+  width: number;
+  line1: string;
+  line2: string | null;
+  fontSize: number;
+}
+
+const NODE_MIN = 200;
+const NODE_MAX = 320;
+const NODE_PADDING = 32;
+const NODE_SINGLE_FONT = 18;
+const NODE_WRAP_FONT = 14;
+
+const layoutNode = (text: string): NodeLayout => {
+  const innerMax = NODE_MAX - NODE_PADDING * 2; // 256
+  const single = estimateTextWidth(text, NODE_SINGLE_FONT, true);
+  if (single <= innerMax) {
+    const w = Math.max(NODE_MIN, Math.min(NODE_MAX, Math.round(single + NODE_PADDING * 2)));
+    return { width: w, line1: text, line2: null, fontSize: NODE_SINGLE_FONT };
+  }
+  // Need 2-line wrap. Greedy split balancing length.
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    // Single very-long word: keep at max width, smaller font, single line.
+    return { width: NODE_MAX, line1: text, line2: null, fontSize: NODE_WRAP_FONT };
+  }
+  // Find the split point that minimizes max(line1, line2) length.
+  let bestSplit = 1;
+  let bestMax = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const a = words.slice(0, i).join(' ');
+    const b = words.slice(i).join(' ');
+    const m = Math.max(a.length, b.length);
+    if (m < bestMax) {
+      bestMax = m;
+      bestSplit = i;
+    }
+  }
+  const line1 = words.slice(0, bestSplit).join(' ');
+  const line2 = words.slice(bestSplit).join(' ');
+  return { width: NODE_MAX, line1, line2, fontSize: NODE_WRAP_FONT };
+};
+
+const drugLayout = layoutNode(data.drug.name);
+const mediatorLayout = layoutNode(data.mediator.name);
+const outcomeLayout = layoutNode(data.outcome.name);
+
+const ARROW_GAP = 100;
+const SVG_MARGIN = 20;
+const NODE_HEIGHT = 80;
+const NODE_Y = 50;
+const NODE_CENTER_Y = NODE_Y + NODE_HEIGHT / 2; // 90
+const ARROW_Y = NODE_CENTER_Y;
+const ARROW_LINE_INSET = 5; // visual padding between node edge and line start
+
+const drugX = SVG_MARGIN;
+const mediatorX = drugX + drugLayout.width + ARROW_GAP;
+const outcomeX = mediatorX + mediatorLayout.width + ARROW_GAP;
+const drugCenterX = drugX + drugLayout.width / 2;
+const mediatorCenterX = mediatorX + mediatorLayout.width / 2;
+const outcomeCenterX = outcomeX + outcomeLayout.width / 2;
+
+const arrowAB_X1 = drugX + drugLayout.width + ARROW_LINE_INSET;
+const arrowAB_X2 = mediatorX - ARROW_LINE_INSET;
+const arrowAB_CenterX = (arrowAB_X1 + arrowAB_X2) / 2;
+
+const arrowBC_X1 = mediatorX + mediatorLayout.width + ARROW_LINE_INSET;
+const arrowBC_X2 = outcomeX - ARROW_LINE_INSET;
+const arrowBC_CenterX = (arrowBC_X1 + arrowBC_X2) / 2;
+
+const svgWidth = outcomeX + outcomeLayout.width + SVG_MARGIN;
+const svgHeight = 220;
+
+// Vertical position helpers: for single-line text the y is centered; for
+// 2-line text, line1 is above center and line2 below.
+const textY = (layout: NodeLayout, line: 1 | 2): number => {
+  const center = NODE_CENTER_Y;
+  if (!layout.line2) {
+    // Single line — visual center of the line baseline (~+6 of geometric center for 18px font)
+    return center + layout.fontSize / 3;
+  }
+  // Two-line wrap with 4px vertical gap between baselines
+  const lineHeight = layout.fontSize * 1.15;
+  const baseline = layout.fontSize / 3;
+  if (line === 1) return center - lineHeight / 2 + baseline;
+  return center + lineHeight / 2 + baseline;
+};
+
+const sublabelY = NODE_Y + NODE_HEIGHT + 30; // 160
 
 const score = data.metrics.outreach_score;
 const scorePct = score != null ? Math.max(2, Math.min(100, Math.round(score * 100))) : 0;
@@ -118,28 +208,55 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
         <strong>{fmtDomain(data.outcome.domain)}</strong> outcome
       </p>
 
-      <div class="cs-flow-wrap">
-        <svg class="cs-flow" viewBox="0 0 600 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <figure class="cs-flow-wrap">
+        <svg
+          class="cs-flow"
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
           <defs>
-            <marker id="cs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+            <marker id="cs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-tertiary)"/>
             </marker>
           </defs>
-          <rect x="20" y="40" width="160" height="40" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-          <text x="100" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#0a0a0a">{data.drug.name}</text>
-          <text x="100" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b" letter-spacing="0.06em" text-transform="uppercase">DRUG</text>
-          <line x1="184" y1="60" x2="216" y2="60" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
-          <text x="200" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#1e40af">{fmtPredicate(data.metrics.predicate_ab)}</text>
-          <rect x="220" y="40" width="160" height="40" rx="6" fill="#eff3ff" stroke="#bfdbfe" stroke-width="1.5"/>
-          <text x="300" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#1e40af">{data.mediator.name}</text>
-          <text x="300" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b" letter-spacing="0.06em" text-transform="uppercase">MEDIATOR{data.mediator.type ? ` · ${data.mediator.type}` : ''}</text>
-          <line x1="384" y1="60" x2="416" y2="60" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
-          <text x="400" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#1e40af">{fmtPredicate(data.metrics.predicate_bc)}</text>
-          <rect x="420" y="40" width="160" height="40" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
-          <text x="500" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#0a0a0a">{data.outcome.name.length > 22 ? data.outcome.name.slice(0, 20) + '…' : data.outcome.name}</text>
-          <text x="500" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b" letter-spacing="0.06em" text-transform="uppercase">OUTCOME</text>
+
+          {/* Drug node */}
+          <rect x={drugX} y={NODE_Y} width={drugLayout.width} height={NODE_HEIGHT} rx="8" fill="var(--bg-card)" stroke="var(--border-default)" stroke-width="1"/>
+          <text x={drugCenterX} y={textY(drugLayout, 1)} text-anchor="middle" font-family="Inter, sans-serif" font-size={drugLayout.fontSize} font-weight="700" fill="var(--text-primary)">{drugLayout.line1}</text>
+          {drugLayout.line2 && (
+            <text x={drugCenterX} y={textY(drugLayout, 2)} text-anchor="middle" font-family="Inter, sans-serif" font-size={drugLayout.fontSize} font-weight="700" fill="var(--text-primary)">{drugLayout.line2}</text>
+          )}
+          <text x={drugCenterX} y={sublabelY} text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--text-tertiary)" letter-spacing="0.1em" text-transform="uppercase">DRUG</text>
+
+          {/* A→B predicate + arrow */}
+          <text x={arrowAB_CenterX} y={ARROW_Y - 12} text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="var(--text-tertiary)">{fmtPredicate(data.metrics.predicate_ab)}</text>
+          <line x1={arrowAB_X1} y1={ARROW_Y} x2={arrowAB_X2} y2={ARROW_Y} stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
+
+          {/* Mediator node */}
+          <rect x={mediatorX} y={NODE_Y} width={mediatorLayout.width} height={NODE_HEIGHT} rx="8" fill="var(--accent-bg)" stroke="var(--accent-light)" stroke-width="1.5"/>
+          <text x={mediatorCenterX} y={textY(mediatorLayout, 1)} text-anchor="middle" font-family="Inter, sans-serif" font-size={mediatorLayout.fontSize} font-weight="700" fill="var(--accent-hover)">{mediatorLayout.line1}</text>
+          {mediatorLayout.line2 && (
+            <text x={mediatorCenterX} y={textY(mediatorLayout, 2)} text-anchor="middle" font-family="Inter, sans-serif" font-size={mediatorLayout.fontSize} font-weight="700" fill="var(--accent-hover)">{mediatorLayout.line2}</text>
+          )}
+          <text x={mediatorCenterX} y={sublabelY} text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--accent)" letter-spacing="0.1em" text-transform="uppercase">MEDIATOR{data.mediator.type ? ` · ${data.mediator.type}` : ''}</text>
+
+          {/* B→C predicate + arrow */}
+          <text x={arrowBC_CenterX} y={ARROW_Y - 12} text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="var(--text-tertiary)">{fmtPredicate(data.metrics.predicate_bc)}</text>
+          <line x1={arrowBC_X1} y1={ARROW_Y} x2={arrowBC_X2} y2={ARROW_Y} stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
+
+          {/* Outcome node */}
+          <rect x={outcomeX} y={NODE_Y} width={outcomeLayout.width} height={NODE_HEIGHT} rx="8" fill="var(--bg-card)" stroke="var(--border-default)" stroke-width="1"/>
+          <text x={outcomeCenterX} y={textY(outcomeLayout, 1)} text-anchor="middle" font-family="Inter, sans-serif" font-size={outcomeLayout.fontSize} font-weight="700" fill="var(--text-primary)">{outcomeLayout.line1}</text>
+          {outcomeLayout.line2 && (
+            <text x={outcomeCenterX} y={textY(outcomeLayout, 2)} text-anchor="middle" font-family="Inter, sans-serif" font-size={outcomeLayout.fontSize} font-weight="700" fill="var(--text-primary)">{outcomeLayout.line2}</text>
+          )}
+          <text x={outcomeCenterX} y={sublabelY} text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--text-tertiary)" letter-spacing="0.1em" text-transform="uppercase">OUTCOME</text>
         </svg>
-      </div>
+        <figcaption class="cs-flow-caption">
+          Figure 1. Hypothesis chain: {data.drug.name} ({fmtPredicate(data.metrics.predicate_ab)}) {data.mediator.name} ({fmtPredicate(data.metrics.predicate_bc)}) {data.outcome.name}.
+        </figcaption>
+      </figure>
     </div>
   </section>
 
@@ -407,452 +524,572 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
 </Layout>
 
 <style>
+  /* ===== Draft banner (page-top) ===== */
+  .cs-draft-banner {
+    background: var(--state-error-bg);
+    border-bottom: 1px solid rgba(185, 28, 28, 0.2);
+    color: var(--state-error);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-snug);
+    padding: var(--space-3) 0;
+    text-align: center;
+  }
+  .cs-draft-banner strong {
+    color: var(--state-error);
+    font-weight: var(--weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    margin-right: var(--space-2);
+    font-size: var(--text-xs);
+  }
+
+  /* ===== Hero ===== */
   .cs-hero {
-    padding: 56px 0 32px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: var(--space-20) 0 var(--space-16);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-subtle);
   }
-  .cs-hero.is-benchmark { background: #fffaf0; }
+  .cs-hero.is-benchmark { background: var(--state-warning-bg); }
   .cs-back {
-    display: inline-block;
-    font-size: 13px;
-    color: #1e40af;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-tertiary);
     text-decoration: none;
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
+    transition: color .15s ease;
   }
-  .cs-back:hover { text-decoration: underline; }
+  .cs-back:hover { color: var(--accent); }
+
   .cs-hero-badges {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: var(--space-4);
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: var(--space-6);
   }
   .cs-section-badge {
     display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 4px 10px;
-    border-radius: 4px;
+    letter-spacing: var(--tracking-wide);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
   }
-  .cs-section-badge--novel { background: #dbeafe; color: #1e40af; }
-  .cs-section-badge--benchmark { background: #fed7aa; color: #9a3412; }
+  .cs-section-badge--novel { color: var(--accent); }
+  .cs-section-badge--benchmark { color: var(--state-warning); }
   .cs-id-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: 'JetBrains Mono', monospace;
-    padding: 4px 10px;
-    border-radius: 4px;
-    background: #f1f5f9;
-    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    font-family: var(--font-mono);
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-tertiary);
   }
   .cs-quality-badge {
     display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 4px 10px;
-    border-radius: 4px;
+    letter-spacing: var(--tracking-wide);
+    padding: var(--space-1) var(--space-3);
+    border-radius: 999px;
   }
-  .cs-quality-badge--high { background: #dcfce7; color: #166534; }
-  .cs-quality-badge--mid  { background: #fef3c7; color: #92400e; }
-  .cs-quality-badge--low  { background: #fecaca; color: #991b1b; }
+  .cs-quality-badge--high { background: var(--state-success-bg); color: var(--state-success); }
+  .cs-quality-badge--mid  { background: var(--state-warning-bg); color: var(--state-warning); }
+  .cs-quality-badge--low  { background: var(--state-error-bg); color: var(--state-error); }
+
   .cs-hero h1 {
-    font-size: 38px;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    color: #0a0a0a;
-    margin-bottom: 12px;
+    font-family: var(--font-base);
+    font-size: var(--text-4xl);
+    font-weight: var(--weight-extrabold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-4);
+    max-width: 1000px;
   }
-  .cs-hero-arrow { color: #cbd5e1; font-weight: 400; padding: 0 6px; }
-  .cs-hero-mediator { color: #1e40af; }
+  .cs-hero-arrow {
+    font-weight: var(--weight-normal);
+    color: var(--text-muted);
+    padding: 0 var(--space-2);
+  }
+  .cs-hero-mediator { color: var(--accent); }
   .cs-hero-sub {
-    font-size: 16px;
-    color: #4a5568;
-    line-height: 1.6;
-    margin-bottom: 24px;
+    font-size: var(--text-lg);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    max-width: 720px;
+    margin: 0 0 0;
+    font-weight: var(--weight-normal);
   }
-  .cs-hero-sub strong { color: #1a1a1a; font-weight: 600; }
+  .cs-hero-sub strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
+
+  /* ===== Chain figure (full-width, section bg) ===== */
+  .cs-flow-section {
+    background: var(--bg-section);
+    padding: var(--space-16) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
   .cs-flow-wrap {
-    background: #f9fafb;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 12px;
-    margin-top: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8) var(--space-8) var(--space-6);
+    margin: 0;
   }
   .cs-flow {
     width: 100%;
+    max-height: 240px;
     height: auto;
-    max-height: 160px;
+    display: block;
+  }
+  .cs-flow-caption {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    text-align: center;
+    margin: var(--space-4) auto 0;
+    max-width: 760px;
+    line-height: var(--leading-normal);
   }
 
+  /* ===== Metrics cards (DrugBank cards) ===== */
   .cs-facts-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    gap: var(--space-4);
   }
   .cs-facts-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
   }
   .cs-facts-label {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #64748b;
-    margin-bottom: 8px;
+    letter-spacing: var(--tracking-wide);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-3);
   }
   .cs-facts-value {
-    font-size: 32px;
-    font-weight: 700;
-    color: #0a0a0a;
+    font-family: var(--font-base);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--text-primary);
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-tight);
   }
   .cs-facts-meta {
-    font-size: 12px;
-    color: #64748b;
-    margin-top: 4px;
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-top: var(--space-2);
   }
   .cs-score-bar {
-    margin-top: 10px;
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
+    margin-top: var(--space-4);
+    height: 4px;
+    background: var(--bg-section);
+    border-radius: 2px;
     overflow: hidden;
   }
   .cs-score-fill {
     height: 100%;
-    background: #1e40af;
-    border-radius: 3px;
+    background: var(--accent);
+    border-radius: 2px;
   }
 
+  /* ===== Benchmark callout (full-section bg) ===== */
   .cs-callout {
-    border-left: 4px solid #1e40af;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid #1e40af;
-    border-radius: 4px;
-    padding: 24px 28px;
+    background: var(--state-warning-bg);
+    border: 1px solid rgba(180, 83, 9, 0.2);
+    border-left: 4px solid var(--state-warning);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8) var(--space-10);
   }
-  .cs-callout--benchmark { border-left-color: #ea580c; background: #fff7ed; }
+  .cs-callout--benchmark { /* token alias */ }
   .cs-callout-eyebrow {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #ea580c;
-    margin-bottom: 6px;
+    letter-spacing: var(--tracking-wide);
+    color: var(--state-warning);
+    margin-bottom: var(--space-3);
   }
   .cs-callout-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #0a0a0a;
-    margin-bottom: 12px;
+    font-family: var(--font-base);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-4);
+    line-height: var(--leading-tight);
   }
   .cs-callout-body {
-    font-size: 16px;
-    color: #374151;
-    line-height: 1.7;
-    margin: 0 0 12px;
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    margin: 0 0 var(--space-6);
+    max-width: 760px;
   }
-  .cs-callout-body strong { color: #1a1a1a; font-weight: 600; }
-  .cs-callout-body a { color: #1e40af; text-decoration: none; }
-  .cs-callout-body a:hover { text-decoration: underline; }
+  .cs-callout-body strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
+  .cs-callout-body a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: var(--weight-medium);
+  }
+  .cs-callout-body a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+  /* ===== DRAFT / TODO blocks (callout card with red border) ===== */
+  .cs-todo-block,
   .cs-callout-todo {
-    font-size: 14px;
-    color: #6b7280;
-    background: #f9fafb;
-    border: 1px dashed #cbd5e1;
-    border-radius: 4px;
-    padding: 32px 14px 10px;
-    margin: 8px 0 0;
-    font-family: 'JetBrains Mono', monospace;
+    background: var(--state-error-bg);
+    border: 1px solid rgba(185, 28, 28, 0.25);
+    border-left: 4px solid var(--state-error);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6) var(--space-6);
+    margin: var(--space-4) 0;
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
   }
-  .cs-callout-todo em { color: #475569; font-style: italic; }
+  .cs-todo-block::before,
+  .cs-callout-todo::before {
+    content: "Draft — author review pending";
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--state-error);
+    margin-bottom: var(--space-3);
+  }
+  .cs-todo-block em,
+  .cs-callout-todo em {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: var(--weight-normal);
+  }
+  .cs-callout-todo code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    background: rgba(185, 28, 28, 0.08);
+    color: var(--state-error);
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-weight: var(--weight-medium);
+    font-style: normal;
+  }
 
+  /* ===== Chain subsections ===== */
   .cs-chain-sub {
-    font-size: 20px;
-    font-weight: 600;
-    color: #0a0a0a;
-    margin: 28px 0 12px;
+    font-family: var(--font-base);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    color: var(--text-primary);
+    letter-spacing: var(--tracking-tight);
+    margin: var(--space-10) 0 var(--space-4);
   }
-  .cs-chain-sub:first-of-type { margin-top: 8px; }
+  .cs-chain-sub:first-of-type { margin-top: 0; }
   .cs-chain-meta {
-    font-size: 14px;
-    color: #64748b;
-    margin-top: 6px;
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-top: var(--space-3);
   }
+  .cs-chain-meta strong { color: var(--text-secondary); font-weight: var(--weight-semibold); }
   .cs-chain-meta code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    background: #f1f5f9;
-    color: #475569;
-    padding: 1px 6px;
-    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    background: var(--bg-section);
+    color: var(--text-secondary);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
   }
-  .cs-todo-block {
-    font-size: 15px;
-    color: #6b7280;
-    background: #f9fafb;
-    border: 1px dashed #cbd5e1;
-    border-radius: 4px;
-    padding: 36px 18px 14px;
-    margin: 8px 0;
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.7;
-  }
-  .cs-todo-block em { color: #475569; font-style: italic; }
 
+  /* ===== Evidence (two-column on desktop) ===== */
   .cs-evidence-warning {
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
-    border-radius: 6px;
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #92400e;
-    margin: 0 0 24px;
+    background: var(--state-warning-bg);
+    border: 1px solid rgba(180, 83, 9, 0.2);
+    border-left: 4px solid var(--state-warning);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--state-warning);
+    margin: 0 0 var(--space-8);
+    max-width: 720px;
   }
-  .cs-evidence-block { margin-bottom: 24px; }
+  .cs-evidence-block { margin-bottom: var(--space-10); }
   .cs-evidence-block:last-of-type { margin-bottom: 0; }
   .cs-evidence-head {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #1a1a1a;
-    margin: 0 0 12px;
+    letter-spacing: var(--tracking-wide);
+    color: var(--text-tertiary);
+    margin: 0 0 var(--space-4);
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
   }
   .cs-evidence-chain {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
     text-transform: none;
-    color: #0a0a0a;
-    font-weight: 600;
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0;
   }
   .cs-evidence-pred {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #1e40af;
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
     text-transform: none;
-    padding: 0 4px;
+    font-weight: var(--weight-normal);
+    letter-spacing: 0;
   }
   .cs-evidence-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    overflow: hidden;
   }
   .cs-evidence-list li {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
-    line-height: 1.55;
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3) var(--space-4);
+    align-items: baseline;
   }
   .cs-evidence-list li:last-child { border-bottom: 0; }
   .cs-pmid {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: #1e40af;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--accent);
     text-decoration: none;
-    margin-right: 10px;
-    flex-shrink: 0;
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+    padding: 2px var(--space-2);
+    background: var(--accent-bg);
+    border-radius: var(--radius-sm);
   }
-  .cs-pmid:hover { text-decoration: underline; }
-  .cs-pmid--no { color: #94a3b8; }
-  .cs-ev-title { color: #374151; }
-  .cs-ev-year { color: #94a3b8; font-size: 12px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .cs-pmid:hover { background: var(--accent-light); color: var(--accent-hover); }
+  .cs-pmid--no { color: var(--text-muted); background: var(--bg-section); }
+  .cs-ev-title {
+    color: var(--text-primary);
+    font-weight: var(--weight-medium);
+  }
+  .cs-ev-year {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    margin-left: var(--space-2);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-normal);
+  }
   .cs-evidence-empty {
-    font-size: 14px;
-    color: #94a3b8;
-    font-style: italic;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
     margin: 0;
   }
 
+  /* ===== Literature gap viz ===== */
   .cs-gap-viz {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
-    gap: 16px;
+    gap: var(--space-8);
     align-items: center;
-    margin: 28px 0 16px;
+    margin: var(--space-8) 0 var(--space-4);
+    padding: var(--space-8);
+    background: var(--bg-section);
+    border-radius: var(--radius-lg);
   }
   .cs-gap-cluster {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
     text-align: center;
   }
-  .cs-gap-cluster--ab { border-top: 3px solid #1e40af; }
-  .cs-gap-cluster--bc { border-top: 3px solid #1e40af; }
   .cs-gap-cluster-label {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #64748b;
-    margin-bottom: 8px;
+    letter-spacing: var(--tracking-wide);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-3);
   }
   .cs-gap-cluster-count {
-    font-size: 36px;
-    font-weight: 700;
-    color: #1e40af;
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--accent);
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    margin-bottom: 6px;
+    margin-bottom: var(--space-2);
+    letter-spacing: var(--tracking-tight);
   }
   .cs-gap-cluster-meta {
-    font-size: 12px;
-    color: #4a5568;
-    line-height: 1.4;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-snug);
   }
   .cs-gap-arrow {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
     min-width: 100px;
   }
   .cs-gap-arrow-line {
-    width: 60px;
-    height: 2px;
-    background: #cbd5e1;
+    width: 60px; height: 2px;
+    background: var(--text-tertiary);
     position: relative;
   }
   .cs-gap-arrow-line::after {
-    content: '';
-    position: absolute;
-    right: -4px;
-    top: -3px;
-    width: 0;
-    height: 0;
-    border-left: 6px solid #cbd5e1;
+    content: ''; position: absolute; right: -1px; top: -3px;
+    width: 0; height: 0;
+    border-left: 8px solid var(--text-tertiary);
     border-top: 4px solid transparent;
     border-bottom: 4px solid transparent;
   }
   .cs-gap-arrow-label {
-    font-size: 11px;
-    color: #64748b;
-    text-align: center;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
   }
-  .cs-gap-arrow-label strong { color: #1a1a1a; font-weight: 600; }
+  .cs-gap-arrow-label strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
   .cs-gap-caption {
-    font-size: 14px;
-    color: #4a5568;
-    line-height: 1.65;
-    margin: 4px 0 0;
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
+    margin: var(--space-4) 0 0;
+    max-width: 760px;
   }
 
+  /* ===== Related cards ===== */
   .cs-related-intro {
-    font-size: 15px;
-    color: #4a5568;
-    margin: 0 0 20px;
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    margin: 0 0 var(--space-6);
+    max-width: 680px;
   }
   .cs-related-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: var(--space-4);
   }
   .cs-related-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 18px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
     text-decoration: none;
     color: inherit;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    transition: border-color .15s, box-shadow .15s, transform .15s;
+    gap: var(--space-3);
+    transition: border-color .15s ease;
   }
-  .cs-related-card:hover {
-    border-color: #1e40af;
-    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08);
-    transform: translateY(-1px);
-  }
+  .cs-related-card:hover { border-color: var(--accent); }
   .cs-related-shared {
-    font-size: 10px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #1e40af;
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent);
   }
   .cs-related-chain {
-    font-size: 14px;
-    line-height: 1.5;
+    font-family: var(--font-base);
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
   }
-  .cs-rel-drug { font-weight: 600; color: #0a0a0a; }
-  .cs-rel-mediator { font-weight: 600; color: #1e40af; }
-  .cs-rel-outcome { color: #1a1a1a; }
-  .cs-rel-arrow { color: #cbd5e1; font-size: 12px; }
+  .cs-rel-drug { font-weight: var(--weight-bold); color: var(--text-primary); }
+  .cs-rel-mediator { font-weight: var(--weight-bold); color: var(--accent); }
+  .cs-rel-outcome { color: var(--text-secondary); }
+  .cs-rel-arrow { color: var(--text-muted); font-size: var(--text-sm); }
   .cs-related-footer {
     margin-top: auto;
-    padding-top: 8px;
-    border-top: 1px solid #f1f5f9;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
-    color: #64748b;
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
   }
-  .cs-related-score { font-variant-numeric: tabular-nums; font-weight: 600; color: #1e40af; }
-  .cs-related-link { color: #1e40af; font-weight: 500; }
+  .cs-related-score {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+  }
+  .cs-related-link {
+    color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
 
+  /* ===== Footer link cards ===== */
   .cs-footer-links {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: var(--space-4);
   }
   .cs-footer-link {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 20px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
     text-decoration: none;
     color: inherit;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    transition: border-color .15s;
+    gap: var(--space-2);
+    transition: border-color .15s ease;
   }
-  .cs-footer-link:hover { border-color: #1e40af; }
+  .cs-footer-link:hover { border-color: var(--accent); }
   .cs-footer-link strong {
-    font-size: 16px;
-    color: #1e40af;
-    font-weight: 600;
+    font-family: var(--font-base);
+    font-size: var(--text-base);
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
   }
   .cs-footer-link span {
-    font-size: 14px;
-    color: #4a5568;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
   }
 
+  /* ===== Responsive ===== */
+  @media (max-width: 1024px) {
+    .cs-evidence-list li { grid-template-columns: 1fr; gap: var(--space-2); }
+  }
   @media (max-width: 900px) {
     .cs-facts-grid { grid-template-columns: repeat(2, 1fr); }
     .cs-related-grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 720px) {
-    .cs-hero h1 { font-size: 28px; }
-    .cs-hero-arrow { display: block; padding: 4px 0; }
+    .cs-hero { padding: var(--space-12) 0 var(--space-10); }
+    .cs-hero h1 { font-size: var(--text-2xl); }
+    .cs-hero-arrow { display: inline-block; padding: 0 var(--space-1); }
     .cs-gap-viz { grid-template-columns: 1fr; }
-    .cs-gap-arrow { transform: rotate(90deg); margin: 8px 0; }
+    .cs-gap-arrow { transform: rotate(90deg); margin: var(--space-2) 0; }
     .cs-footer-links { grid-template-columns: 1fr; }
+    .cs-callout { padding: var(--space-6); }
   }
   @media (max-width: 540px) {
     .cs-facts-grid { grid-template-columns: 1fr; }

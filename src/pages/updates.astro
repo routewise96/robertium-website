@@ -30,7 +30,7 @@ import Layout from '../layouts/Layout.astro';
             <li><strong>valproic acid → BDNF → bipolar disorder</strong> (455 of 510)</li>
           </ul>
           <p>The remaining 11 misses break down as 2 drugs absent from corpus, 5 specific outcomes absent from BC edges, and 4 drugs too thinly represented to form chains. These are corpus coverage gaps, not methodology failures.</p>
-          <p>The takeaway: Robertium's value claim is novelty precision (best measured by prospective tracking and expert review), not known-repurposing reproduction. A new page at <a href="/benchmark" style="color:#1e40af;">/benchmark</a> documents the full finding with citations.</p>
+          <p>The takeaway: Robertium's value claim is novelty precision (best measured by prospective tracking and expert review), not known-repurposing reproduction. A new page at <a href="/benchmark" style="color:var(--accent);">/benchmark</a> documents the full finding with citations.</p>
           <div class="update-tags">
             <span class="update-tag">benchmark</span>
             <span class="update-tag">methodology</span>
@@ -119,7 +119,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Clinical trials: <strong>50 active</strong>, 55 completed, 8 preclinical-only, 544 with no registered trial, 15 unknown (drug name not searchable as a single intervention).</li>
             <li>Literature: <strong>361 novel signals</strong> (no PubMed paper proposes the drug as treatment/repurposing for this outcome), 117 partial evidence, 179 reproduces a documented association, 15 unknown.</li>
           </ul>
-          <p>The most useful combination for outreach is <em>novel literature signal</em> together with <em>no clinical trial</em> — those are candidates that Robertium surfaced and that nobody appears to have followed up on yet. The catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> now shows badges on every row and a "Show novel signals only" button that filters the table to those candidates.</p>
+          <p>The most useful combination for outreach is <em>novel literature signal</em> together with <em>no clinical trial</em> — those are candidates that Robertium surfaced and that nobody appears to have followed up on yet. The catalog at <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a> now shows badges on every row and a "Show novel signals only" button that filters the table to those candidates.</p>
           <p>Implementation: <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_clinical_trials.py</code> and <code style="font-family:var(--font-mono); font-size:14px;">scripts/enrich_literature_status.py</code>. Both scripts are rate-limited (5 req/s for ClinicalTrials.gov, ~2.5 req/s for PubMed without an API key), idempotent, and run only against outreach-quality hypotheses to keep the API budget bounded. Drug names that are combinations or identifiers (for example "ALA/AUR combination" or "1D9-LIRΔTP53INP2") are flagged <em>unknown</em> without making a request. Trials enrichment took ~4 minutes; literature enrichment took ~10 minutes.</p>
           <div class="update-tags">
             <span class="update-tag">validation</span>
@@ -141,7 +141,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Cross-domain hypotheses (raw): 4,593 → <strong>7,957</strong></li>
             <li>Outreach-quality hypotheses: 328 → <strong>672</strong> (62 high-confidence + 610 mid-confidence)</li>
           </ul>
-          <p>For researchers: more papers per domain produces stronger cross-domain bridges. New high-confidence candidates surfaced in the top: <em>erlotinib → EGFR → glioblastoma</em> (now #1 at score 0.457), <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective signal via the ALS–Alzheimer's mediator chain), and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature). The full ranked catalog is on <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a>.</p>
+          <p>For researchers: more papers per domain produces stronger cross-domain bridges. New high-confidence candidates surfaced in the top: <em>erlotinib → EGFR → glioblastoma</em> (now #1 at score 0.457), <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective signal via the ALS–Alzheimer's mediator chain), and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature). The full ranked catalog is on <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a>.</p>
           <p>Pipeline ran end-to-end across all six domains. Cross-domain orchestrator completed in under an hour with no quality-gate failures.</p>
           <div class="update-tags">
             <span class="update-tag">pipeline</span>
@@ -153,7 +153,7 @@ import Layout from '../layouts/Layout.astro';
         <article class="update-post">
           <div class="update-date">2026-05-09</div>
           <h2>All six domains live: 4,593 cross-domain hypotheses now searchable</h2>
-          <p>Major depressive disorder is now ingested and processed — the last of the six target domains. With depression in place, the cross-domain orchestrator ran the full 30 directional pairs (each domain as drug source × each other domain as outcome) and produced <strong>4,593 cross-domain hypotheses</strong> with complete evidence chains, all browsable on the <a href="/hypotheses" style="color:#1e40af;">hypotheses page</a>.</p>
+          <p>Major depressive disorder is now ingested and processed — the last of the six target domains. With depression in place, the cross-domain orchestrator ran the full 30 directional pairs (each domain as drug source × each other domain as outcome) and produced <strong>4,593 cross-domain hypotheses</strong> with complete evidence chains, all browsable on the <a href="/hypotheses" style="color:var(--accent);">hypotheses page</a>.</p>
           <p>Final corpus numbers: 47,370 papers ingested, 27,177 passed the L1 biomedical-relevance filter, 82,708 structured claims extracted, six therapeutic domains in the knowledge graph (glioblastoma, epilepsy, ALS, Alzheimer's disease, pancreatic cancer, major depressive disorder).</p>
           <p>For researchers: the catalog now lets you ask, for any pair of these diseases, which drugs from one literature might modulate outcomes in the other through a shared molecular mediator — even when no paper has ever co-mentioned the drug and the target disease. Filter by drug domain, outcome domain, or search by gene/protein/drug name; each hypothesis links to the underlying PubMed evidence on both legs of the chain.</p>
 
@@ -235,7 +235,7 @@ import Layout from '../layouts/Layout.astro';
         </article>
 
       </div>
-      <p style="margin-top:24px; font-size:15px; color:#4a5568;">Subscribe to updates by email — <a href="mailto:daniel@robertium.com?subject=Subscribe%20to%20updates" style="color:#1e40af;">daniel@robertium.com</a> (mention "subscribe to updates" in subject).</p>
+      <p style="margin-top:24px; font-size:15px; color:var(--text-secondary);">Subscribe to updates by email — <a href="mailto:daniel@robertium.com?subject=Subscribe%20to%20updates" style="color:var(--accent);">daniel@robertium.com</a> (mention "subscribe to updates" in subject).</p>
     </div>
   </section>
 </Layout>

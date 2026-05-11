@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -40,17 +41,8 @@ const sortFn = (a: CaseStudyMeta, b: CaseStudyMeta) =>
 const novelCases = all.filter((c) => c.section === 'novel').sort(sortFn);
 const benchmarkCases = all.filter((c) => c.section === 'benchmark').sort(sortFn);
 
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'depression',
-  epilepsy: 'epilepsy',
-  glioblastoma: 'glioblastoma',
-  multiple_sclerosis: 'multiple sclerosis',
-  pancreatic_cancer: 'pancreatic cancer',
-};
 const fmtDomain = (d: string | null) =>
-  d ? DOMAIN_LABEL[d] ?? d.replace(/_/g, ' ') : 'cross-domain';
+  d ? formatDomainName(d) : 'cross-domain';
 
 const renderCard = (c: CaseStudyMeta) => ({
   href: `/case-studies/${c.slug}/`,
@@ -203,184 +195,233 @@ const renderCard = (c: CaseStudyMeta) => ({
         These five case studies are a curated subset. For every cross-domain hypothesis
         Robertium has surfaced — including filtering by drug, mediator, outcome domain,
         or evidence level — see the full
-        <a href="/hypotheses" style="color:#1e40af;">catalog</a>. The discovery method is
-        described in detail at <a href="/method" style="color:#1e40af;">/method</a>.
+        <a href="/hypotheses" style="color:var(--accent);">catalog</a>. The discovery method is
+        described in detail at <a href="/method" style="color:var(--accent);">/method</a>.
       </p>
     </div>
   </section>
 </Layout>
 
 <style>
+  /* ===== Page-intro TODO block ===== */
   .csi-todo-intro {
-    font-size: 15px;
-    color: #6b7280;
-    background: #f9fafb;
-    border: 1px dashed #cbd5e1;
-    border-radius: 4px;
-    padding: 36px 18px 14px;
-    margin: 16px 0 0;
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.7;
+    background: var(--state-error-bg);
+    border: 1px solid rgba(185, 28, 28, 0.25);
+    border-left: 4px solid var(--state-error);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
     max-width: 760px;
   }
-  .csi-todo-intro em { color: #475569; font-style: italic; }
+  .csi-todo-intro::before {
+    content: "Draft — author review pending";
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--state-error);
+    margin-bottom: var(--space-3);
+  }
+  .csi-todo-intro em {
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  /* ===== Section eyebrow + h2 (DrugBank pattern) ===== */
   .csi-section-head {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
   }
   .csi-section-eyebrow {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #1e40af;
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent);
   }
-  .csi-section-eyebrow--benchmark { color: #ea580c; }
+  .csi-section-eyebrow--benchmark { color: var(--state-warning); }
   .csi-section-head h2 {
-    font-size: 28px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #0a0a0a;
+    font-family: var(--font-base);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
     margin: 0;
+    line-height: var(--leading-tight);
   }
   .csi-section-body {
-    font-size: 15px;
-    color: #6b7280;
-    background: #f9fafb;
-    border: 1px dashed #cbd5e1;
-    border-radius: 4px;
-    padding: 36px 18px 14px;
-    margin: 0 0 24px;
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.7;
+    background: var(--state-error-bg);
+    border: 1px solid rgba(185, 28, 28, 0.25);
+    border-left: 4px solid var(--state-error);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    margin: 0 0 var(--space-10);
+    font-family: var(--font-base);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-normal);
     max-width: 760px;
   }
-  .csi-section-body em { color: #475569; font-style: italic; }
-  .section--gray .csi-section-body { background: #fff; }
+  .csi-section-body::before {
+    content: "Draft — author review pending";
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--state-error);
+    margin-bottom: var(--space-3);
+  }
+  .csi-section-body em {
+    color: var(--text-secondary);
+    font-style: italic;
+  }
 
+  /* ===== Cards grid (DrugBank-style) ===== */
   .csi-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
+    gap: var(--space-6);
   }
   .csi-grid--benchmark {
     grid-template-columns: repeat(2, 1fr);
-    max-width: 760px;
+    max-width: 880px;
   }
   .csi-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 22px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
     text-decoration: none;
     color: inherit;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    transition: border-color .15s, box-shadow .15s, transform .15s;
+    gap: var(--space-4);
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
   }
   .csi-card:hover {
-    border-color: #1e40af;
-    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08);
-    transform: translateY(-1px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    transform: translateY(-2px);
   }
-  .csi-card--benchmark:hover { border-color: #ea580c; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.08); }
+  .csi-card--benchmark:hover { border-color: var(--state-warning); }
   .csi-card-eyebrow {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .csi-card-section {
-    font-size: 10px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #1e40af;
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent);
   }
-  .csi-card-section--benchmark { color: #ea580c; }
+  .csi-card-section--benchmark { color: var(--state-warning); }
   .csi-quality {
-    font-size: 10px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 2px 8px;
-    border-radius: 4px;
+    letter-spacing: var(--tracking-wide);
+    padding: var(--space-1) var(--space-3);
+    border-radius: 999px;
   }
-  .csi-quality--high { background: #dcfce7; color: #166534; }
-  .csi-quality--mid  { background: #fef3c7; color: #92400e; }
-  .csi-quality--low  { background: #fecaca; color: #991b1b; }
+  .csi-quality--high { background: var(--state-success-bg); color: var(--state-success); }
+  .csi-quality--mid  { background: var(--state-warning-bg); color: var(--state-warning); }
+  .csi-quality--low  { background: var(--state-error-bg); color: var(--state-error); }
   .csi-card-chain {
-    font-size: 16px;
-    line-height: 1.5;
+    font-family: var(--font-base);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    line-height: var(--leading-snug);
+    color: var(--text-primary);
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-2);
     align-items: baseline;
+    letter-spacing: var(--tracking-tight);
   }
-  .csi-chain-drug    { font-weight: 700; color: #0a0a0a; }
-  .csi-chain-mediator{ font-weight: 600; color: #1e40af; }
-  .csi-chain-outcome { color: #1a1a1a; }
-  .csi-chain-arrow   { color: #cbd5e1; font-size: 13px; }
-  .csi-chain-arrow--small { font-size: 11px; }
+  .csi-chain-drug { font-weight: var(--weight-bold); color: var(--text-primary); }
+  .csi-chain-mediator { font-weight: var(--weight-bold); color: var(--accent); }
+  .csi-chain-outcome { color: var(--text-primary); font-weight: var(--weight-bold); }
+  .csi-chain-arrow {
+    color: var(--text-muted);
+    font-size: var(--text-base);
+    font-weight: var(--weight-normal);
+  }
+  .csi-chain-arrow--small { font-size: var(--text-xs); }
   .csi-card-domains {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
   .csi-domain-tag {
     display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #f1f5f9;
-    color: #475569;
+    letter-spacing: var(--tracking-wide);
+    padding: var(--space-1) var(--space-2);
+    background: var(--bg-section);
+    color: var(--text-tertiary);
+    border-radius: var(--radius-sm);
   }
   .csi-card-footer {
     margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid #f1f5f9;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 8px;
-    font-size: 12px;
-    color: #64748b;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
   }
   .csi-card-score {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: #1e40af;
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
   }
-  .csi-card--benchmark .csi-card-score { color: #ea580c; }
   .csi-card-evidence {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
   .csi-card-link {
-    font-weight: 500;
-    color: #1e40af;
+    font-weight: var(--weight-semibold);
+    color: var(--accent);
   }
-  .csi-card--benchmark .csi-card-link { color: #ea580c; }
+  .csi-card--benchmark .csi-card-link { color: var(--state-warning); }
 
+  /* ===== Benchmark footer note ===== */
   .csi-benchmark-foot {
-    margin-top: 18px;
-    font-size: 14px;
-    color: #4a5568;
+    margin-top: var(--space-8);
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    max-width: 720px;
   }
-  .csi-benchmark-foot a { color: #1e40af; text-decoration: none; }
-  .csi-benchmark-foot a:hover { text-decoration: underline; }
+  .csi-benchmark-foot a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: var(--weight-medium);
+  }
+  .csi-benchmark-foot a:hover { color: var(--accent-hover); text-decoration: underline; }
 
   @media (max-width: 900px) {
     .csi-grid, .csi-grid--benchmark { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 600px) {
     .csi-grid, .csi-grid--benchmark { grid-template-columns: 1fr; }
+    .csi-section-head h2 { font-size: var(--text-2xl); }
   }
 </style>
