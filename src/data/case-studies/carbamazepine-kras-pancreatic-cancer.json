@@ -1,0 +1,109 @@
+{
+  "slug": "carbamazepine-kras-pancreatic-cancer",
+  "hypothesis_id": 7049,
+  "section": "novel",
+  "title": "carbamazepine → KRAS → pancreatic ductal adenocarcinoma",
+  "drug": {
+    "name": "carbamazepine",
+    "canonical": "carbamazepine",
+    "type": "drug",
+    "domain": "epilepsy",
+    "TODO_common_name": "TODO Daniel: brand/common names if applicable",
+    "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
+  },
+  "mediator": {
+    "name": "KRAS",
+    "canonical": "kras",
+    "type": "gene",
+    "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
+  },
+  "outcome": {
+    "name": "pancreatic ductal adenocarcinoma",
+    "canonical": "pancreatic ductal adenocarcinoma",
+    "type": "disease",
+    "domain": "pancreatic_cancer",
+    "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
+  },
+  "metrics": {
+    "outreach_score": 0.29957322735539915,
+    "outreach_quality": "high",
+    "outreach_reason": null,
+    "ab_count": 1,
+    "bc_count": 9,
+    "direct_evidence_count": 0,
+    "domain_source": "epilepsy",
+    "domain_target": "pancreatic_cancer",
+    "predicate_ab": "binds_to",
+    "predicate_bc": "associated_with",
+    "literature_status": "novel_signal",
+    "clinical_trial_status": "none",
+    "clinical_trial_nct_ids": []
+  },
+  "evidence": {
+    "ab_claims": [
+      {
+        "pmid": "38446332",
+        "title": "Impact of carbamazepine on SMARCA4 (BRG1) expression in colorectal cancer: modulation by KRAS mutation status",
+        "doi": "10.1007/s10637-024-01418-2",
+        "year": 2024
+      }
+    ],
+    "bc_claims": [
+      {
+        "pmid": "39999309",
+        "title": "Somatic Genomic Profiling of Pancreatic Ductal Adenocarcinomas From a Diverse Cohort of Patients",
+        "doi": "10.1097/mpa.0000000000002408",
+        "year": 2025
+      },
+      {
+        "pmid": "34665935",
+        "title": "Evaluation and diagnostic value of next‐generation sequencing analysis of residual liquid‐based cytology specimens of pancreatic masses",
+        "doi": "10.1002/cncy.22525",
+        "year": 2021
+      },
+      {
+        "pmid": "34905283",
+        "title": "Adequacy evaluation and use of pancreatic adenocarcinoma specimens for next‐generation sequencing acquired by endoscopic ultrasound–guided FNA and FNB",
+        "doi": "10.1002/cncy.22533",
+        "year": 2021
+      },
+      {
+        "pmid": "27929127",
+        "title": "Lipid-modified G4-decoy oligonucleotide anchored to nanoparticles: delivery and bioactivity in pancreatic cancer cells",
+        "doi": "10.1038/srep38468",
+        "year": 2016
+      },
+      {
+        "pmid": "26669280",
+        "title": "Clinical utility of circulating tumor DNA for molecular assessment in pancreatic cancer",
+        "doi": "10.1038/srep18425",
+        "year": 2015
+      }
+    ]
+  },
+  "biological_context": {
+    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how the drug normally works",
+    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on mediator's known role in the outcome disease",
+    "TODO_novelty_argument": "TODO Daniel: why this drug-disease combination is novel and worth investigating",
+    "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
+  },
+  "benchmark_context": null,
+  "related_hypotheses": [
+    {
+      "id": 7050,
+      "drug": "carbamazepine",
+      "mediator": "KRAS",
+      "outcome": "pancreatic cancer",
+      "score": 0.26390573296152586,
+      "shared": "drug"
+    },
+    {
+      "id": 2093,
+      "drug": "carbamazepine",
+      "mediator": "Cx43",
+      "outcome": "ALS",
+      "score": 0.24849066497880004,
+      "shared": "drug"
+    }
+  ]
+}

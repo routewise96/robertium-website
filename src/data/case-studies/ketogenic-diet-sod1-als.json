@@ -1,0 +1,117 @@
+{
+  "slug": "ketogenic-diet-sod1-als",
+  "hypothesis_id": 2091,
+  "section": "novel",
+  "title": "Ketogenic diet → Sod1 → ALS",
+  "drug": {
+    "name": "Ketogenic diet",
+    "canonical": "ketogenic diet",
+    "type": "drug",
+    "domain": "epilepsy",
+    "TODO_common_name": "TODO Daniel: brand/common names if applicable",
+    "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
+  },
+  "mediator": {
+    "name": "Sod1",
+    "canonical": "SOD1",
+    "type": "gene",
+    "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
+  },
+  "outcome": {
+    "name": "ALS",
+    "canonical": "amyotrophic lateral sclerosis",
+    "type": "disease",
+    "domain": "als",
+    "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
+  },
+  "metrics": {
+    "outreach_score": 0.38286413964890953,
+    "outreach_quality": "high",
+    "outreach_reason": null,
+    "ab_count": 1,
+    "bc_count": 22,
+    "direct_evidence_count": 0,
+    "domain_source": "epilepsy",
+    "domain_target": "als",
+    "predicate_ab": "upregulates",
+    "predicate_bc": "associated_with",
+    "literature_status": null,
+    "clinical_trial_status": null,
+    "clinical_trial_nct_ids": []
+  },
+  "evidence": {
+    "ab_claims": [
+      {
+        "pmid": "31873138",
+        "title": "Ketogenic diet induces skeletal muscle atrophy via reducing muscle protein synthesis and possibly activating proteolysis in mice",
+        "doi": "10.1038/s41598-019-56166-8",
+        "year": 2019
+      }
+    ],
+    "bc_claims": [
+      {
+        "pmid": "34996976",
+        "title": "SOD1 mutations associated with amyotrophic lateral sclerosis analysis of variant severity",
+        "doi": "10.1038/s41598-021-03891-8",
+        "year": 2022
+      },
+      {
+        "pmid": "33630959",
+        "title": "Comprehensive in silico analysis and molecular dynamics of the superoxide dismutase 1 (SOD1) variants related to amyotrophic lateral sclerosis",
+        "doi": "10.1371/journal.pone.0247841",
+        "year": 2021
+      },
+      {
+        "pmid": "34518333",
+        "title": "De novo mutations in <i>SOD1</i> are a cause of ALS",
+        "doi": "10.1136/jnnp-2021-327520",
+        "year": 2021
+      },
+      {
+        "pmid": "33208543",
+        "title": "Mutational Analysis of Known ALS Genes in an Italian Population-Based Cohort",
+        "doi": "10.1212/wnl.0000000000011209",
+        "year": 2020
+      },
+      {
+        "pmid": "31747286",
+        "title": "An Allosteric Pathway in Copper, Zinc Superoxide Dismutase Unravels the Molecular Mechanism of the G93A Amyotrophic Lateral Sclerosis-Linked Mutation",
+        "doi": "10.1021/acs.jpclett.9b02868",
+        "year": 2019
+      }
+    ]
+  },
+  "biological_context": {
+    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how the drug normally works",
+    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on mediator's known role in the outcome disease",
+    "TODO_novelty_argument": "TODO Daniel: why this drug-disease combination is novel and worth investigating",
+    "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
+  },
+  "benchmark_context": null,
+  "related_hypotheses": [
+    {
+      "id": 3773,
+      "drug": "sodium butyrate",
+      "mediator": "Sod1",
+      "outcome": "ALS",
+      "score": 0.38286413964890953,
+      "shared": "mediator"
+    },
+    {
+      "id": 23412,
+      "drug": "TOL",
+      "mediator": "SOD1",
+      "outcome": "ALS",
+      "score": 0.26390573296152586,
+      "shared": "mediator"
+    },
+    {
+      "id": 2105,
+      "drug": "Ketogenic diet",
+      "mediator": "Sod1",
+      "outcome": "familial amyotrophic lateral sclerosis",
+      "score": 0.24849066497880004,
+      "shared": "drug"
+    }
+  ]
+}

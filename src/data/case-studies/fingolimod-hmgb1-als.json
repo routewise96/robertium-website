@@ -1,0 +1,102 @@
+{
+  "slug": "fingolimod-hmgb1-als",
+  "hypothesis_id": 23443,
+  "section": "benchmark",
+  "title": "Fingolimod → HMGB1 → ALS",
+  "drug": {
+    "name": "Fingolimod",
+    "canonical": "fingolimod",
+    "type": "drug",
+    "domain": "multiple_sclerosis",
+    "TODO_common_name": "TODO Daniel: brand/common names if applicable",
+    "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
+  },
+  "mediator": {
+    "name": "HMGB1",
+    "canonical": "HMGB1",
+    "type": "protein",
+    "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
+  },
+  "outcome": {
+    "name": "ALS",
+    "canonical": "amyotrophic lateral sclerosis",
+    "type": "disease",
+    "domain": "als",
+    "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
+  },
+  "metrics": {
+    "outreach_score": 0.1791759469228055,
+    "outreach_quality": "low",
+    "outreach_reason": null,
+    "ab_count": 1,
+    "bc_count": 2,
+    "direct_evidence_count": 0,
+    "domain_source": "multiple_sclerosis",
+    "domain_target": "als",
+    "predicate_ab": "downregulates",
+    "predicate_bc": "correlates_with",
+    "literature_status": null,
+    "clinical_trial_status": null,
+    "clinical_trial_nct_ids": []
+  },
+  "evidence": {
+    "ab_claims": [
+      {
+        "pmid": "39207074",
+        "title": "Fingolimod Alleviates Inflammation after Cerebral Ischemia via HMGB1/TLR4/NF-κB Signaling Pathway",
+        "doi": "10.31083/j.jin2308142",
+        "year": 2024
+      }
+    ],
+    "bc_claims": [
+      {
+        "pmid": "35216298",
+        "title": "The Involvement of RAGE and Its Ligands during Progression of ALS in SOD1 G93A Transgenic Mice",
+        "doi": "10.3390/ijms23042184",
+        "year": 2022
+      },
+      {
+        "pmid": "26733811",
+        "title": "Receptor for Advanced Glycation End Products and its Inflammatory Ligands are Upregulated in Amyotrophic Lateral Sclerosis",
+        "doi": "10.3389/fncel.2015.00485",
+        "year": 2015
+      }
+    ]
+  },
+  "biological_context": {
+    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how the drug normally works",
+    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on mediator's known role in the outcome disease",
+    "TODO_novelty_argument": "TODO Daniel: why this drug-disease combination is novel and worth investigating",
+    "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
+  },
+  "benchmark_context": {
+    "TODO_why_benchmark": "TODO Daniel: explain why this is a benchmark validation hit, not a novel surfacing",
+    "TODO_what_it_validates": "TODO Daniel: what aspect of the pipeline this hit confirms"
+  },
+  "related_hypotheses": [
+    {
+      "id": 7644,
+      "drug": "glycyrrhizin",
+      "mediator": "HMGB1",
+      "outcome": "epilepsy",
+      "score": 0.28903717578961646,
+      "shared": "mediator"
+    },
+    {
+      "id": 5491,
+      "drug": "DOX",
+      "mediator": "HMGB1",
+      "outcome": "epilepsy",
+      "score": 0.24849066497880004,
+      "shared": "mediator"
+    },
+    {
+      "id": 7646,
+      "drug": "glycyrrhizin",
+      "mediator": "HMGB1",
+      "outcome": "drug-resistant epilepsy",
+      "score": 0.24849066497880004,
+      "shared": "mediator"
+    }
+  ]
+}

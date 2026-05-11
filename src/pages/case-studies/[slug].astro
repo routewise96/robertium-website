@@ -1,0 +1,861 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface PmidEntry {
+  pmid: string | null;
+  title: string;
+  doi: string | null;
+  year: number | null;
+}
+interface CaseStudy {
+  slug: string;
+  hypothesis_id: number;
+  section: 'novel' | 'benchmark';
+  title: string;
+  drug: { name: string; canonical: string | null; type: string | null; domain: string | null };
+  mediator: { name: string; canonical: string | null; type: string | null };
+  outcome: { name: string; canonical: string | null; type: string | null; domain: string | null };
+  metrics: {
+    outreach_score: number | null;
+    outreach_quality: string | null;
+    ab_count: number | null;
+    bc_count: number | null;
+    direct_evidence_count: number | null;
+    domain_source: string | null;
+    domain_target: string | null;
+    predicate_ab: string | null;
+    predicate_bc: string | null;
+    literature_status: string | null;
+    clinical_trial_status: string | null;
+    clinical_trial_nct_ids: string[];
+  };
+  evidence: { ab_claims: PmidEntry[]; bc_claims: PmidEntry[] };
+  biological_context: Record<string, string>;
+  benchmark_context: Record<string, string> | null;
+  related_hypotheses: Array<{
+    id: number;
+    drug: string;
+    mediator: string;
+    outcome: string;
+    score: number | null;
+    shared: 'drug' | 'mediator';
+  }>;
+}
+
+export async function getStaticPaths() {
+  const dir = path.join(process.cwd(), 'src', 'data', 'case-studies');
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+  return files.map((f) => {
+    const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as CaseStudy;
+    return { params: { slug: data.slug }, props: { data } };
+  });
+}
+
+const { data } = Astro.props as { data: CaseStudy };
+
+const DOMAIN_LABEL: Record<string, string> = {
+  als: 'ALS',
+  alzheimer: "Alzheimer's",
+  depression: 'depression',
+  epilepsy: 'epilepsy',
+  glioblastoma: 'glioblastoma',
+  multiple_sclerosis: 'multiple sclerosis',
+  pancreatic_cancer: 'pancreatic cancer',
+};
+const fmtDomain = (d: string | null | undefined) =>
+  d ? DOMAIN_LABEL[d] ?? d.replace(/_/g, ' ') : 'cross-domain';
+const fmtPredicate = (p: string | null) => (p ?? 'modulates').replace(/_/g, ' ');
+
+const score = data.metrics.outreach_score;
+const scorePct = score != null ? Math.max(2, Math.min(100, Math.round(score * 100))) : 0;
+const quality = data.metrics.outreach_quality ?? 'unknown';
+const isBenchmark = data.section === 'benchmark';
+const isLimitedEvidence =
+  (data.metrics.ab_count ?? 0) < 3 || (data.metrics.bc_count ?? 0) < 3;
+
+const pubmedUrl = (pmid: string | null) =>
+  pmid ? `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(pmid)}/` : null;
+
+const sectionLabel = isBenchmark ? 'Benchmark validation hit' : 'Top novel candidate';
+const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
+---
+<Layout
+  title={`${data.drug.name} → ${data.mediator.name} → ${data.outcome.name} — Robertium case study`}
+  description={`Case study of the Robertium hypothesis linking ${data.drug.name} (${fmtDomain(data.drug.domain)}) to ${data.outcome.name} via ${data.mediator.name}. ${isBenchmark ? 'Benchmark validation hit.' : 'Top novel candidate from the cross-domain catalog.'}`}
+  current="case-studies"
+  ogImage="/og/home.png"
+>
+  <div class="cs-draft-banner">
+    <div class="container">
+      <strong>DRAFT</strong>
+      This page is in active drafting. Biological interpretation is pending review by the author —
+      placeholder text is visible throughout. Quantitative data (PMIDs, scores, evidence counts)
+      is final.
+    </div>
+  </div>
+
+  <section class={`cs-hero ${sectionClass}`}>
+    <div class="container">
+      <a href="/case-studies/" class="cs-back">← Case studies</a>
+      <div class="cs-hero-badges">
+        <span class={`cs-section-badge cs-section-badge--${data.section}`}>{sectionLabel}</span>
+        <span class="cs-id-badge">Hypothesis #{data.hypothesis_id}</span>
+        {quality && quality !== 'unknown' && (
+          <span class={`cs-quality-badge cs-quality-badge--${quality}`}>{quality} quality</span>
+        )}
+      </div>
+      <h1>
+        {data.drug.name}
+        <span class="cs-hero-arrow">→</span>
+        <span class="cs-hero-mediator">{data.mediator.name}</span>
+        <span class="cs-hero-arrow">→</span>
+        {data.outcome.name}
+      </h1>
+      <p class="cs-hero-sub">
+        Cross-domain hypothesis: <strong>{fmtDomain(data.drug.domain)}</strong> drug →
+        <strong>{fmtDomain(data.outcome.domain)}</strong> outcome
+      </p>
+
+      <div class="cs-flow-wrap">
+        <svg class="cs-flow" viewBox="0 0 600 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <marker id="cs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+            </marker>
+          </defs>
+          <rect x="20" y="40" width="160" height="40" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="100" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#0a0a0a">{data.drug.name}</text>
+          <text x="100" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b" letter-spacing="0.06em" text-transform="uppercase">DRUG</text>
+          <line x1="184" y1="60" x2="216" y2="60" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
+          <text x="200" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#1e40af">{fmtPredicate(data.metrics.predicate_ab)}</text>
+          <rect x="220" y="40" width="160" height="40" rx="6" fill="#eff3ff" stroke="#bfdbfe" stroke-width="1.5"/>
+          <text x="300" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#1e40af">{data.mediator.name}</text>
+          <text x="300" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b" letter-spacing="0.06em" text-transform="uppercase">MEDIATOR{data.mediator.type ? ` · ${data.mediator.type}` : ''}</text>
+          <line x1="384" y1="60" x2="416" y2="60" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
+          <text x="400" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#1e40af">{fmtPredicate(data.metrics.predicate_bc)}</text>
+          <rect x="420" y="40" width="160" height="40" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="500" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#0a0a0a">{data.outcome.name.length > 22 ? data.outcome.name.slice(0, 20) + '…' : data.outcome.name}</text>
+          <text x="500" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b" letter-spacing="0.06em" text-transform="uppercase">OUTCOME</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="cs-facts-grid">
+        <div class="cs-facts-card">
+          <div class="cs-facts-label">Outreach score</div>
+          <div class="cs-facts-value">{score != null ? score.toFixed(3) : '—'}</div>
+          <div class="cs-score-bar"><div class="cs-score-fill" style={`width: ${scorePct}%`}></div></div>
+        </div>
+        <div class="cs-facts-card">
+          <div class="cs-facts-label">Evidence A → B</div>
+          <div class="cs-facts-value">{data.metrics.ab_count ?? 0}</div>
+          <div class="cs-facts-meta">papers</div>
+        </div>
+        <div class="cs-facts-card">
+          <div class="cs-facts-label">Evidence B → C</div>
+          <div class="cs-facts-value">{data.metrics.bc_count ?? 0}</div>
+          <div class="cs-facts-meta">papers</div>
+        </div>
+        <div class="cs-facts-card">
+          <div class="cs-facts-label">Direct A → C</div>
+          <div class="cs-facts-value">{data.metrics.direct_evidence_count ?? 0}</div>
+          <div class="cs-facts-meta">papers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {isBenchmark && (
+    <section class="section section--gray">
+      <div class="container--narrow">
+        <div class="cs-callout cs-callout--benchmark">
+          <div class="cs-callout-eyebrow">Benchmark validation hit</div>
+          <h2 class="cs-callout-title">Not a top-ranked novel hypothesis</h2>
+          <p class="cs-callout-body">
+            This is an established drug–disease association that Robertium successfully recovered from
+            literature, demonstrating the pipeline can both surface novel candidates and reproduce known
+            repurposings. It appears with <strong>{quality}</strong> quality in the catalog because the
+            evidence base in our extraction is thin
+            ({data.metrics.ab_count ?? 0} paper{(data.metrics.ab_count ?? 0) === 1 ? '' : 's'} on the drug → mediator leg,
+            {' '}{data.metrics.bc_count ?? 0} paper{(data.metrics.bc_count ?? 0) === 1 ? '' : 's'} on the mediator → outcome leg).
+            See <a href="/benchmark">/benchmark</a> for context on how this hit was identified.
+          </p>
+          {data.benchmark_context && Object.entries(data.benchmark_context).map(([key, value]) => (
+            <p class="cs-callout-todo">[TODO Daniel — <code>{key.replace(/^TODO_/, '')}</code>: <em>{value}</em>]</p>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </div>
+        <h2>The chain</h2>
+      </div>
+
+      <h3 class="cs-chain-sub">About the drug — {data.drug.name}</h3>
+      <p class="cs-todo-block">
+        [TODO Daniel — original indication: <em>{data.drug.TODO_original_indication}</em>]<br/>
+        [TODO Daniel — brand/common names: <em>{data.drug.TODO_common_name}</em>]<br/>
+        [TODO Daniel — drug action: <em>{data.biological_context.TODO_drug_action_summary}</em>]
+      </p>
+      <p class="cs-chain-meta">
+        Source domain: <strong>{fmtDomain(data.drug.domain)}</strong>
+        {data.drug.type && <> · entity type: <code>{data.drug.type}</code></>}
+      </p>
+
+      <h3 class="cs-chain-sub">About the mediator — {data.mediator.name}</h3>
+      <p class="cs-todo-block">
+        [TODO Daniel — mediator description: <em>{data.mediator.TODO_description_short}</em>]<br/>
+        [TODO Daniel — role in {data.outcome.name}: <em>{data.biological_context.TODO_mediator_role}</em>]
+      </p>
+      {data.mediator.type && (
+        <p class="cs-chain-meta">Entity type: <code>{data.mediator.type}</code></p>
+      )}
+
+      <h3 class="cs-chain-sub">About the outcome — {data.outcome.name}</h3>
+      <p class="cs-todo-block">
+        [TODO Daniel — full name / context: <em>{data.outcome.TODO_full_name}</em>]
+      </p>
+      <p class="cs-chain-meta">
+        Target domain: <strong>{fmtDomain(data.outcome.domain)}</strong>
+        {data.outcome.type && <> · entity type: <code>{data.outcome.type}</code></>}
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h2>Evidence</h2>
+      </div>
+      {isLimitedEvidence && (
+        <p class="cs-evidence-warning">
+          Limited evidence base in our current extraction. Treat this hypothesis as a
+          starting point for further literature review, not a settled conclusion.
+        </p>
+      )}
+
+      <div class="cs-evidence-block">
+        <h3 class="cs-evidence-head">
+          A → B evidence:
+          <span class="cs-evidence-chain">{data.drug.name}</span>
+          <span class="cs-evidence-pred">{fmtPredicate(data.metrics.predicate_ab)}</span>
+          <span class="cs-evidence-chain">{data.mediator.name}</span>
+        </h3>
+        {data.evidence.ab_claims.length === 0 ? (
+          <p class="cs-evidence-empty">No PMID-linked papers indexed for this leg.</p>
+        ) : (
+          <ul class="cs-evidence-list">
+            {data.evidence.ab_claims.map((e) => (
+              <li>
+                {e.pmid ? (
+                  <a href={pubmedUrl(e.pmid)!} target="_blank" rel="noopener" class="cs-pmid">PMID {e.pmid}</a>
+                ) : (
+                  <span class="cs-pmid cs-pmid--no">no PMID</span>
+                )}
+                <span class="cs-ev-title">{e.title}</span>
+                {e.year && <span class="cs-ev-year">({e.year})</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div class="cs-evidence-block">
+        <h3 class="cs-evidence-head">
+          B → C evidence:
+          <span class="cs-evidence-chain">{data.mediator.name}</span>
+          <span class="cs-evidence-pred">{fmtPredicate(data.metrics.predicate_bc)}</span>
+          <span class="cs-evidence-chain">{data.outcome.name}</span>
+        </h3>
+        {data.evidence.bc_claims.length === 0 ? (
+          <p class="cs-evidence-empty">No PMID-linked papers indexed for this leg.</p>
+        ) : (
+          <ul class="cs-evidence-list">
+            {data.evidence.bc_claims.map((e) => (
+              <li>
+                {e.pmid ? (
+                  <a href={pubmedUrl(e.pmid)!} target="_blank" rel="noopener" class="cs-pmid">PMID {e.pmid}</a>
+                ) : (
+                  <span class="cs-pmid cs-pmid--no">no PMID</span>
+                )}
+                <span class="cs-ev-title">{e.title}</span>
+                {e.year && <span class="cs-ev-year">({e.year})</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2>{isBenchmark ? 'Why this matters' : 'Why this is novel'}</h2>
+      </div>
+      <p class="cs-todo-block">
+        [TODO Daniel — novelty / significance argument: <em>{data.biological_context.TODO_novelty_argument}</em>]
+      </p>
+
+      <div class="cs-gap-viz">
+        <div class="cs-gap-cluster cs-gap-cluster--ab">
+          <div class="cs-gap-cluster-label">A→B literature</div>
+          <div class="cs-gap-cluster-count">{data.metrics.ab_count ?? 0}</div>
+          <div class="cs-gap-cluster-meta">papers on {data.drug.name} → {data.mediator.name}</div>
+        </div>
+        <div class="cs-gap-arrow">
+          <div class="cs-gap-arrow-line"></div>
+          <div class="cs-gap-arrow-label">Direct A→C: <strong>{data.metrics.direct_evidence_count ?? 0}</strong></div>
+        </div>
+        <div class="cs-gap-cluster cs-gap-cluster--bc">
+          <div class="cs-gap-cluster-label">B→C literature</div>
+          <div class="cs-gap-cluster-count">{data.metrics.bc_count ?? 0}</div>
+          <div class="cs-gap-cluster-meta">papers on {data.mediator.name} → {data.outcome.name}</div>
+        </div>
+      </div>
+      <p class="cs-gap-caption">
+        Robertium identifies these split literatures and proposes the bridge: a drug from the
+        A→B cluster paired with a disease from the B→C cluster, sharing the same mediator.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h2>Limitations</h2>
+      </div>
+      <p class="cs-todo-block">
+        [TODO Daniel — honest limitations: <em>{data.biological_context.TODO_limitations}</em>]
+      </p>
+      <p>
+        This is a literature-derived hypothesis, not a clinical recommendation. Like every entry
+        in the Robertium catalog, it requires expert review, mechanistic validation, and clinical
+        trial design before it can inform patient care.
+      </p>
+    </div>
+  </section>
+
+  {data.related_hypotheses.length > 0 && (
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </div>
+          <h2>Related hypotheses</h2>
+        </div>
+        <p class="cs-related-intro">
+          Other hypotheses in the catalog sharing the same drug or mediator.
+        </p>
+        <div class="cs-related-grid">
+          {data.related_hypotheses.map((r) => (
+            <a class="cs-related-card" href={`/hypotheses?id=${r.id}`}>
+              <div class="cs-related-shared">shared {r.shared}</div>
+              <div class="cs-related-chain">
+                <span class="cs-rel-drug">{r.drug}</span>
+                <span class="cs-rel-arrow">→</span>
+                <span class="cs-rel-mediator">{r.mediator}</span>
+                <span class="cs-rel-arrow">→</span>
+                <span class="cs-rel-outcome">{r.outcome}</span>
+              </div>
+              <div class="cs-related-footer">
+                <span class="cs-related-score">score {r.score != null ? r.score.toFixed(3) : '—'}</span>
+                <span class="cs-related-link">View in catalog →</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="cs-footer-links">
+        <a href="/method" class="cs-footer-link">
+          <strong>How was this hypothesis generated?</strong>
+          <span>Read about Robertium's Swanson ABC discovery method</span>
+        </a>
+        <a href={`/hypotheses?id=${data.hypothesis_id}`} class="cs-footer-link">
+          <strong>View raw data in catalog</strong>
+          <span>Open hypothesis #{data.hypothesis_id} with full evidence and metadata</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .cs-hero {
+    padding: 56px 0 32px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cs-hero.is-benchmark { background: #fffaf0; }
+  .cs-back {
+    display: inline-block;
+    font-size: 13px;
+    color: #1e40af;
+    text-decoration: none;
+    margin-bottom: 20px;
+  }
+  .cs-back:hover { text-decoration: underline; }
+  .cs-hero-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .cs-section-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .cs-section-badge--novel { background: #dbeafe; color: #1e40af; }
+  .cs-section-badge--benchmark { background: #fed7aa; color: #9a3412; }
+  .cs-id-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+  }
+  .cs-quality-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .cs-quality-badge--high { background: #dcfce7; color: #166534; }
+  .cs-quality-badge--mid  { background: #fef3c7; color: #92400e; }
+  .cs-quality-badge--low  { background: #fecaca; color: #991b1b; }
+  .cs-hero h1 {
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #0a0a0a;
+    margin-bottom: 12px;
+  }
+  .cs-hero-arrow { color: #cbd5e1; font-weight: 400; padding: 0 6px; }
+  .cs-hero-mediator { color: #1e40af; }
+  .cs-hero-sub {
+    font-size: 16px;
+    color: #4a5568;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .cs-hero-sub strong { color: #1a1a1a; font-weight: 600; }
+  .cs-flow-wrap {
+    background: #f9fafb;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+  }
+  .cs-flow {
+    width: 100%;
+    height: auto;
+    max-height: 160px;
+  }
+
+  .cs-facts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .cs-facts-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .cs-facts-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+  .cs-facts-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0a0a0a;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .cs-facts-meta {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
+  }
+  .cs-score-bar {
+    margin-top: 10px;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .cs-score-fill {
+    height: 100%;
+    background: #1e40af;
+    border-radius: 3px;
+  }
+
+  .cs-callout {
+    border-left: 4px solid #1e40af;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #1e40af;
+    border-radius: 4px;
+    padding: 24px 28px;
+  }
+  .cs-callout--benchmark { border-left-color: #ea580c; background: #fff7ed; }
+  .cs-callout-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #ea580c;
+    margin-bottom: 6px;
+  }
+  .cs-callout-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0a0a0a;
+    margin-bottom: 12px;
+  }
+  .cs-callout-body {
+    font-size: 16px;
+    color: #374151;
+    line-height: 1.7;
+    margin: 0 0 12px;
+  }
+  .cs-callout-body strong { color: #1a1a1a; font-weight: 600; }
+  .cs-callout-body a { color: #1e40af; text-decoration: none; }
+  .cs-callout-body a:hover { text-decoration: underline; }
+  .cs-callout-todo {
+    font-size: 14px;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 32px 14px 10px;
+    margin: 8px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cs-callout-todo em { color: #475569; font-style: italic; }
+
+  .cs-chain-sub {
+    font-size: 20px;
+    font-weight: 600;
+    color: #0a0a0a;
+    margin: 28px 0 12px;
+  }
+  .cs-chain-sub:first-of-type { margin-top: 8px; }
+  .cs-chain-meta {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 6px;
+  }
+  .cs-chain-meta code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .cs-todo-block {
+    font-size: 15px;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 36px 18px 14px;
+    margin: 8px 0;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.7;
+  }
+  .cs-todo-block em { color: #475569; font-style: italic; }
+
+  .cs-evidence-warning {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #92400e;
+    margin: 0 0 24px;
+  }
+  .cs-evidence-block { margin-bottom: 24px; }
+  .cs-evidence-block:last-of-type { margin-bottom: 0; }
+  .cs-evidence-head {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1a1a1a;
+    margin: 0 0 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .cs-evidence-chain {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    text-transform: none;
+    color: #0a0a0a;
+    font-weight: 600;
+  }
+  .cs-evidence-pred {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #1e40af;
+    text-transform: none;
+    padding: 0 4px;
+  }
+  .cs-evidence-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .cs-evidence-list li {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .cs-evidence-list li:last-child { border-bottom: 0; }
+  .cs-pmid {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #1e40af;
+    text-decoration: none;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .cs-pmid:hover { text-decoration: underline; }
+  .cs-pmid--no { color: #94a3b8; }
+  .cs-ev-title { color: #374151; }
+  .cs-ev-year { color: #94a3b8; font-size: 12px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .cs-evidence-empty {
+    font-size: 14px;
+    color: #94a3b8;
+    font-style: italic;
+    margin: 0;
+  }
+
+  .cs-gap-viz {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    margin: 28px 0 16px;
+  }
+  .cs-gap-cluster {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+  }
+  .cs-gap-cluster--ab { border-top: 3px solid #1e40af; }
+  .cs-gap-cluster--bc { border-top: 3px solid #1e40af; }
+  .cs-gap-cluster-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 8px;
+  }
+  .cs-gap-cluster-count {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1e40af;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .cs-gap-cluster-meta {
+    font-size: 12px;
+    color: #4a5568;
+    line-height: 1.4;
+  }
+  .cs-gap-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 100px;
+  }
+  .cs-gap-arrow-line {
+    width: 60px;
+    height: 2px;
+    background: #cbd5e1;
+    position: relative;
+  }
+  .cs-gap-arrow-line::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: -3px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid #cbd5e1;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+  .cs-gap-arrow-label {
+    font-size: 11px;
+    color: #64748b;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cs-gap-arrow-label strong { color: #1a1a1a; font-weight: 600; }
+  .cs-gap-caption {
+    font-size: 14px;
+    color: #4a5568;
+    line-height: 1.65;
+    margin: 4px 0 0;
+  }
+
+  .cs-related-intro {
+    font-size: 15px;
+    color: #4a5568;
+    margin: 0 0 20px;
+  }
+  .cs-related-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .cs-related-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .cs-related-card:hover {
+    border-color: #1e40af;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08);
+    transform: translateY(-1px);
+  }
+  .cs-related-shared {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #1e40af;
+  }
+  .cs-related-chain {
+    font-size: 14px;
+    line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .cs-rel-drug { font-weight: 600; color: #0a0a0a; }
+  .cs-rel-mediator { font-weight: 600; color: #1e40af; }
+  .cs-rel-outcome { color: #1a1a1a; }
+  .cs-rel-arrow { color: #cbd5e1; font-size: 12px; }
+  .cs-related-footer {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #64748b;
+  }
+  .cs-related-score { font-variant-numeric: tabular-nums; font-weight: 600; color: #1e40af; }
+  .cs-related-link { color: #1e40af; font-weight: 500; }
+
+  .cs-footer-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .cs-footer-link {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color .15s;
+  }
+  .cs-footer-link:hover { border-color: #1e40af; }
+  .cs-footer-link strong {
+    font-size: 16px;
+    color: #1e40af;
+    font-weight: 600;
+  }
+  .cs-footer-link span {
+    font-size: 14px;
+    color: #4a5568;
+  }
+
+  @media (max-width: 900px) {
+    .cs-facts-grid { grid-template-columns: repeat(2, 1fr); }
+    .cs-related-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .cs-hero h1 { font-size: 28px; }
+    .cs-hero-arrow { display: block; padding: 4px 0; }
+    .cs-gap-viz { grid-template-columns: 1fr; }
+    .cs-gap-arrow { transform: rotate(90deg); margin: 8px 0; }
+    .cs-footer-links { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 540px) {
+    .cs-facts-grid { grid-template-columns: 1fr; }
+    .cs-related-grid { grid-template-columns: 1fr; }
+  }
+</style>

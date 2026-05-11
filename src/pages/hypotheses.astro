@@ -277,6 +277,13 @@ const noTrialNovelCount = data.hypotheses.filter(
         partial_evidence: { cls: 'hyp-badge--lit-partial', label: 'partial' },
         reproduces_known: { cls: 'hyp-badge--lit-known', label: 'known' },
       };
+      // Top novel case studies — link badge from catalog row to deep-dive page.
+      // Benchmark hits (5385, 23443) intentionally not featured here.
+      const FEATURED_CASE_STUDIES = {
+        7049: 'carbamazepine-kras-pancreatic-cancer',
+        3772: 'curcumin-tdp43-als',
+        2091: 'ketogenic-diet-sod1-als',
+      };
       const trialBadge = (s) => {
         const b = TRIAL_BADGE[s];
         return b ? `<span class="hyp-badge ${b.cls}">${b.label}</span>` : '';
@@ -285,11 +292,17 @@ const noTrialNovelCount = data.hypotheses.filter(
         const b = LIT_BADGE[s];
         return b ? `<span class="hyp-badge ${b.cls}">${b.label}</span>` : '';
       };
+      const featuredBadge = (id) => {
+        const slug = FEATURED_CASE_STUDIES[id];
+        return slug
+          ? `<a class="hyp-badge hyp-badge--featured" href="/case-studies/${slug}/" title="Featured case study">★ featured</a>`
+          : '';
+      };
 
       const renderRow = (h, index) => {
         const score = h.score != null ? h.score.toFixed(3) : '—';
         const evidence = `${h.ab_count ?? 0} + ${h.bc_count ?? 0}`;
-        const badges = `${trialBadge(h.clinical_trial_status)}${litBadge(h.literature_status)}`;
+        const badges = `${featuredBadge(h.id)}${trialBadge(h.clinical_trial_status)}${litBadge(h.literature_status)}`;
         let html = `
           <tr class="hyp-row" data-id="${h.id}">
             <td class="num">${index + 1}</td>

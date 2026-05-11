@@ -1,0 +1,117 @@
+{
+  "slug": "curcumin-tdp43-als",
+  "hypothesis_id": 3772,
+  "section": "novel",
+  "title": "curcumin → TDP-43 → ALS",
+  "drug": {
+    "name": "curcumin",
+    "canonical": "curcumin",
+    "type": "drug",
+    "domain": "alzheimer",
+    "TODO_common_name": "TODO Daniel: brand/common names if applicable",
+    "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
+  },
+  "mediator": {
+    "name": "TDP-43",
+    "canonical": "TDP-43",
+    "type": "protein",
+    "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
+  },
+  "outcome": {
+    "name": "ALS",
+    "canonical": "amyotrophic lateral sclerosis",
+    "type": "disease",
+    "domain": "als",
+    "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
+  },
+  "metrics": {
+    "outreach_score": 0.614151684333315,
+    "outreach_quality": "high",
+    "outreach_reason": null,
+    "ab_count": 1,
+    "bc_count": 29,
+    "direct_evidence_count": 0,
+    "domain_source": "alzheimer",
+    "domain_target": "als",
+    "predicate_ab": "binds_to",
+    "predicate_bc": "associated_with",
+    "literature_status": null,
+    "clinical_trial_status": null,
+    "clinical_trial_nct_ids": []
+  },
+  "evidence": {
+    "ab_claims": [
+      {
+        "pmid": "30092839",
+        "title": "Different curcumin forms selectively bind fibrillar amyloid beta in post mortem Alzheimer’s disease brains: Implications for in-vivo diagnostics",
+        "doi": "10.1186/s40478-018-0577-2",
+        "year": 2018
+      }
+    ],
+    "bc_claims": [
+      {
+        "pmid": "35604654",
+        "title": "TDP-43 Accumulation Within Intramuscular Nerve Bundles of Patients With Amyotrophic Lateral Sclerosis",
+        "doi": "10.1001/jamaneurol.2022.1113",
+        "year": 2022
+      },
+      {
+        "pmid": "30072868",
+        "title": "Pathological Proteins Are Transported by Extracellular Vesicles of Sporadic Amyotrophic Lateral Sclerosis Patients",
+        "doi": "10.3389/fnins.2018.00487",
+        "year": 2018
+      },
+      {
+        "pmid": "26980269",
+        "title": "Mass spectrometric analysis of accumulated TDP-43 in amyotrophic lateral sclerosis brains",
+        "doi": "10.1038/srep23281",
+        "year": 2016
+      },
+      {
+        "pmid": "25637145",
+        "title": "Early detection of structural abnormalities and cytoplasmic accumulation of TDP-43 in tissue-engineered skins derived from ALS patients",
+        "doi": "10.1186/s40478-014-0181-z",
+        "year": 2015
+      },
+      {
+        "pmid": "26598621",
+        "title": "TDP-43 is intercellularly transmitted across axon terminals",
+        "doi": "10.1083/jcb.201504057",
+        "year": 2015
+      }
+    ]
+  },
+  "biological_context": {
+    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how the drug normally works",
+    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on mediator's known role in the outcome disease",
+    "TODO_novelty_argument": "TODO Daniel: why this drug-disease combination is novel and worth investigating",
+    "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
+  },
+  "benchmark_context": null,
+  "related_hypotheses": [
+    {
+      "id": 8816,
+      "drug": "curcumin",
+      "mediator": "TDP-43",
+      "outcome": "FTLD",
+      "score": 0.3119162312519753,
+      "shared": "drug"
+    },
+    {
+      "id": 4173,
+      "drug": "curcumin",
+      "mediator": "BDNF",
+      "outcome": "schizophrenia",
+      "score": 0.3119162312519753,
+      "shared": "drug"
+    },
+    {
+      "id": 9218,
+      "drug": "curcumin",
+      "mediator": "BDNF",
+      "outcome": "depression severity",
+      "score": 0.26876392038420827,
+      "shared": "drug"
+    }
+  ]
+}

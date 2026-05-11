@@ -1,0 +1,121 @@
+{
+  "slug": "ketamine-nmda-chronic-pain",
+  "hypothesis_id": 5385,
+  "section": "benchmark",
+  "title": "ketamine → NMDA receptor → pain",
+  "drug": {
+    "name": "ketamine",
+    "canonical": "ketamine",
+    "type": "drug",
+    "domain": "depression",
+    "TODO_common_name": "TODO Daniel: brand/common names if applicable",
+    "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
+  },
+  "mediator": {
+    "name": "NMDA receptor",
+    "canonical": "nmda receptor",
+    "type": "protein",
+    "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
+  },
+  "outcome": {
+    "name": "pain",
+    "canonical": "pain",
+    "type": "phenotype",
+    "domain": "als",
+    "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
+  },
+  "metrics": {
+    "outreach_score": 0.10116301152636578,
+    "outreach_quality": "low",
+    "outreach_reason": null,
+    "ab_count": 8,
+    "bc_count": 1,
+    "direct_evidence_count": 1,
+    "domain_source": "depression",
+    "domain_target": "als",
+    "predicate_ab": "inhibits",
+    "predicate_bc": "associated_with",
+    "literature_status": null,
+    "clinical_trial_status": null,
+    "clinical_trial_nct_ids": []
+  },
+  "evidence": {
+    "ab_claims": [
+      {
+        "pmid": "41690063",
+        "title": "Ketamine combined with psychotherapy for treatment-resistant depression: Real-world outcomes and the role of subjective experience",
+        "doi": "10.1016/j.genhosppsych.2026.02.001",
+        "year": 2026
+      },
+      {
+        "pmid": "41656677",
+        "title": "Comparative Efficacy and Safety of Ketamine Versus Midazolam for Suicidality: A GRADE‐Assessed Systematic Review and Meta‐Analysis of Randomized Controlled Trials",
+        "doi": "10.1002/brb3.71255",
+        "year": 2026
+      },
+      {
+        "pmid": "41765199",
+        "title": "Ketamine pharmacotherapy for major depressive disorder: A narrative review",
+        "doi": "10.1016/j.pnpbp.2026.111651",
+        "year": 2026
+      },
+      {
+        "pmid": "35783539",
+        "title": "Ketamine use disorder: preclinical, clinical, and neuroimaging evidence to support proposed mechanisms of actions",
+        "doi": "10.1016/j.imed.2022.03.001",
+        "year": 2022
+      },
+      {
+        "pmid": "31617335",
+        "title": "Effects of ketamine on circadian rhythm and synaptic homeostasis in patients with treatment‐resistant depression: A protocol for mechanistic studies of its rapid and sustained antidepressant actions in humans",
+        "doi": "10.1002/brb3.1423",
+        "year": 2019
+      }
+    ],
+    "bc_claims": [
+      {
+        "pmid": "33467407",
+        "title": "Delayed Onset Muscle Soreness (DOMS): The Repeated Bout Effect and Chemotherapy-Induced Axonopathy May Help Explain the Dying-Back Mechanism in Amyotrophic Lateral Sclerosis and Other Neurodegenerative Diseases",
+        "doi": "10.3390/brainsci11010108",
+        "year": 2021
+      }
+    ]
+  },
+  "biological_context": {
+    "TODO_drug_action_summary": "TODO Daniel: 1-2 sentences on how ketamine normally works (NMDA antagonism, anesthetic + antidepressant context)",
+    "TODO_mediator_role": "TODO Daniel: 1-2 sentences on NMDA receptor's role in pain signaling (peripheral + central sensitization, chronic vs acute)",
+    "TODO_novelty_argument": "TODO Daniel: this is a benchmark hit not a novel claim — ketamine for chronic/refractory pain is established clinical practice. Explain what the recovery validates.",
+    "TODO_limitations": "TODO Daniel: address the domain-routing artifact (see benchmark_context.TODO_domain_routing_artifact)"
+  },
+  "benchmark_context": {
+    "TODO_why_benchmark": "TODO Daniel: ketamine for chronic/refractory pain is established off-label clinical practice — explain how it was selected as a benchmark target and what a successful recovery should look like",
+    "TODO_what_it_validates": "TODO Daniel: what aspect of the v2 pipeline this hit confirms (cross-domain bridging works even when the target domain isn't one of the 8 indexed)",
+    "TODO_domain_routing_artifact": "TODO Daniel: this hit appears as depression→als in our domain tags. That is a routing artifact, not a biological claim. Reasons: (1) ketamine's strongest A→B literature in our corpus comes from depression studies (treatment-resistant depression is the most-published ketamine use case in recent years), (2) NMDA receptor → pain signaling is co-indexed with ALS literature because excitotoxicity is the dominant B→C extraction signal for NMDA in our current 8-domain corpus, (3) pain itself is not one of the 8 Robertium domains, so the outcome got tagged with its nearest neighbor in extraction (ALS). The biology (ketamine modulates NMDA which is implicated in pain) is real; the domain labels just reflect what is and isn't in our current corpus."
+  },
+  "related_hypotheses": [
+    {
+      "id": 5315,
+      "drug": "ketamine",
+      "mediator": "NMDA receptor",
+      "outcome": "neuronal death",
+      "score": 0.2890371757896165,
+      "shared": "drug"
+    },
+    {
+      "id": 10442,
+      "drug": "ketamine",
+      "mediator": "NMDA receptor",
+      "outcome": "neurodevelopmental disorders",
+      "score": 0.2890371757896165,
+      "shared": "drug"
+    },
+    {
+      "id": 5386,
+      "drug": "ketamine",
+      "mediator": "NMDA receptor",
+      "outcome": "cell-autonomous excitotoxicity",
+      "score": 0.2890371757896165,
+      "shared": "drug"
+    }
+  ]
+}

@@ -681,6 +681,56 @@ a { color: inherit; }
 .hyp-badge--lit-novel        { background: #f3e8ff; color: #6b21a8; }
 .hyp-badge--lit-partial      { background: #e2e8f0; color: #475569; }
 .hyp-badge--lit-known        { background: #f1f5f9; color: #64748b; }
+.hyp-badge--featured         { background: #fef3c7; color: #92400e; text-decoration: none; cursor: pointer; }
+.hyp-badge--featured:hover   { background: #fde68a; }
+
+/* ---------- Case-studies draft markers ---------- */
+.cs-draft-banner {
+  background: #fee2e2;
+  border-bottom: 2px solid #b91c1c;
+  color: #7f1d1d;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 0;
+  text-align: center;
+}
+.cs-draft-banner strong {
+  color: #b91c1c;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+}
+.cs-draft-banner a { color: #7f1d1d; text-decoration: underline; }
+
+.cs-todo-block,
+.cs-callout-todo,
+.csi-todo-intro,
+.csi-section-body {
+  position: relative;
+  padding-top: 30px;
+}
+.cs-todo-block::before,
+.cs-callout-todo::before,
+.csi-todo-intro::before,
+.csi-section-body::before {
+  content: 'DRAFT — author review pending · not for publication';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 4px 10px;
+  border-bottom: 1px solid #fca5a5;
+  border-radius: 3px 3px 0 0;
+  text-align: center;
+}
 
 .hyp-validation-cell {
   padding: 14px 8px;

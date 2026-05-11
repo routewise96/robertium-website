@@ -1,0 +1,386 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface CaseStudyMeta {
+  slug: string;
+  hypothesis_id: number;
+  section: 'novel' | 'benchmark';
+  title: string;
+  drug: { name: string; domain: string | null };
+  mediator: { name: string; type: string | null };
+  outcome: { name: string; domain: string | null };
+  metrics: {
+    outreach_score: number | null;
+    outreach_quality: string | null;
+    ab_count: number | null;
+    bc_count: number | null;
+  };
+}
+
+const dir = path.join(process.cwd(), 'src', 'data', 'case-studies');
+const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+const all: CaseStudyMeta[] = files.map(
+  (f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as CaseStudyMeta,
+);
+
+// Preserve display order: novel first (carbamazepine, curcumin, ketogenic),
+// then benchmark (ketamine, fingolimod).
+const ORDER = [
+  'carbamazepine-kras-pancreatic-cancer',
+  'curcumin-tdp43-als',
+  'ketogenic-diet-sod1-als',
+  'ketamine-nmda-chronic-pain',
+  'fingolimod-hmgb1-als',
+];
+const sortFn = (a: CaseStudyMeta, b: CaseStudyMeta) =>
+  ORDER.indexOf(a.slug) - ORDER.indexOf(b.slug);
+
+const novelCases = all.filter((c) => c.section === 'novel').sort(sortFn);
+const benchmarkCases = all.filter((c) => c.section === 'benchmark').sort(sortFn);
+
+const DOMAIN_LABEL: Record<string, string> = {
+  als: 'ALS',
+  alzheimer: "Alzheimer's",
+  depression: 'depression',
+  epilepsy: 'epilepsy',
+  glioblastoma: 'glioblastoma',
+  multiple_sclerosis: 'multiple sclerosis',
+  pancreatic_cancer: 'pancreatic cancer',
+};
+const fmtDomain = (d: string | null) =>
+  d ? DOMAIN_LABEL[d] ?? d.replace(/_/g, ' ') : 'cross-domain';
+
+const renderCard = (c: CaseStudyMeta) => ({
+  href: `/case-studies/${c.slug}/`,
+  drug: c.drug.name,
+  mediator: c.mediator.name,
+  outcome: c.outcome.name,
+  drugDomain: fmtDomain(c.drug.domain),
+  outcomeDomain: fmtDomain(c.outcome.domain),
+  score: c.metrics.outreach_score,
+  quality: c.metrics.outreach_quality,
+  ab: c.metrics.ab_count ?? 0,
+  bc: c.metrics.bc_count ?? 0,
+  id: c.hypothesis_id,
+});
+---
+<Layout
+  title="Case studies — Robertium featured hypothesis deep-dives"
+  description="Featured hypothesis case studies from the Robertium catalog: deep-dives into top novel candidates and benchmark validation hits, with evidence chains and biological context."
+  current="case-studies"
+  ogImage="/og/home.png"
+>
+  <div class="cs-draft-banner">
+    <div class="container">
+      <strong>DRAFT</strong>
+      These case-study pages are in active drafting. Biological interpretation is pending review
+      by the author — placeholder text is visible throughout. Quantitative data is final.
+    </div>
+  </div>
+
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Featured hypothesis case studies</h1>
+      <p class="subtitle">
+        Deep-dives into selected hypotheses from the Robertium catalog — drug → mediator →
+        outcome chains presented as standalone insights with their evidence and limitations.
+      </p>
+      <p class="csi-todo-intro">
+        [TODO Daniel — page intro: <em>2-3 sentences explaining how these five cases were
+        selected, what readers should look for, and how the two sections (novel candidates
+        vs benchmark hits) differ in their role in the catalog.</em>]
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="csi-section-head">
+        <span class="csi-section-eyebrow">Section 1</span>
+        <h2>Top novel candidate hypotheses</h2>
+      </div>
+      <p class="csi-section-body">
+        [TODO Daniel — section intro: <em>e.g. "These are hypotheses Robertium discovered that
+        have not yet been explored as clinical or therapeutic combinations in the literature.
+        Each pairs a drug from one therapeutic area with a disease from another via a shared
+        molecular mediator."</em>]
+      </p>
+      <div class="csi-grid">
+        {novelCases.map((c) => {
+          const v = renderCard(c);
+          return (
+            <a class="csi-card csi-card--novel" href={v.href}>
+              <div class="csi-card-eyebrow">
+                <span class="csi-card-section">Novel candidate</span>
+                {v.quality && <span class={`csi-quality csi-quality--${v.quality}`}>{v.quality}</span>}
+              </div>
+              <div class="csi-card-chain">
+                <span class="csi-chain-drug">{v.drug}</span>
+                <span class="csi-chain-arrow">→</span>
+                <span class="csi-chain-mediator">{v.mediator}</span>
+                <span class="csi-chain-arrow">→</span>
+                <span class="csi-chain-outcome">{v.outcome}</span>
+              </div>
+              <div class="csi-card-domains">
+                <span class="csi-domain-tag">{v.drugDomain}</span>
+                <span class="csi-chain-arrow csi-chain-arrow--small">→</span>
+                <span class="csi-domain-tag">{v.outcomeDomain}</span>
+              </div>
+              <div class="csi-card-footer">
+                <span class="csi-card-score">score {v.score != null ? v.score.toFixed(3) : '—'}</span>
+                <span class="csi-card-evidence">{v.ab} + {v.bc} papers</span>
+                <span class="csi-card-link">Read deep-dive →</span>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container">
+      <div class="csi-section-head">
+        <span class="csi-section-eyebrow csi-section-eyebrow--benchmark">Section 2</span>
+        <h2>Benchmark validation hits</h2>
+      </div>
+      <p class="csi-section-body">
+        [TODO Daniel — section intro: <em>e.g. "These are known drug repurposings that
+        Robertium successfully surfaced from literature, demonstrating that the system can
+        both discover novel candidates and recover established knowledge. They appear as
+        lower-quality entries in the public catalog because the novelty filter recognizes
+        their established status — but their recovery is what gives us confidence the
+        pipeline isn't only finding noise."</em>]
+      </p>
+      <div class="csi-grid csi-grid--benchmark">
+        {benchmarkCases.map((c) => {
+          const v = renderCard(c);
+          return (
+            <a class="csi-card csi-card--benchmark" href={v.href}>
+              <div class="csi-card-eyebrow">
+                <span class="csi-card-section csi-card-section--benchmark">Benchmark hit</span>
+                {v.quality && <span class={`csi-quality csi-quality--${v.quality}`}>{v.quality}</span>}
+              </div>
+              <div class="csi-card-chain">
+                <span class="csi-chain-drug">{v.drug}</span>
+                <span class="csi-chain-arrow">→</span>
+                <span class="csi-chain-mediator">{v.mediator}</span>
+                <span class="csi-chain-arrow">→</span>
+                <span class="csi-chain-outcome">{v.outcome}</span>
+              </div>
+              <div class="csi-card-domains">
+                <span class="csi-domain-tag">{v.drugDomain}</span>
+                <span class="csi-chain-arrow csi-chain-arrow--small">→</span>
+                <span class="csi-domain-tag">{v.outcomeDomain}</span>
+              </div>
+              <div class="csi-card-footer">
+                <span class="csi-card-score">score {v.score != null ? v.score.toFixed(3) : '—'}</span>
+                <span class="csi-card-evidence">{v.ab} + {v.bc} papers</span>
+                <span class="csi-card-link">Read deep-dive →</span>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+      <p class="csi-benchmark-foot">
+        For the full benchmark validation story — including how the v1 and v2 architectural
+        choices were tested — see <a href="/benchmark">/benchmark</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h2>Want the full catalog?</h2>
+      </div>
+      <p>
+        These five case studies are a curated subset. For every cross-domain hypothesis
+        Robertium has surfaced — including filtering by drug, mediator, outcome domain,
+        or evidence level — see the full
+        <a href="/hypotheses" style="color:#1e40af;">catalog</a>. The discovery method is
+        described in detail at <a href="/method" style="color:#1e40af;">/method</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .csi-todo-intro {
+    font-size: 15px;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 36px 18px 14px;
+    margin: 16px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.7;
+    max-width: 760px;
+  }
+  .csi-todo-intro em { color: #475569; font-style: italic; }
+  .csi-section-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .csi-section-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1e40af;
+  }
+  .csi-section-eyebrow--benchmark { color: #ea580c; }
+  .csi-section-head h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #0a0a0a;
+    margin: 0;
+  }
+  .csi-section-body {
+    font-size: 15px;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+    padding: 36px 18px 14px;
+    margin: 0 0 24px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.7;
+    max-width: 760px;
+  }
+  .csi-section-body em { color: #475569; font-style: italic; }
+  .section--gray .csi-section-body { background: #fff; }
+
+  .csi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .csi-grid--benchmark {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 760px;
+  }
+  .csi-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 22px 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .csi-card:hover {
+    border-color: #1e40af;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08);
+    transform: translateY(-1px);
+  }
+  .csi-card--benchmark:hover { border-color: #ea580c; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.08); }
+  .csi-card-eyebrow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .csi-card-section {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #1e40af;
+  }
+  .csi-card-section--benchmark { color: #ea580c; }
+  .csi-quality {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .csi-quality--high { background: #dcfce7; color: #166534; }
+  .csi-quality--mid  { background: #fef3c7; color: #92400e; }
+  .csi-quality--low  { background: #fecaca; color: #991b1b; }
+  .csi-card-chain {
+    font-size: 16px;
+    line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .csi-chain-drug    { font-weight: 700; color: #0a0a0a; }
+  .csi-chain-mediator{ font-weight: 600; color: #1e40af; }
+  .csi-chain-outcome { color: #1a1a1a; }
+  .csi-chain-arrow   { color: #cbd5e1; font-size: 13px; }
+  .csi-chain-arrow--small { font-size: 11px; }
+  .csi-card-domains {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .csi-domain-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+  }
+  .csi-card-footer {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: #64748b;
+  }
+  .csi-card-score {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #1e40af;
+  }
+  .csi-card--benchmark .csi-card-score { color: #ea580c; }
+  .csi-card-evidence {
+    font-variant-numeric: tabular-nums;
+  }
+  .csi-card-link {
+    font-weight: 500;
+    color: #1e40af;
+  }
+  .csi-card--benchmark .csi-card-link { color: #ea580c; }
+
+  .csi-benchmark-foot {
+    margin-top: 18px;
+    font-size: 14px;
+    color: #4a5568;
+  }
+  .csi-benchmark-foot a { color: #1e40af; text-decoration: none; }
+  .csi-benchmark-foot a:hover { text-decoration: underline; }
+
+  @media (max-width: 900px) {
+    .csi-grid, .csi-grid--benchmark { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .csi-grid, .csi-grid--benchmark { grid-template-columns: 1fr; }
+  }
+</style>
