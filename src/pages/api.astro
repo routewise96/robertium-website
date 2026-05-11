@@ -11,8 +11,8 @@ import Layout from '../layouts/Layout.astro';
     <div class="container">
       <h1>Research access</h1>
       <p class="subtitle">Bulk and programmatic access to the Robertium hypothesis catalog and knowledge graph</p>
-      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
-        For most researchers, the public web catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> is enough. If you need bulk download, programmatic queries, or a copy of the underlying graph for an offline analysis, email and we'll work it out. There is no signup or paywall — this page describes what is currently available and what is planned.
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
+        For most researchers, the public web catalog at <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a> is enough. If you need bulk download, programmatic queries, or a copy of the underlying graph for an offline analysis, email and we'll work it out. There is no signup or paywall — this page describes what is currently available and what is planned.
       </p>
     </div>
   </section>
@@ -24,10 +24,10 @@ import Layout from '../layouts/Layout.astro';
         <h2>Available now</h2>
       </div>
       <ul class="simple-list">
-        <li><strong>Hypothesis catalog as JSON</strong> — the same file the website renders is publicly served at <a href="/data/hypotheses.json" style="color:#1e40af;"><code style="font-family:var(--font-mono); font-size:14px;">/data/hypotheses.json</code></a>. No authentication. Includes outreach-quality hypotheses with full evidence chains (PMIDs, titles, scores, mediator/drug/outcome metadata). Updated when the cross-domain orchestrator is re-run.</li>
+        <li><strong>Hypothesis catalog as JSON</strong> — the same file the website renders is publicly served at <a href="/data/hypotheses.json" style="color:var(--accent);"><code style="font-family:var(--font-mono); font-size:14px;">/data/hypotheses.json</code></a>. No authentication. Includes outreach-quality hypotheses with full evidence chains (PMIDs, titles, scores, mediator/drug/outcome metadata). Updated when the cross-domain orchestrator is re-run.</li>
         <li><strong>Knowledge graph dump (Kuzu format)</strong> — available on request. The complete graph with all 81,328 entities and 140,178 claim edges across six therapeutic domains. Useful if you want to run your own ABC queries, swap in different filters, or merge with other graphs.</li>
         <li><strong>Raw claims database</strong> — available on request. Postgres dump of the structured claims table (subject, predicate, object, polarity, confidence, source PMID) for all 47,255 papers that passed the L1 biomedical-relevance filter. Useful if you want to apply your own extraction quality thresholds or re-derive hypotheses.</li>
-        <li><strong>Open-source pipeline</strong> — the full ingest, extraction, and orchestration code is at <a href="https://github.com/routewise96/robertium" style="color:#1e40af;">github.com/routewise96/robertium</a> under MIT. Clone the repo, drop in an OpenAlex concept ID for a new domain, and run the pipeline on your own corpus. Cost on cloud LLM APIs is roughly $3–$7 per 5,000 papers.</li>
+        <li><strong>Open-source pipeline</strong> — the full ingest, extraction, and orchestration code is at <a href="https://github.com/routewise96/robertium" style="color:var(--accent);">github.com/routewise96/robertium</a> under MIT. Clone the repo, drop in an OpenAlex concept ID for a new domain, and run the pipeline on your own corpus. Cost on cloud LLM APIs is roughly $3–$7 per 5,000 papers.</li>
       </ul>
     </div>
   </section>

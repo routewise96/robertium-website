@@ -204,7 +204,7 @@ const noTrialNovelCount = data.hypotheses.filter(
       </thead>
       <tbody id="hyp-tbody">
         <tr id="hyp-load-trigger" aria-hidden="true">
-          <td colspan="9" style="padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+          <td colspan="9" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
             Loading more…
           </td>
         </tr>
@@ -329,7 +329,7 @@ const noTrialNovelCount = data.hypotheses.filter(
                     <li>
                       <a href="${pubmedUrl(e.pmid)}" target="_blank" rel="noopener">PMID ${escapeHtml(e.pmid)}</a>
                       <span class="ev-title">${escapeHtml(e.title)}</span>${
-                        e.year ? ` <span style="color:#94a3b8">(${e.year})</span>` : ''
+                        e.year ? ` <span style="color:var(--text-muted)">(${e.year})</span>` : ''
                       }
                     </li>`
                 )

@@ -15,7 +15,7 @@ import Layout from '../layouts/Layout.astro';
         of clinical history. The result was 0 hits — and that result is the
         most informative finding of the benchmark.
       </p>
-      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
         Robertium is a novelty discovery system. By construction it filters out
         the well-cited repurposings that make up any reasonable gold standard.
         The architecturally-correct answer for such a benchmark is therefore
@@ -386,10 +386,10 @@ import Layout from '../layouts/Layout.astro';
         <h2>Data and reproduction</h2>
       </div>
       <ul class="simple-list">
-        <li><strong>Gold standard</strong> (50 verified cases, CC-BY-4.0) — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/known_repurposings.json" target="_blank" rel="noopener noreferrer" style="color:#1e40af;">known_repurposings.json</a></li>
-        <li><strong>Full benchmark report</strong> — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/benchmark_report.md" target="_blank" rel="noopener noreferrer" style="color:#1e40af;">benchmark_report.md</a></li>
-        <li><strong>Baseline results</strong> (50 cases, novelty filter on) — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/results.json" target="_blank" rel="noopener noreferrer" style="color:#1e40af;">results.json</a></li>
-        <li><strong>No-filter diagnostic</strong> (14 in-corpus cases) — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/results_no_filter.json" target="_blank" rel="noopener noreferrer" style="color:#1e40af;">results_no_filter.json</a></li>
+        <li><strong>Gold standard</strong> (50 verified cases, CC-BY-4.0) — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/known_repurposings.json" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">known_repurposings.json</a></li>
+        <li><strong>Full benchmark report</strong> — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/benchmark_report.md" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">benchmark_report.md</a></li>
+        <li><strong>Baseline results</strong> (50 cases, novelty filter on) — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/results.json" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">results.json</a></li>
+        <li><strong>No-filter diagnostic</strong> (14 in-corpus cases) — <a href="https://github.com/routewise96/robertium/blob/main/data/benchmark/results_no_filter.json" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">results_no_filter.json</a></li>
       </ul>
       <p style="margin-top: 18px;">Reproduction:</p>
       <div class="hero-card" style="margin: 12px 0;">
@@ -418,13 +418,13 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
     text-align: center;
     max-width: 720px;
     margin: 0 auto 32px;
-    color: #4a5568;
+    color: var(--text-secondary);
     font-size: 16px;
     line-height: 1.7;
   }
   .bench-card {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border-subtle);
     border-radius: 10px;
     padding: 28px 32px;
     margin-bottom: 20px;
@@ -441,9 +441,9 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
     font-size: 18px;
     line-height: 1.4;
   }
-  .bench-node { font-weight: 600; color: #0a0a0a; }
-  .bench-node--mediator { color: #1e40af; }
-  .bench-arrow { color: #cbd5e1; font-size: 15px; padding: 0 2px; }
+  .bench-node { font-weight: 600; color: var(--text-primary); }
+  .bench-node--mediator { color: var(--accent); }
+  .bench-arrow { color: var(--border-default); font-size: 15px; padding: 0 2px; }
   .bench-arrow--small { font-size: 11px; }
   .bench-card-meta {
     display: flex;
@@ -451,7 +451,7 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
     flex-wrap: wrap;
     gap: 8px;
     font-size: 13px;
-    color: #64748b;
+    color: var(--text-tertiary);
   }
   .bench-domain-tag {
     display: inline-block;
@@ -461,18 +461,18 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
     letter-spacing: 0.05em;
     padding: 2px 8px;
     border-radius: 4px;
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--bg-section);
+    color: var(--text-secondary);
   }
   .bench-rank {
     margin-left: auto;
     font-variant-numeric: tabular-nums;
   }
-  .bench-rank strong { color: #0a0a0a; }
+  .bench-rank strong { color: var(--text-primary); }
   .bench-card-note {
     margin: 0;
     font-size: 15px;
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.7;
   }
   .bench-evidence {
@@ -480,12 +480,12 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     padding-top: 8px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--bg-section);
   }
   .bench-evidence-leg h4 {
     font-size: 13px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text-primary);
     margin: 0 0 8px 0;
     display: flex;
     align-items: baseline;
@@ -495,7 +495,7 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
   .bench-evidence-meta {
     font-weight: 400;
     font-size: 12px;
-    color: #64748b;
+    color: var(--text-tertiary);
   }
   .bench-evidence-list {
     list-style: none;
@@ -506,17 +506,17 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
   }
   .bench-evidence-list li {
     margin-bottom: 6px;
-    color: #4a5568;
+    color: var(--text-secondary);
   }
   .bench-evidence-list li:last-child { margin-bottom: 0; }
   .bench-evidence-list a {
-    color: #1e40af;
+    color: var(--accent);
     text-decoration: none;
     font-weight: 500;
   }
   .bench-evidence-list a:hover { text-decoration: underline; }
   .bench-evidence-year {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-variant-numeric: tabular-nums;
   }
 
@@ -532,24 +532,24 @@ uv run python scripts/benchmark/analyze_results.py`}</pre>
   .bench-table thead th {
     text-align: left;
     padding: 10px 12px;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid var(--border-subtle);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #475569;
+    color: var(--text-secondary);
     font-weight: 600;
   }
   .bench-table tbody td {
     padding: 12px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #374151;
+    border-bottom: 1px solid var(--bg-section);
+    color: var(--text-secondary);
     vertical-align: top;
   }
   .bench-table .bench-table-num {
     text-align: right;
     font-variant-numeric: tabular-nums;
     width: 80px;
-    color: #0a0a0a;
+    color: var(--text-primary);
     font-weight: 600;
   }
 

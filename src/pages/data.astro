@@ -11,7 +11,7 @@ import Layout from '../layouts/Layout.astro';
     <div class="container">
       <h1>Data</h1>
       <p class="subtitle">Sources, filters, and exact composition of our biomedical corpus</p>
-      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
         Every domain in Robertium is built from open-access biomedical literature, retrieved via OpenAlex API,
         filtered through PubTator for biomedical relevance, and processed through the same pipeline.
         This page documents the exact sources and parameters for full reproducibility.
@@ -74,7 +74,7 @@ import Layout from '../layouts/Layout.astro';
           </tr>
         </tbody>
       </table>
-      <p>All concepts were verified via the OpenAlex API to confirm display name and works count before ingest. The exact YAML configuration files are available in the <a href="https://github.com/routewise96/robertium/tree/main/config/domains" style="color:#1e40af;">GitHub repository</a> under <code style="font-family:var(--font-mono); font-size:14px;">config/domains/</code>.</p>
+      <p>All concepts were verified via the OpenAlex API to confirm display name and works count before ingest. The exact YAML configuration files are available in the <a href="https://github.com/routewise96/robertium/tree/main/config/domains" style="color:var(--accent);">GitHub repository</a> under <code style="font-family:var(--font-mono); font-size:14px;">config/domains/</code>.</p>
     </div>
   </section>
 
@@ -248,7 +248,7 @@ import Layout from '../layouts/Layout.astro';
         <h2>Controlled vocabulary</h2>
       </div>
       <p>To ensure consistency, the LLM extracts only predicates and entity types from a fixed vocabulary.</p>
-      <h3 style="font-size:14px; font-weight:600; color:#1e40af; text-transform:uppercase; letter-spacing:0.06em; margin-top:24px;">Predicates (21)</h3>
+      <h3 style="font-size:14px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.06em; margin-top:24px;">Predicates (21)</h3>
       <div class="vocab-list">
         <span class="vocab-tag">inhibits</span>
         <span class="vocab-tag">activates</span>
@@ -272,7 +272,7 @@ import Layout from '../layouts/Layout.astro';
         <span class="vocab-tag">sensitizes_to</span>
         <span class="vocab-tag">confers_resistance_to</span>
       </div>
-      <h3 style="font-size:14px; font-weight:600; color:#1e40af; text-transform:uppercase; letter-spacing:0.06em; margin-top:24px;">Entity types (9)</h3>
+      <h3 style="font-size:14px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:0.06em; margin-top:24px;">Entity types (9)</h3>
       <div class="vocab-list">
         <span class="vocab-tag">drug</span>
         <span class="vocab-tag">gene</span>
@@ -296,8 +296,8 @@ import Layout from '../layouts/Layout.astro';
       </div>
       <p>All data — claims, knowledge graph, and configuration — will be released under CC-BY-4.0 alongside the first preprint (planned for Q3 2026). Currently:</p>
       <ul class="simple-list">
-        <li><strong>GitHub repository</strong> with source code (MIT) and config files: <a href="https://github.com/routewise96/robertium" style="color:#1e40af;">github.com/routewise96/robertium</a></li>
-        <li><strong>Hypothesis catalog</strong> publicly available at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> — cross-domain candidates with full evidence chains</li>
+        <li><strong>GitHub repository</strong> with source code (MIT) and config files: <a href="https://github.com/routewise96/robertium" style="color:var(--accent);">github.com/routewise96/robertium</a></li>
+        <li><strong>Hypothesis catalog</strong> publicly available at <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a> — cross-domain candidates with full evidence chains</li>
         <li><strong>Full claim dataset</strong> and <strong>knowledge graph dump</strong> will be released as a Zenodo deposit with persistent DOI on preprint publication</li>
         <li><strong>API access</strong> for programmatic queries — planned for late 2026</li>
       </ul>
@@ -314,7 +314,7 @@ import Layout from '../layouts/Layout.astro';
       <ul class="simple-list">
         <li><strong>Quarterly re-ingest</strong> of all 6 domains to capture new publications</li>
         <li><strong>Monthly cross-domain hypothesis recomputation</strong> to incorporate new data</li>
-        <li><strong>New domains</strong> added when there is a clear scientific case (request via <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a>)</li>
+        <li><strong>New domains</strong> added when there is a clear scientific case (request via <a href="mailto:daniel@robertium.com" style="color:var(--accent);">daniel@robertium.com</a>)</li>
       </ul>
       <p>The knowledge graph version will be tagged in the repository at each re-ingest. Old versions remain accessible for reproducibility.</p>
       <div class="data-cta">

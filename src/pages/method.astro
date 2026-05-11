@@ -11,7 +11,7 @@ import Layout from '../layouts/Layout.astro';
     <div class="container">
       <h1>Methodology</h1>
       <p class="subtitle">How Robertium discovers drug repurposing candidates from biomedical literature</p>
-      <p class="meta" style="font-family: inherit; font-size: 16px; color: #4a5568; line-height: 1.7; max-width: 760px;">
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
         Robertium reads peer-reviewed papers, extracts structured claims about drugs, genes, and diseases,
         builds a knowledge graph, and applies the Swanson ABC model to discover non-obvious cross-domain
         repurposing candidates. The pipeline is open-source and reproducible — every component is documented below.
@@ -176,8 +176,8 @@ import Layout from '../layouts/Layout.astro';
         <h2>The novelty filter</h2>
       </div>
       <p>Robertium enforces a strict novelty constraint on the hypotheses it surfaces. Any candidate where the drug → outcome connection already appears as a direct claim in more than one paper is filtered out (<code style="font-family:var(--font-mono); font-size:14px;">max_direct_evidence = 1</code>, see <code style="font-family:var(--font-mono); font-size:14px;">src/robertium/graph/repurposing.py:192</code>). This is not a parameter to tune — it is the Swanson 1986 prerequisite for literature-based hidden discovery.</p>
-      <p>The catalog at <a href="/hypotheses" style="color:#1e40af;">/hypotheses</a> therefore explicitly excludes the most well-known drug repurposings: ketamine → treatment-resistant depression, metformin → Alzheimer's disease, valproate → bipolar disorder, and others whose drug → outcome link has accumulated direct citation chains over decades of clinical research. These cases were filtered out at construction time.</p>
-      <p>What you see instead are connections that the published literature does not yet make explicit through direct citation — drug → mediator → outcome chains where the two halves live in separate literature pools that rarely cite each other. This is Robertium's value proposition: novelty precision, not known-repurposing reproduction. See <a href="/benchmark" style="color:#1e40af;">/benchmark</a> for empirical validation of this framing against 50 verified historical repurposings.</p>
+      <p>The catalog at <a href="/hypotheses" style="color:var(--accent);">/hypotheses</a> therefore explicitly excludes the most well-known drug repurposings: ketamine → treatment-resistant depression, metformin → Alzheimer's disease, valproate → bipolar disorder, and others whose drug → outcome link has accumulated direct citation chains over decades of clinical research. These cases were filtered out at construction time.</p>
+      <p>What you see instead are connections that the published literature does not yet make explicit through direct citation — drug → mediator → outcome chains where the two halves live in separate literature pools that rarely cite each other. This is Robertium's value proposition: novelty precision, not known-repurposing reproduction. See <a href="/benchmark" style="color:var(--accent);">/benchmark</a> for empirical validation of this framing against 50 verified historical repurposings.</p>
     </div>
   </section>
 
@@ -285,7 +285,7 @@ import Layout from '../layouts/Layout.astro';
         Source code: <a href="https://github.com/routewise96/robertium">github.com/routewise96/robertium</a> · 
         Web interface: <a href="https://robertium.com">robertium.com</a>
       </p>
-      <p>For collaborations, dataset access, or methodology questions: <a href="mailto:daniel@robertium.com" style="color:#1e40af;">daniel@robertium.com</a></p>
+      <p>For collaborations, dataset access, or methodology questions: <a href="mailto:daniel@robertium.com" style="color:var(--accent);">daniel@robertium.com</a></p>
     </div>
   </section>
 </Layout>
