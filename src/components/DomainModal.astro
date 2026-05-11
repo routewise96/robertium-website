@@ -1,0 +1,191 @@
+---
+interface Domain {
+  key: string;
+  label: string;
+  count: number;
+}
+interface Props {
+  domains: Domain[];
+}
+const { domains } = Astro.props;
+---
+<dialog
+  id="domain-modal"
+  class="domain-modal"
+  aria-modal="true"
+  aria-labelledby="domain-modal-title"
+>
+  <div class="domain-modal-card" role="document">
+    <header class="domain-modal-header">
+      <h2 id="domain-modal-title">All therapeutic domains</h2>
+      <button
+        type="button"
+        class="domain-modal-close"
+        id="domain-modal-close"
+        aria-label="Close dialog"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </header>
+
+    <p class="domain-modal-sub">
+      Browse every therapeutic area indexed in the Robertium catalog. Counts include
+      hypotheses where the domain appears as either drug source or outcome.
+    </p>
+
+    <div class="domain-modal-grid">
+      {domains.map((d) => (
+        <button
+          type="button"
+          class="domain-modal-tile"
+          data-domain={d.key}
+        >
+          <span class="domain-modal-tile-label">{d.label}</span>
+          <span class="domain-modal-tile-count">{d.count.toLocaleString()} hypotheses</span>
+        </button>
+      ))}
+    </div>
+  </div>
+</dialog>
+
+<script is:inline>
+  (() => {
+    const dialog = document.getElementById('domain-modal');
+    const opener = document.getElementById('hyp-show-all-domains');
+    if (!dialog || !opener) return;
+
+    const closeBtn = dialog.querySelector('#domain-modal-close');
+    const tiles = dialog.querySelectorAll('.domain-modal-tile');
+    // Remember the trigger so we always return focus there, regardless of
+    // what document.activeElement was at the moment of open.
+    const restoreFocusTo = opener;
+
+    const focusableSelector = [
+      'button:not([disabled])',
+      '[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+
+    const getFocusable = () =>
+      Array.from(dialog.querySelectorAll(focusableSelector)).filter(
+        (el) => !el.hasAttribute('disabled') && el.offsetParent !== null,
+      );
+
+    const open = () => {
+      // Use showModal so backdrop + ESC are handled natively.
+      if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute('open', '');
+      }
+      dialog.classList.add('is-open');
+      document.documentElement.classList.add('has-modal-open');
+      // Focus the close button after the animation kicks in.
+      requestAnimationFrame(() => closeBtn?.focus());
+    };
+
+    const close = () => {
+      dialog.classList.remove('is-open');
+      // Allow exit animation to play before native close.
+      window.setTimeout(() => {
+        if (typeof dialog.close === 'function') {
+          try { dialog.close(); } catch (_) { /* already closed */ }
+        } else {
+          dialog.removeAttribute('open');
+        }
+        document.documentElement.classList.remove('has-modal-open');
+        if (restoreFocusTo && typeof restoreFocusTo.focus === 'function') {
+          restoreFocusTo.focus();
+        }
+      }, 150);
+    };
+
+    opener.addEventListener('click', (e) => {
+      e.preventDefault();
+      open();
+    });
+
+    closeBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      close();
+    });
+
+    // Native dialogs fire `cancel` on ESC; mirror to our close animation.
+    dialog.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      close();
+    });
+
+    // Click on backdrop = click landed on the <dialog> itself, not its card.
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) close();
+    });
+
+    // Focus trap: when Tab/Shift+Tab would leave the dialog, wrap around.
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const items = getFocusable();
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+
+    // Deep-link: visiting /hypotheses#domains auto-opens the modal.
+    if (window.location.hash === '#domains') {
+      // Defer until layout settles so showModal() finds a stable focus point.
+      window.setTimeout(open, 50);
+    }
+
+    // Selecting a domain inside the modal applies the filter and closes.
+    tiles.forEach((tile) => {
+      tile.addEventListener('click', () => {
+        const domain = tile.getAttribute('data-domain');
+        if (!domain) {
+          close();
+          return;
+        }
+        // Re-use the existing browse-tile click handler by triggering it.
+        const trigger = document.querySelector(
+          `.hyp-browse-tile[data-domain="${CSS.escape(domain)}"]`,
+        );
+        if (trigger) {
+          trigger.click();
+        } else {
+          // No top-6 trigger: fall back to setting filter selects directly.
+          const drugSel = document.getElementById('hyp-drug-domain');
+          const outSel = document.getElementById('hyp-outcome-domain');
+          if (drugSel && drugSel.querySelector(`option[value="${CSS.escape(domain)}"]`)) {
+            drugSel.value = domain;
+            drugSel.dispatchEvent(new Event('change', { bubbles: true }));
+          } else if (outSel && outSel.querySelector(`option[value="${CSS.escape(domain)}"]`)) {
+            outSel.value = domain;
+            outSel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+        close();
+      });
+    });
+  })();
+</script>
+
+<style is:global>
+  /* Hide scroll on the document while the modal is open so the page
+     doesn't compete with modal scroll. */
+  html.has-modal-open { overflow: hidden; }
+</style>

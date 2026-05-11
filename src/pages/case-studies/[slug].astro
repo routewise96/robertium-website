@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -55,18 +56,107 @@ export async function getStaticPaths() {
 
 const { data } = Astro.props as { data: CaseStudy };
 
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'depression',
-  epilepsy: 'epilepsy',
-  glioblastoma: 'glioblastoma',
-  multiple_sclerosis: 'multiple sclerosis',
-  pancreatic_cancer: 'pancreatic cancer',
-};
 const fmtDomain = (d: string | null | undefined) =>
-  d ? DOMAIN_LABEL[d] ?? d.replace(/_/g, ' ') : 'cross-domain';
+  d ? formatDomainName(d) : 'cross-domain';
 const fmtPredicate = (p: string | null) => (p ?? 'modulates').replace(/_/g, ' ');
+
+// ===== Chain SVG: auto-size nodes =====
+// Approximate text width avoiding canvas/getBBox (this is SSR). Bold sans-
+// serif averages ~0.62× font size per character; regular ~0.55×.
+const estimateTextWidth = (text: string, fontSize: number, bold: boolean) => {
+  const avgCharWidth = (bold ? 0.62 : 0.55) * fontSize;
+  return text.length * avgCharWidth;
+};
+
+interface NodeLayout {
+  width: number;
+  line1: string;
+  line2: string | null;
+  fontSize: number;
+}
+
+const NODE_MIN = 200;
+const NODE_MAX = 320;
+const NODE_PADDING = 32;
+const NODE_SINGLE_FONT = 18;
+const NODE_WRAP_FONT = 14;
+
+const layoutNode = (text: string): NodeLayout => {
+  const innerMax = NODE_MAX - NODE_PADDING * 2; // 256
+  const single = estimateTextWidth(text, NODE_SINGLE_FONT, true);
+  if (single <= innerMax) {
+    const w = Math.max(NODE_MIN, Math.min(NODE_MAX, Math.round(single + NODE_PADDING * 2)));
+    return { width: w, line1: text, line2: null, fontSize: NODE_SINGLE_FONT };
+  }
+  // Need 2-line wrap. Greedy split balancing length.
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    // Single very-long word: keep at max width, smaller font, single line.
+    return { width: NODE_MAX, line1: text, line2: null, fontSize: NODE_WRAP_FONT };
+  }
+  // Find the split point that minimizes max(line1, line2) length.
+  let bestSplit = 1;
+  let bestMax = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const a = words.slice(0, i).join(' ');
+    const b = words.slice(i).join(' ');
+    const m = Math.max(a.length, b.length);
+    if (m < bestMax) {
+      bestMax = m;
+      bestSplit = i;
+    }
+  }
+  const line1 = words.slice(0, bestSplit).join(' ');
+  const line2 = words.slice(bestSplit).join(' ');
+  return { width: NODE_MAX, line1, line2, fontSize: NODE_WRAP_FONT };
+};
+
+const drugLayout = layoutNode(data.drug.name);
+const mediatorLayout = layoutNode(data.mediator.name);
+const outcomeLayout = layoutNode(data.outcome.name);
+
+const ARROW_GAP = 100;
+const SVG_MARGIN = 20;
+const NODE_HEIGHT = 80;
+const NODE_Y = 50;
+const NODE_CENTER_Y = NODE_Y + NODE_HEIGHT / 2; // 90
+const ARROW_Y = NODE_CENTER_Y;
+const ARROW_LINE_INSET = 5; // visual padding between node edge and line start
+
+const drugX = SVG_MARGIN;
+const mediatorX = drugX + drugLayout.width + ARROW_GAP;
+const outcomeX = mediatorX + mediatorLayout.width + ARROW_GAP;
+const drugCenterX = drugX + drugLayout.width / 2;
+const mediatorCenterX = mediatorX + mediatorLayout.width / 2;
+const outcomeCenterX = outcomeX + outcomeLayout.width / 2;
+
+const arrowAB_X1 = drugX + drugLayout.width + ARROW_LINE_INSET;
+const arrowAB_X2 = mediatorX - ARROW_LINE_INSET;
+const arrowAB_CenterX = (arrowAB_X1 + arrowAB_X2) / 2;
+
+const arrowBC_X1 = mediatorX + mediatorLayout.width + ARROW_LINE_INSET;
+const arrowBC_X2 = outcomeX - ARROW_LINE_INSET;
+const arrowBC_CenterX = (arrowBC_X1 + arrowBC_X2) / 2;
+
+const svgWidth = outcomeX + outcomeLayout.width + SVG_MARGIN;
+const svgHeight = 220;
+
+// Vertical position helpers: for single-line text the y is centered; for
+// 2-line text, line1 is above center and line2 below.
+const textY = (layout: NodeLayout, line: 1 | 2): number => {
+  const center = NODE_CENTER_Y;
+  if (!layout.line2) {
+    // Single line — visual center of the line baseline (~+6 of geometric center for 18px font)
+    return center + layout.fontSize / 3;
+  }
+  // Two-line wrap with 4px vertical gap between baselines
+  const lineHeight = layout.fontSize * 1.15;
+  const baseline = layout.fontSize / 3;
+  if (line === 1) return center - lineHeight / 2 + baseline;
+  return center + lineHeight / 2 + baseline;
+};
+
+const sublabelY = NODE_Y + NODE_HEIGHT + 30; // 160
 
 const score = data.metrics.outreach_score;
 const scorePct = score != null ? Math.max(2, Math.min(100, Math.round(score * 100))) : 0;
@@ -119,34 +209,49 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
       </p>
 
       <figure class="cs-flow-wrap">
-        <svg class="cs-flow" viewBox="0 0 960 220" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <svg
+          class="cs-flow"
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
           <defs>
             <marker id="cs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-tertiary)"/>
             </marker>
           </defs>
-          {/* Drug node */}
-          <rect x="20" y="50" width="240" height="80" rx="8" fill="var(--bg-card)" stroke="var(--border-default)" stroke-width="1"/>
-          <text x="140" y="98" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="var(--text-primary)">{data.drug.name}</text>
-          <text x="140" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--text-tertiary)" letter-spacing="0.1em" text-transform="uppercase">DRUG</text>
 
-          {/* A→B label + arrow */}
-          <text x="310" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="var(--text-tertiary)">{fmtPredicate(data.metrics.predicate_ab)}</text>
-          <line x1="265" y1="90" x2="355" y2="90" stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
+          {/* Drug node */}
+          <rect x={drugX} y={NODE_Y} width={drugLayout.width} height={NODE_HEIGHT} rx="8" fill="var(--bg-card)" stroke="var(--border-default)" stroke-width="1"/>
+          <text x={drugCenterX} y={textY(drugLayout, 1)} text-anchor="middle" font-family="Inter, sans-serif" font-size={drugLayout.fontSize} font-weight="700" fill="var(--text-primary)">{drugLayout.line1}</text>
+          {drugLayout.line2 && (
+            <text x={drugCenterX} y={textY(drugLayout, 2)} text-anchor="middle" font-family="Inter, sans-serif" font-size={drugLayout.fontSize} font-weight="700" fill="var(--text-primary)">{drugLayout.line2}</text>
+          )}
+          <text x={drugCenterX} y={sublabelY} text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--text-tertiary)" letter-spacing="0.1em" text-transform="uppercase">DRUG</text>
+
+          {/* A→B predicate + arrow */}
+          <text x={arrowAB_CenterX} y={ARROW_Y - 12} text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="var(--text-tertiary)">{fmtPredicate(data.metrics.predicate_ab)}</text>
+          <line x1={arrowAB_X1} y1={ARROW_Y} x2={arrowAB_X2} y2={ARROW_Y} stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
 
           {/* Mediator node */}
-          <rect x="360" y="50" width="240" height="80" rx="8" fill="var(--accent-bg)" stroke="var(--accent-light)" stroke-width="1.5"/>
-          <text x="480" y="98" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="var(--accent-hover)">{data.mediator.name}</text>
-          <text x="480" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--accent)" letter-spacing="0.1em" text-transform="uppercase">MEDIATOR{data.mediator.type ? ` · ${data.mediator.type}` : ''}</text>
+          <rect x={mediatorX} y={NODE_Y} width={mediatorLayout.width} height={NODE_HEIGHT} rx="8" fill="var(--accent-bg)" stroke="var(--accent-light)" stroke-width="1.5"/>
+          <text x={mediatorCenterX} y={textY(mediatorLayout, 1)} text-anchor="middle" font-family="Inter, sans-serif" font-size={mediatorLayout.fontSize} font-weight="700" fill="var(--accent-hover)">{mediatorLayout.line1}</text>
+          {mediatorLayout.line2 && (
+            <text x={mediatorCenterX} y={textY(mediatorLayout, 2)} text-anchor="middle" font-family="Inter, sans-serif" font-size={mediatorLayout.fontSize} font-weight="700" fill="var(--accent-hover)">{mediatorLayout.line2}</text>
+          )}
+          <text x={mediatorCenterX} y={sublabelY} text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--accent)" letter-spacing="0.1em" text-transform="uppercase">MEDIATOR{data.mediator.type ? ` · ${data.mediator.type}` : ''}</text>
 
-          {/* B→C label + arrow */}
-          <text x="650" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="var(--text-tertiary)">{fmtPredicate(data.metrics.predicate_bc)}</text>
-          <line x1="605" y1="90" x2="695" y2="90" stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
+          {/* B→C predicate + arrow */}
+          <text x={arrowBC_CenterX} y={ARROW_Y - 12} text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="var(--text-tertiary)">{fmtPredicate(data.metrics.predicate_bc)}</text>
+          <line x1={arrowBC_X1} y1={ARROW_Y} x2={arrowBC_X2} y2={ARROW_Y} stroke="var(--text-tertiary)" stroke-width="1.5" marker-end="url(#cs-arrow)"/>
 
           {/* Outcome node */}
-          <rect x="700" y="50" width="240" height="80" rx="8" fill="var(--bg-card)" stroke="var(--border-default)" stroke-width="1"/>
-          <text x="820" y="98" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="var(--text-primary)">{data.outcome.name.length > 30 ? data.outcome.name.slice(0, 28) + '…' : data.outcome.name}</text>
-          <text x="820" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--text-tertiary)" letter-spacing="0.1em" text-transform="uppercase">OUTCOME</text>
+          <rect x={outcomeX} y={NODE_Y} width={outcomeLayout.width} height={NODE_HEIGHT} rx="8" fill="var(--bg-card)" stroke="var(--border-default)" stroke-width="1"/>
+          <text x={outcomeCenterX} y={textY(outcomeLayout, 1)} text-anchor="middle" font-family="Inter, sans-serif" font-size={outcomeLayout.fontSize} font-weight="700" fill="var(--text-primary)">{outcomeLayout.line1}</text>
+          {outcomeLayout.line2 && (
+            <text x={outcomeCenterX} y={textY(outcomeLayout, 2)} text-anchor="middle" font-family="Inter, sans-serif" font-size={outcomeLayout.fontSize} font-weight="700" fill="var(--text-primary)">{outcomeLayout.line2}</text>
+          )}
+          <text x={outcomeCenterX} y={sublabelY} text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="var(--text-tertiary)" letter-spacing="0.1em" text-transform="uppercase">OUTCOME</text>
         </svg>
         <figcaption class="cs-flow-caption">
           Figure 1. Hypothesis chain: {data.drug.name} ({fmtPredicate(data.metrics.predicate_ab)}) {data.mediator.name} ({fmtPredicate(data.metrics.predicate_bc)}) {data.outcome.name}.

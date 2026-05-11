@@ -904,27 +904,39 @@ a { color: inherit; }
 }
 .hyp-filters-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr auto auto auto auto;
-  gap: 12px;
+  grid-template-columns: minmax(240px, 2fr) minmax(200px, 1fr) minmax(200px, 1fr) minmax(180px, 1fr) auto auto auto auto;
+  gap: var(--space-3);
   align-items: center;
 }
 .hyp-input,
 .hyp-select {
   width: 100%;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-primary);
-  background: #fff;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  padding: 9px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
   transition: border-color .15s, box-shadow .15s;
+}
+.hyp-select {
+  min-width: 200px;
+  padding-right: 32px;
+  /* Ensure the option label can be read at rest without clipping. */
+  text-overflow: ellipsis;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
 }
 .hyp-input:focus,
 .hyp-select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(30,64,175,.12);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
 }
 .hyp-checkbox {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1107,6 +1119,163 @@ a { color: inherit; }
 }
 @media (max-width: 480px) {
   .hyp-browse-grid { grid-template-columns: 1fr; }
+}
+
+/* "Show all domains" CTA below the top-6 grid */
+.hyp-browse-more {
+  margin-top: var(--space-4);
+}
+.hyp-browse-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: none;
+  padding: var(--space-2) 0;
+  font-family: var(--font-base);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color .15s ease;
+}
+.hyp-browse-more-btn:hover { color: var(--accent); }
+.hyp-browse-more-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Filter row mobile stacking */
+@media (max-width: 768px) {
+  .hyp-filters-grid { grid-template-columns: 1fr; gap: var(--space-2); }
+  .hyp-select { width: 100%; }
+}
+
+/* ---------- Domain modal (native dialog) ---------- */
+/* Restore native <dialog> centering — our global reset zeroes the
+   user-agent margin: auto. */
+.domain-modal {
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: 880px;
+  width: calc(100% - var(--space-12));
+  max-height: calc(100vh - var(--space-12));
+  border-radius: 12px;
+  overflow: visible;
+  margin: auto;
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.domain-modal.is-open {
+  opacity: 1;
+  transform: scale(1);
+}
+.domain-modal[open]::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.domain-modal.is-open::backdrop { opacity: 1; }
+/* Legacy fallback when ::backdrop is not supported */
+@supports not (backdrop-filter: blur(8px)) {
+  .domain-modal[open]::backdrop { background: rgba(15, 23, 42, 0.6); }
+}
+.domain-modal-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: var(--space-8);
+  max-height: calc(100vh - var(--space-12));
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+.domain-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.domain-modal-header h2 {
+  font-family: var(--font-base);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  margin: 0;
+}
+.domain-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color .15s ease, color .15s ease;
+}
+.domain-modal-close:hover { border-color: var(--text-primary); color: var(--text-primary); }
+.domain-modal-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.domain-modal-sub {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-6);
+  line-height: var(--leading-normal);
+}
+.domain-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+.domain-modal-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease, transform .12s ease;
+}
+.domain-modal-tile:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.domain-modal-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.domain-modal-tile-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.domain-modal-tile-count {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .domain-modal { width: 100%; max-width: 100%; border-radius: 0; }
+  .domain-modal-card { border-radius: 0; padding: var(--space-6); max-height: 100vh; }
+  .domain-modal-grid { grid-template-columns: 1fr; }
 }
 
 .hyp-row--highlight {

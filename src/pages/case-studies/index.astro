@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -40,17 +41,8 @@ const sortFn = (a: CaseStudyMeta, b: CaseStudyMeta) =>
 const novelCases = all.filter((c) => c.section === 'novel').sort(sortFn);
 const benchmarkCases = all.filter((c) => c.section === 'benchmark').sort(sortFn);
 
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'depression',
-  epilepsy: 'epilepsy',
-  glioblastoma: 'glioblastoma',
-  multiple_sclerosis: 'multiple sclerosis',
-  pancreatic_cancer: 'pancreatic cancer',
-};
 const fmtDomain = (d: string | null) =>
-  d ? DOMAIN_LABEL[d] ?? d.replace(/_/g, ' ') : 'cross-domain';
+  d ? formatDomainName(d) : 'cross-domain';
 
 const renderCard = (c: CaseStudyMeta) => ({
   href: `/case-studies/${c.slug}/`,

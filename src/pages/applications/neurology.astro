@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -49,14 +50,9 @@ const featured: Hypothesis[] = FEATURED_IDS.map(
   (id) => data.hypotheses.find((h) => h.id === id),
 ).filter(Boolean) as Hypothesis[];
 
-const DOMAIN_LABEL: Record<string, string> = {
-  als: 'ALS',
-  alzheimer: "Alzheimer's",
-  depression: 'depression',
-  epilepsy: 'epilepsy',
-  glioblastoma: 'glioblastoma',
-  pancreatic_cancer: 'pancreatic cancer',
-};
+const DOMAIN_LABEL = new Proxy({} as Record<string, string>, {
+  get: (_, key: string) => formatDomainName(key),
+});
 
 const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
 const article = (word: string) =>
