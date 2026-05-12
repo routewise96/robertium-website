@@ -1,0 +1,488 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { formatDomainName } from '../lib/format';
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface PredictionRow {
+  hypothesis_id: number;
+  drug: string;
+  drug_normalized: string | null;
+  mediator: string;
+  outcome: string;
+  outcome_normalized: string | null;
+  domain_source: string;
+  domain_target: string;
+  quality_tier: 'high' | 'mid';
+  score: number | null;
+  status: 'pending' | 'partial_support' | 'strong_support';
+  frozen_at: string;
+  last_check_date: string | null;
+  baseline_pmid_count: number;
+  current_pmid_count: number;
+  new_pmids_since_freeze: Array<{
+    pmid: string;
+    title: string | null;
+    pubdate: string | null;
+    year: number | null;
+    first_seen_check_date: string;
+  }>;
+  new_trial_nct_ids: string[];
+  support_first_seen_at: string | null;
+}
+
+interface PredictionPayload {
+  metadata: {
+    snapshot_name: string;
+    snapshot_date: string;
+    frozen_at: string;
+    last_checked_at: string;
+    exported_at: string;
+    total: number;
+    pending: number;
+    partial_support: number;
+    strong_support: number;
+    high_quality: number;
+    mid_quality: number;
+    total_new_pmids: number;
+    total_new_trials: number;
+    methodology: {
+      baseline: string;
+      match_criteria: string;
+      status_transitions: Record<string, string>;
+      clinical_trials_baseline: string;
+    };
+  };
+  rows: PredictionRow[];
+}
+
+const dataPath = path.join(process.cwd(), 'public', 'data', 'prospective.json');
+const data = JSON.parse(fs.readFileSync(dataPath, 'utf-8')) as PredictionPayload;
+const m = data.metadata;
+
+const frozenDate = new Date(m.frozen_at).toISOString().slice(0, 10);
+const lastCheckedDate = m.last_checked_at
+  ? new Date(m.last_checked_at).toISOString().slice(0, 10)
+  : '—';
+---
+<Layout
+  title="Public prospective predictions — Robertium"
+  description={`We publish ${m.total} drug repurposing hypotheses with timestamps and auto-track which gain literature support over time. Snapshot ${m.snapshot_name} frozen ${frozenDate}.`}
+  current="predictions"
+  ogImage="/og/home.png"
+>
+  <section class="pred-hero">
+    <div class="container">
+      <h1>Public prospective predictions</h1>
+      <p class="pred-subtitle">
+        We froze {m.total} drug repurposing hypotheses on <strong>{frozenDate}</strong> and
+        publicly track which ones gain literature support over time. PubMed and
+        ClinicalTrials.gov are re-queried monthly. Baseline counts never change.
+        Status transitions are appended.
+      </p>
+    </div>
+  </section>
+
+  <section class="pred-stats">
+    <div class="container">
+      <div class="pred-stats-grid">
+        <div class="pred-stat">
+          <span class="pred-stat-num">{m.total.toLocaleString()}</span>
+          <span class="pred-stat-label">Tracked hypotheses</span>
+        </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num pred-stat--strong">{m.strong_support}</span>
+          <span class="pred-stat-label">Strong support</span>
+        </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num pred-stat--partial">{m.partial_support}</span>
+          <span class="pred-stat-label">Partial support</span>
+        </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num pred-stat--pending">{m.pending.toLocaleString()}</span>
+          <span class="pred-stat-label">Pending</span>
+        </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num">{m.total_new_pmids}</span>
+          <span class="pred-stat-label">New PMIDs since freeze</span>
+        </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num">{m.total_new_trials}</span>
+          <span class="pred-stat-label">New trials since freeze</span>
+        </div>
+      </div>
+      <p class="pred-stats-foot">
+        Snapshot <code>{m.snapshot_name}</code> · frozen <time datetime={m.frozen_at}>{frozenDate}</time>
+        · last checked <time datetime={m.last_checked_at}>{lastCheckedDate}</time>
+      </p>
+    </div>
+  </section>
+
+  <section class="pred-method">
+    <div class="container">
+      <details class="pred-method-card">
+        <summary>
+          <span class="pred-method-title">Methodology</span>
+          <span class="pred-method-hint">click to expand</span>
+        </summary>
+        <div class="pred-method-body">
+          <h3>Baseline</h3>
+          <p>{m.methodology.baseline}</p>
+          <h3>PubMed match criteria</h3>
+          <p><code>{m.methodology.match_criteria}</code></p>
+          <p class="pred-method-note">
+            Criteria are intentionally strict to minimize false positives. Drug
+            synonym expansion (e.g. FTY720 / fingolimod / Gilenya) is not yet
+            applied — see the GitHub repo for the open issue.
+          </p>
+          <h3>Status transitions</h3>
+          <ul>
+            <li><strong>pending</strong> — {m.methodology.status_transitions.pending}</li>
+            <li><strong>partial_support</strong> — {m.methodology.status_transitions.partial_support}</li>
+            <li><strong>strong_support</strong> — {m.methodology.status_transitions.strong_support}</li>
+          </ul>
+          <h3>ClinicalTrials.gov baseline</h3>
+          <p>{m.methodology.clinical_trials_baseline}</p>
+          <h3>Integrity</h3>
+          <p>
+            The frozen snapshot is committed to git as
+            <code>data/prospective/snapshot_{m.snapshot_name}.json</code> and is
+            append-only. Every monthly check writes
+            <code>data/prospective/checks_{m.snapshot_name}_YYYY-MM-DD.json</code>.
+            Postgres is a derived cache and can be rebuilt at any time from these
+            files. Full source:
+            <a href="https://github.com/routewise96/robertium/tree/main/scripts/prospective">
+              scripts/prospective
+            </a>.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="pred-controls">
+    <div class="container">
+      <div class="pred-controls-grid">
+        <input
+          type="search"
+          id="pred-search"
+          class="pred-input"
+          placeholder="Search by drug, mediator, outcome…"
+          aria-label="Search predictions"
+          autocomplete="off"
+        />
+        <fieldset class="pred-chips" aria-label="Filter by status">
+          <legend class="pred-chips-legend">Status</legend>
+          <label class="pred-chip"><input type="checkbox" value="strong_support" checked /> Strong</label>
+          <label class="pred-chip"><input type="checkbox" value="partial_support" checked /> Partial</label>
+          <label class="pred-chip"><input type="checkbox" value="pending" checked /> Pending</label>
+        </fieldset>
+        <fieldset class="pred-chips" aria-label="Filter by quality">
+          <legend class="pred-chips-legend">Quality</legend>
+          <label class="pred-chip"><input type="checkbox" value="high" checked /> High</label>
+          <label class="pred-chip"><input type="checkbox" value="mid" checked /> Mid</label>
+        </fieldset>
+        <button type="button" id="pred-reset" class="pred-reset">Reset</button>
+      </div>
+      <p class="pred-controls-summary"><span id="pred-count">{m.total}</span> shown</p>
+    </div>
+  </section>
+
+  <section class="pred-table-wrap">
+    <div class="container">
+      <table class="pred-table">
+        <thead>
+          <tr>
+            <th data-sort="status">Status</th>
+            <th data-sort="drug">Drug</th>
+            <th>Mediator</th>
+            <th>Outcome</th>
+            <th data-sort="quality_tier">Quality</th>
+            <th data-sort="score">Score</th>
+            <th data-sort="current_pmid_count">New PMIDs</th>
+            <th>New trials</th>
+            <th>Last checked</th>
+          </tr>
+        </thead>
+        <tbody id="pred-tbody">
+          <tr><td colspan="9" class="pred-loading">Loading…</td></tr>
+        </tbody>
+      </table>
+      <div id="pred-pager" class="pred-pager"></div>
+    </div>
+  </section>
+
+  <script type="application/json" id="pred-data" set:html={JSON.stringify(data.rows)}></script>
+  <script is:inline>
+    (function () {
+      const dataEl = document.getElementById('pred-data');
+      const rows = JSON.parse(dataEl.textContent || '[]');
+      const tbody = document.getElementById('pred-tbody');
+      const countEl = document.getElementById('pred-count');
+      const pager = document.getElementById('pred-pager');
+      const searchEl = document.getElementById('pred-search');
+      const resetEl = document.getElementById('pred-reset');
+      const statusChips = document.querySelectorAll('.pred-chips[aria-label="Filter by status"] input');
+      const qualityChips = document.querySelectorAll('.pred-chips[aria-label="Filter by quality"] input');
+
+      const PAGE_SIZE = 50;
+      const STATUS_RANK = { strong_support: 0, partial_support: 1, pending: 2 };
+      const QUALITY_RANK = { high: 0, mid: 1 };
+
+      let currentSort = { key: 'default', dir: 'desc' };
+      let currentPage = 0;
+      let filtered = rows.slice();
+
+      function getSelected(chips) {
+        return new Set(Array.from(chips).filter(c => c.checked).map(c => c.value));
+      }
+
+      function defaultSort(a, b) {
+        const s = STATUS_RANK[a.status] - STATUS_RANK[b.status];
+        if (s !== 0) return s;
+        const p = (b.current_pmid_count || 0) - (a.current_pmid_count || 0);
+        if (p !== 0) return p;
+        return (b.score || 0) - (a.score || 0);
+      }
+
+      function applySort(arr) {
+        if (currentSort.key === 'default') return arr.sort(defaultSort);
+        const dir = currentSort.dir === 'asc' ? 1 : -1;
+        return arr.sort((a, b) => {
+          let av = a[currentSort.key];
+          let bv = b[currentSort.key];
+          if (currentSort.key === 'status') {
+            av = STATUS_RANK[av]; bv = STATUS_RANK[bv];
+          } else if (currentSort.key === 'quality_tier') {
+            av = QUALITY_RANK[av]; bv = QUALITY_RANK[bv];
+          }
+          if (av == null) av = -Infinity;
+          if (bv == null) bv = -Infinity;
+          if (typeof av === 'string') return dir * av.localeCompare(bv);
+          return dir * (av - bv);
+        });
+      }
+
+      function applyFilters() {
+        const q = searchEl.value.trim().toLowerCase();
+        const sel = getSelected(statusChips);
+        const qua = getSelected(qualityChips);
+        filtered = rows.filter(r => {
+          if (!sel.has(r.status)) return false;
+          if (!qua.has(r.quality_tier)) return false;
+          if (q) {
+            const hay = (r.drug + ' ' + r.mediator + ' ' + r.outcome + ' ' +
+                         r.domain_source + ' ' + r.domain_target).toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+        filtered = applySort(filtered);
+        countEl.textContent = filtered.length.toLocaleString();
+        currentPage = 0;
+        render();
+      }
+
+      function statusBadge(s) {
+        const labels = { strong_support: 'Strong', partial_support: 'Partial', pending: 'Pending' };
+        return '<span class="pred-badge pred-badge--' + s + '">' + labels[s] + '</span>';
+      }
+
+      function qualityBadge(q) {
+        return '<span class="pred-qbadge pred-qbadge--' + q + '">' + (q === 'high' ? 'High' : 'Mid') + '</span>';
+      }
+
+      function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s).replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[c]);
+      }
+
+      function pmidsList(arr) {
+        if (!arr || arr.length === 0) return '';
+        return '<ul class="pred-pmid-list">' + arr.map(p =>
+          '<li><a href="https://pubmed.ncbi.nlm.nih.gov/' + encodeURIComponent(p.pmid) + '/" target="_blank" rel="noopener">PMID ' + escapeHtml(p.pmid) + '</a>'
+          + (p.title ? ' — ' + escapeHtml(p.title) : '')
+          + (p.pubdate ? ' <span class="pred-pubdate">(' + escapeHtml(p.pubdate) + ')</span>' : '')
+          + '</li>'
+        ).join('') + '</ul>';
+      }
+
+      function trialsList(arr) {
+        if (!arr || arr.length === 0) return '';
+        return '<ul class="pred-pmid-list">' + arr.map(nct =>
+          '<li><a href="https://clinicaltrials.gov/study/' + encodeURIComponent(nct) + '" target="_blank" rel="noopener">' + escapeHtml(nct) + '</a></li>'
+        ).join('') + '</ul>';
+      }
+
+      function render() {
+        const start = currentPage * PAGE_SIZE;
+        const slice = filtered.slice(start, start + PAGE_SIZE);
+        if (slice.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="pred-empty">No hypotheses match the current filters.</td></tr>';
+          pager.innerHTML = '';
+          return;
+        }
+        tbody.innerHTML = slice.map(r => {
+          const newPmids = r.new_pmids_since_freeze || [];
+          const newTrials = r.new_trial_nct_ids || [];
+          const detailsRow = (newPmids.length > 0 || newTrials.length > 0)
+            ? '<tr class="pred-detail-row" hidden><td colspan="9"><div class="pred-detail">'
+              + (newPmids.length > 0 ? '<h4>New PMIDs since freeze</h4>' + pmidsList(newPmids) : '')
+              + (newTrials.length > 0 ? '<h4>New trial NCT IDs</h4>' + trialsList(newTrials) : '')
+              + '</div></td></tr>'
+            : '';
+          const hasDetail = newPmids.length > 0 || newTrials.length > 0;
+          return '<tr class="pred-row' + (hasDetail ? ' pred-row--expandable' : '') + '" data-id="' + r.hypothesis_id + '">'
+            + '<td>' + statusBadge(r.status) + '</td>'
+            + '<td><strong>' + escapeHtml(r.drug) + '</strong></td>'
+            + '<td>' + escapeHtml(r.mediator) + '</td>'
+            + '<td>' + escapeHtml(r.outcome) + '</td>'
+            + '<td>' + qualityBadge(r.quality_tier) + '</td>'
+            + '<td class="pred-mono">' + (r.score != null ? r.score.toFixed(3) : '—') + '</td>'
+            + '<td class="pred-mono">' + (r.current_pmid_count || 0) + '</td>'
+            + '<td class="pred-mono">' + (r.new_trial_nct_ids ? r.new_trial_nct_ids.length : 0) + '</td>'
+            + '<td>' + (r.last_check_date || '—') + '</td>'
+            + '</tr>' + detailsRow;
+        }).join('');
+
+        // Wire expand
+        tbody.querySelectorAll('.pred-row--expandable').forEach(row => {
+          row.addEventListener('click', () => {
+            const next = row.nextElementSibling;
+            if (next && next.classList.contains('pred-detail-row')) {
+              next.hidden = !next.hidden;
+              row.classList.toggle('pred-row--open', !next.hidden);
+            }
+          });
+        });
+
+        // Pager
+        const pages = Math.ceil(filtered.length / PAGE_SIZE);
+        if (pages <= 1) { pager.innerHTML = ''; return; }
+        pager.innerHTML = ''
+          + '<button type="button" class="pred-pager-btn" data-act="prev"' + (currentPage === 0 ? ' disabled' : '') + '>‹ Prev</button>'
+          + '<span class="pred-pager-info">Page ' + (currentPage + 1) + ' of ' + pages + '</span>'
+          + '<button type="button" class="pred-pager-btn" data-act="next"' + (currentPage >= pages - 1 ? ' disabled' : '') + '>Next ›</button>';
+        pager.querySelectorAll('button').forEach(b => {
+          b.addEventListener('click', () => {
+            if (b.dataset.act === 'prev' && currentPage > 0) currentPage--;
+            if (b.dataset.act === 'next' && currentPage < pages - 1) currentPage++;
+            render();
+            window.scrollTo({ top: document.querySelector('.pred-table-wrap').offsetTop - 40, behavior: 'smooth' });
+          });
+        });
+      }
+
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.classList.add('pred-th-sortable');
+        th.addEventListener('click', () => {
+          const key = th.dataset.sort;
+          if (currentSort.key === key) {
+            currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            currentSort = { key, dir: 'desc' };
+          }
+          document.querySelectorAll('th[data-sort]').forEach(t => t.removeAttribute('data-active'));
+          th.setAttribute('data-active', currentSort.dir);
+          applyFilters();
+        });
+      });
+
+      searchEl.addEventListener('input', applyFilters);
+      statusChips.forEach(c => c.addEventListener('change', applyFilters));
+      qualityChips.forEach(c => c.addEventListener('change', applyFilters));
+      resetEl.addEventListener('click', () => {
+        searchEl.value = '';
+        statusChips.forEach(c => c.checked = true);
+        qualityChips.forEach(c => c.checked = true);
+        currentSort = { key: 'default', dir: 'desc' };
+        document.querySelectorAll('th[data-sort]').forEach(t => t.removeAttribute('data-active'));
+        applyFilters();
+      });
+
+      applyFilters();
+    })();
+  </script>
+
+  <style>
+    .pred-hero { padding: var(--space-16) 0 var(--space-8); background: var(--bg-section); }
+    .pred-hero h1 { margin: 0 0 var(--space-4); font-size: var(--text-3xl); color: var(--text-primary); }
+    .pred-subtitle { color: var(--text-secondary); font-size: 1.1rem; line-height: 1.6; max-width: 760px; }
+
+    .pred-stats { padding: var(--space-8) 0; background: var(--bg-primary); border-bottom: 1px solid #e2e8f0; }
+    .pred-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-6); }
+    .pred-stat { display: flex; flex-direction: column; gap: var(--space-1); }
+    .pred-stat-num { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .pred-stat--strong { color: var(--state-success); }
+    .pred-stat--partial { color: var(--state-warning); }
+    .pred-stat--pending { color: var(--text-tertiary); }
+    .pred-stat-label { font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+    .pred-stats-foot { margin-top: var(--space-6); color: var(--text-tertiary); font-size: 0.9rem; }
+    .pred-stats-foot code { font-family: ui-monospace, monospace; background: var(--bg-section); padding: 2px 6px; border-radius: 4px; }
+
+    .pred-method { padding: var(--space-6) 0; background: var(--bg-section); }
+    .pred-method-card { background: var(--bg-card); border: 1px solid #e2e8f0; border-radius: 8px; padding: var(--space-6); }
+    .pred-method-card > summary { cursor: pointer; display: flex; justify-content: space-between; align-items: center; list-style: none; }
+    .pred-method-card > summary::-webkit-details-marker { display: none; }
+    .pred-method-title { font-size: 1.1rem; font-weight: var(--weight-semibold); color: var(--text-primary); }
+    .pred-method-hint { font-size: 0.85rem; color: var(--text-tertiary); }
+    .pred-method-body { margin-top: var(--space-4); color: var(--text-secondary); line-height: 1.7; }
+    .pred-method-body h3 { margin: var(--space-4) 0 var(--space-2); font-size: 1rem; color: var(--text-primary); }
+    .pred-method-body code { font-family: ui-monospace, monospace; background: var(--bg-section); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    .pred-method-body ul { margin: 0; padding-left: 1.2rem; }
+    .pred-method-note { color: var(--text-tertiary); font-size: 0.9rem; font-style: italic; }
+
+    .pred-controls { padding: var(--space-6) 0 var(--space-4); background: var(--bg-primary); position: sticky; top: 0; z-index: 5; border-bottom: 1px solid #e2e8f0; }
+    .pred-controls-grid { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+    .pred-input { flex: 1 1 240px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
+    .pred-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; border: 0; padding: 0; margin: 0; }
+    .pred-chips-legend { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-right: var(--space-2); }
+    .pred-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--bg-section); border: 1px solid #cbd5e1; border-radius: 999px; font-size: 0.85rem; cursor: pointer; }
+    .pred-chip input { margin: 0; }
+    .pred-reset { padding: 6px 12px; background: var(--bg-section); border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .pred-reset:hover { background: #e2e8f0; }
+    .pred-controls-summary { margin-top: var(--space-2); color: var(--text-tertiary); font-size: 0.9rem; }
+
+    .pred-table-wrap { padding: var(--space-4) 0 var(--space-16); }
+    .pred-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    .pred-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #cbd5e1; color: var(--text-tertiary); font-weight: var(--weight-semibold); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+    .pred-th-sortable { cursor: pointer; user-select: none; }
+    .pred-th-sortable:hover { color: var(--accent); }
+    .pred-th-sortable[data-active="asc"]::after { content: " ▲"; color: var(--accent); }
+    .pred-th-sortable[data-active="desc"]::after { content: " ▼"; color: var(--accent); }
+    .pred-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    .pred-table tr.pred-row--expandable { cursor: pointer; }
+    .pred-table tr.pred-row--expandable:hover { background: var(--accent-bg); }
+    .pred-table tr.pred-row--open { background: var(--accent-bg); }
+    .pred-mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; }
+    .pred-loading, .pred-empty { text-align: center; padding: var(--space-12); color: var(--text-tertiary); }
+
+    .pred-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: var(--weight-semibold); white-space: nowrap; }
+    .pred-badge--strong_support { background: var(--state-success-bg); color: var(--state-success); }
+    .pred-badge--partial_support { background: var(--state-warning-bg); color: var(--state-warning); }
+    .pred-badge--pending { background: var(--bg-section); color: var(--text-tertiary); }
+    .pred-qbadge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.75rem; font-weight: var(--weight-semibold); }
+    .pred-qbadge--high { background: var(--accent-light); color: var(--accent-hover); }
+    .pred-qbadge--mid { background: var(--bg-section); color: var(--text-tertiary); }
+
+    .pred-detail { padding: var(--space-4) var(--space-4); background: #fafafa; border-radius: 6px; }
+    .pred-detail h4 { margin: 0 0 var(--space-2); font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+    .pred-pmid-list { margin: 0 0 var(--space-4); padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-secondary); }
+    .pred-pmid-list a { color: var(--accent); text-decoration: none; }
+    .pred-pmid-list a:hover { text-decoration: underline; }
+    .pred-pubdate { color: var(--text-tertiary); font-size: 0.85rem; }
+
+    .pred-pager { display: flex; justify-content: center; align-items: center; gap: var(--space-4); margin-top: var(--space-6); }
+    .pred-pager-btn { padding: 6px 14px; background: var(--bg-card); border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .pred-pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pred-pager-btn:not(:disabled):hover { background: var(--accent-bg); }
+    .pred-pager-info { color: var(--text-tertiary); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 720px) {
+      .pred-table { font-size: 0.85rem; }
+      .pred-table th, .pred-table td { padding: 8px 6px; }
+    }
+  </style>
+</Layout>

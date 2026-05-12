@@ -1,0 +1,127 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dataPath = path.join(process.cwd(), 'public', 'data', 'prospective.json');
+const data = JSON.parse(fs.readFileSync(dataPath, 'utf-8')) as {
+  metadata: {
+    snapshot_name: string;
+    frozen_at: string;
+    total: number;
+    pending: number;
+    partial_support: number;
+    strong_support: number;
+    total_new_pmids: number;
+  };
+};
+const m = data.metadata;
+const frozenDate = new Date(m.frozen_at).toISOString().slice(0, 10);
+---
+<section class="pb-banner">
+  <div class="container">
+    <div class="pb-grid">
+      <div class="pb-text">
+        <p class="pb-eyebrow">Live tracking leaderboard</p>
+        <h2 class="pb-heading">We make our predictions public.</h2>
+        <p class="pb-body">
+          On <strong>{frozenDate}</strong> we froze <strong>{m.total.toLocaleString()}</strong> drug
+          repurposing hypotheses and committed them to a public, append-only ledger. Every
+          month we re-query PubMed and ClinicalTrials.gov, then publish whether each one
+          has gained literature support. No retrospective edits.
+        </p>
+        <a href="/predictions" class="pb-cta">See the live tracking leaderboard →</a>
+      </div>
+      <div class="pb-stats">
+        <div class="pb-stat pb-stat--strong">
+          <span class="pb-stat-num">{m.strong_support}</span>
+          <span class="pb-stat-label">Strong support</span>
+        </div>
+        <div class="pb-stat pb-stat--partial">
+          <span class="pb-stat-num">{m.partial_support}</span>
+          <span class="pb-stat-label">Partial support</span>
+        </div>
+        <div class="pb-stat">
+          <span class="pb-stat-num">{m.total_new_pmids}</span>
+          <span class="pb-stat-label">New PMIDs since freeze</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .pb-banner {
+    padding: var(--space-12) 0;
+    background: linear-gradient(180deg, var(--bg-section) 0%, var(--accent-bg) 100%);
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .pb-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: var(--space-12);
+    align-items: center;
+  }
+  .pb-eyebrow {
+    margin: 0 0 var(--space-2);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: var(--weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pb-heading {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-2xl);
+    color: var(--text-primary);
+    line-height: var(--leading-tight);
+  }
+  .pb-body {
+    margin: 0 0 var(--space-5);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 1rem;
+  }
+  .pb-cta {
+    display: inline-block;
+    padding: 10px 18px;
+    background: var(--accent);
+    color: var(--text-inverse);
+    border-radius: 6px;
+    font-weight: var(--weight-semibold);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  .pb-cta:hover { background: var(--accent-hover); }
+  .pb-stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .pb-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-card);
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+  .pb-stat-num {
+    font-size: 1.6rem;
+    font-weight: var(--weight-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+  }
+  .pb-stat--strong .pb-stat-num { color: var(--state-success); }
+  .pb-stat--partial .pb-stat-num { color: var(--state-warning); }
+  .pb-stat-label {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  @media (max-width: 720px) {
+    .pb-grid { grid-template-columns: 1fr; gap: var(--space-6); }
+  }
+</style>
