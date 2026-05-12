@@ -1,0 +1,352 @@
+---
+// SimilarHypotheses — horizontal exploration for one hypothesis.
+//
+// Reads /public/data/similarity/{id}.json at build time (SSG, no client fetch).
+// JSON schema lives in scripts/compute_hypothesis_similarity.py and is sliced
+// per-hypothesis by scripts/export_similarity.py. Each row stores 8 records;
+// this component renders 5 by default and tucks the rest behind <details>.
+import fs from 'node:fs';
+import path from 'node:path';
+import { formatDomainName } from '../lib/format';
+
+interface Props {
+  hypothesisId: number | string;
+}
+const { hypothesisId } = Astro.props;
+
+const filePath = path.join(
+  process.cwd(),
+  'public',
+  'data',
+  'similarity',
+  `${hypothesisId}.json`,
+);
+
+let payload: any = null;
+if (fs.existsSync(filePath)) {
+  try {
+    payload = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch {
+    payload = null;
+  }
+}
+
+const similar = (payload?.similar ?? []) as Array<{
+  id: number;
+  drug: string;
+  mediator: string;
+  outcome: string;
+  outcome_domain: string | null;
+  score: number | null;
+  similarity_score: number;
+  cosine_component: number;
+  structural_component: number;
+  jaccard_component: number;
+  quality_tier: 'high' | 'mid';
+  match_type:
+    | 'cross_indication'
+    | 'same_mechanism_new_indication'
+    | 'alternative_treatment'
+    | 'mechanism_shared'
+    | 'topical';
+  is_case_study: boolean;
+}>;
+
+const VISIBLE_DEFAULT = 5;
+const head = similar.slice(0, VISIBLE_DEFAULT);
+const tail = similar.slice(VISIBLE_DEFAULT);
+
+const MATCH_BLURB: Record<string, string> = {
+  cross_indication: 'Same drug, different disease — potential alternate indication',
+  mechanism_shared: 'Same mediator pathway — mechanism-level similarity',
+  same_mechanism_new_indication: 'Same drug + same mediator, different disease',
+  alternative_treatment: 'Different drug, same disease outcome',
+  topical: 'Related literature, weak structural overlap',
+};
+
+const MATCH_LABEL: Record<string, string> = {
+  cross_indication: 'Cross-indication',
+  mechanism_shared: 'Shared pathway',
+  same_mechanism_new_indication: 'New indication',
+  alternative_treatment: 'Alternative drug',
+  topical: 'Topical',
+};
+
+function fmtScore(n: number): string {
+  return Number(n).toFixed(2);
+}
+
+function breakdownTitle(s: typeof similar[number]): string {
+  return (
+    `cosine ${s.cosine_component.toFixed(2)} · ` +
+    `structural ${s.structural_component.toFixed(2)} · ` +
+    `jaccard ${s.jaccard_component.toFixed(2)}`
+  );
+}
+
+function renderCard(s: typeof similar[number]) {
+  return s;
+}
+---
+
+{similar.length > 0 && (
+  <section class="sim-panel" aria-labelledby={`sim-panel-${hypothesisId}-heading`}>
+    <header class="sim-panel__header">
+      <p class="sim-panel__eyebrow">Horizontal exploration</p>
+      <h2 id={`sim-panel-${hypothesisId}-heading`} class="sim-panel__heading">
+        Similar hypotheses
+      </h2>
+      <p class="sim-panel__sub">
+        Closest {similar.length} of {payload?.method ? '1,618' : 'all'} hypotheses, ranked by hybrid score
+        (50% bge-m3 embedding cosine · 40% drug/mediator/outcome overlap · 10% shared evidence papers).
+      </p>
+    </header>
+
+    <ol class="sim-panel__grid">
+      {head.map((s) => (
+        <li class={`sim-card sim-card--${s.match_type}`}>
+          <a class="sim-card__link" href={`/hypothesis/${s.id}/`} aria-label={`Open hypothesis ${s.drug} → ${s.mediator} → ${s.outcome}`}>
+            <div class="sim-card__top">
+              <span class="sim-card__match">{MATCH_LABEL[s.match_type]}</span>
+              <span class="sim-card__score" title={breakdownTitle(s)}>{fmtScore(s.similarity_score)}</span>
+            </div>
+            <div class="sim-card__chain">
+              <span class="sim-card__entity">{s.drug}</span>
+              <span class="sim-card__arrow">→</span>
+              <span class="sim-card__entity">{s.mediator}</span>
+              <span class="sim-card__arrow">→</span>
+              <span class="sim-card__entity">{s.outcome}</span>
+            </div>
+            <p class="sim-card__blurb">{MATCH_BLURB[s.match_type]}</p>
+            <div class="sim-card__meta">
+              {s.outcome_domain && (
+                <span class="sim-card__meta-item">{formatDomainName(s.outcome_domain)}</span>
+              )}
+              <span class="sim-card__meta-item sim-card__meta-item--tier">{s.quality_tier}</span>
+              {s.is_case_study && (
+                <span class="sim-card__meta-item sim-card__meta-item--cs">★ case study</span>
+              )}
+            </div>
+          </a>
+        </li>
+      ))}
+    </ol>
+
+    {tail.length > 0 && (
+      <details class="sim-panel__more">
+        <summary>Show {tail.length} more</summary>
+        <ol class="sim-panel__grid sim-panel__grid--more">
+          {tail.map((s) => (
+            <li class={`sim-card sim-card--${s.match_type}`}>
+              <a class="sim-card__link" href={`/hypothesis/${s.id}/`} aria-label={`Open hypothesis ${s.drug} → ${s.mediator} → ${s.outcome}`}>
+                <div class="sim-card__top">
+                  <span class="sim-card__match">{MATCH_LABEL[s.match_type]}</span>
+                  <span class="sim-card__score" title={breakdownTitle(s)}>{fmtScore(s.similarity_score)}</span>
+                </div>
+                <div class="sim-card__chain">
+                  <span class="sim-card__entity">{s.drug}</span>
+                  <span class="sim-card__arrow">→</span>
+                  <span class="sim-card__entity">{s.mediator}</span>
+                  <span class="sim-card__arrow">→</span>
+                  <span class="sim-card__entity">{s.outcome}</span>
+                </div>
+                <p class="sim-card__blurb">{MATCH_BLURB[s.match_type]}</p>
+                <div class="sim-card__meta">
+                  {s.outcome_domain && (
+                    <span class="sim-card__meta-item">{formatDomainName(s.outcome_domain)}</span>
+                  )}
+                  <span class="sim-card__meta-item sim-card__meta-item--tier">{s.quality_tier}</span>
+                  {s.is_case_study && (
+                    <span class="sim-card__meta-item sim-card__meta-item--cs">★ case study</span>
+                  )}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </details>
+    )}
+  </section>
+)}
+
+<style>
+  .sim-panel {
+    margin: 0;
+    padding: 0;
+  }
+  .sim-panel__header {
+    margin-bottom: 1.25rem;
+  }
+  .sim-panel__eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.4rem;
+  }
+  .sim-panel__heading {
+    margin: 0 0 0.4rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+  }
+  .sim-panel__sub {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-muted, #6b7280);
+    line-height: 1.5;
+    max-width: 60ch;
+  }
+
+  .sim-panel__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.85rem;
+  }
+
+  .sim-card {
+    margin: 0;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid var(--border, #e5e7eb);
+    background: #fff;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+  .sim-card:hover {
+    border-color: var(--accent, #0891b2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(8, 145, 178, 0.08);
+  }
+  .sim-card__link {
+    display: block;
+    padding: 0.85rem 0.95rem 0.95rem;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  .sim-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+  }
+  .sim-card__match {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.18rem 0.45rem;
+    border-radius: 4px;
+  }
+  .sim-card__score {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    cursor: help;
+  }
+  .sim-card__chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.35rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.35;
+  }
+  .sim-card__entity {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text, #1f2937);
+  }
+  .sim-card__arrow {
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
+    font-weight: 400;
+  }
+  .sim-card__blurb {
+    margin: 0 0 0.6rem;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+    line-height: 1.4;
+  }
+  .sim-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .sim-card__meta-item {
+    background: var(--surface-muted, #f9fafb);
+    border: 1px solid var(--border, #e5e7eb);
+    padding: 0.12rem 0.45rem;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.66rem;
+    text-transform: lowercase;
+  }
+  .sim-card__meta-item--tier {
+    text-transform: uppercase;
+  }
+  .sim-card__meta-item--cs {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+    text-transform: none;
+  }
+
+  /* Match-type color accents on the badge */
+  .sim-card--cross_indication .sim-card__match {
+    background: #cffafe; color: #155e75;
+  }
+  .sim-card--same_mechanism_new_indication .sim-card__match {
+    background: #ede9fe; color: #5b21b6;
+  }
+  .sim-card--alternative_treatment .sim-card__match {
+    background: #dcfce7; color: #166534;
+  }
+  .sim-card--mechanism_shared .sim-card__match {
+    background: #e5e7eb; color: #374151;
+  }
+  .sim-card--topical .sim-card__match {
+    background: #f3f4f6; color: #6b7280;
+  }
+
+  .sim-panel__more {
+    margin-top: 1rem;
+  }
+  .sim-panel__more > summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent, #0891b2);
+    padding: 0.45rem 0;
+    list-style: none;
+  }
+  .sim-panel__more > summary::-webkit-details-marker { display: none; }
+  .sim-panel__more > summary::before {
+    content: '▸ ';
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .sim-panel__more[open] > summary::before {
+    transform: rotate(90deg);
+  }
+  .sim-panel__grid--more {
+    margin-top: 0.75rem;
+  }
+
+  @media (max-width: 640px) {
+    .sim-panel__heading { font-size: 1.25rem; }
+    .sim-panel__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
