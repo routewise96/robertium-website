@@ -1,0 +1,45 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout
+  title="API reference — Robertium"
+  description="OpenAPI 3.1 reference for the Robertium static data API: hypothesis catalog, prospective tracking, provenance bundles, and ClinicalTrials.gov indexes. Free, public, no authentication."
+  current="api"
+  ogImage="/og/api.png"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>API reference</h1>
+      <p class="subtitle">OpenAPI 3.1 specification for Robertium's static data endpoints</p>
+      <p class="meta" style="font-family: inherit; font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 760px;">
+        Every endpoint below resolves to a JSON file served from <code style="font-family:var(--font-mono); font-size:14px;">robertium.com/data/*</code>. No signup, no authentication, no rate limits. The raw spec is at <a href="/openapi.yaml" style="color:var(--accent);"><code style="font-family:var(--font-mono); font-size:14px;">/openapi.yaml</code></a> — import it into Postman, Insomnia, Swagger Editor, or any OpenAPI-aware client. For a higher-level walkthrough and bulk-export options, see <a href="/api" style="color:var(--accent);">Research access</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section openapi-section">
+    <redoc
+      spec-url="/openapi.yaml"
+      hide-loading
+      expand-responses="200"
+      json-sample-expand-level="2"
+      path-in-middle-panel
+      required-props-first
+      sort-tags-alphabetically
+      theme='{"typography":{"fontFamily":"Inter, system-ui, sans-serif","headings":{"fontFamily":"Inter, system-ui, sans-serif"},"code":{"fontFamily":"JetBrains Mono, ui-monospace, monospace"}}}'
+    ></redoc>
+  </section>
+
+  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js" is:inline></script>
+
+  <style>
+    .openapi-section {
+      padding: 0;
+      background: var(--bg, #ffffff);
+    }
+    .openapi-section redoc {
+      display: block;
+      min-height: 90vh;
+    }
+  </style>
+</Layout>
