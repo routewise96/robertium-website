@@ -1,0 +1,843 @@
+---
+// ProvenanceTrace — audit-grade timeline for one hypothesis.
+//
+// Reads /public/data/provenance/{id}.json at build time so the content is in
+// the initial HTML (SSG, no client fetch needed for first render). Native
+// <details> elements provide collapsible sections. Vanilla JS only powers
+// filter chips (Step 1) and the claim search box (Step 2).
+//
+// JSON schema lives in scripts/export_provenance.py (provenance pipeline repo);
+// schema_version is included on every row so we can branch if it changes.
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface Props {
+  hypothesisId: number | string;
+}
+const { hypothesisId } = Astro.props;
+
+const provenancePath = path.join(
+  process.cwd(),
+  'public',
+  'data',
+  'provenance',
+  `${hypothesisId}.json`,
+);
+
+let prov: any = null;
+if (fs.existsSync(provenancePath)) {
+  try {
+    prov = JSON.parse(fs.readFileSync(provenancePath, 'utf-8'));
+  } catch (err) {
+    prov = null;
+  }
+}
+
+const REPO_BASE = 'https://github.com/routewise96/robertium';
+
+function completenessMeta(state: string | undefined): { label: string; klass: string } {
+  switch (state) {
+    case 'complete':
+      return { label: 'Live capture', klass: 'live' };
+    case 'partial_backfill':
+      return { label: 'Backfilled', klass: 'partial' };
+    case 'unknown_pre_capture':
+      return { label: 'Unknown (pre-capture)', klass: 'unknown' };
+    default:
+      return { label: 'Unknown', klass: 'unknown' };
+  }
+}
+
+function shortSha(sha: string | null | undefined): string | null {
+  return sha ? sha.slice(0, 7) : null;
+}
+
+function fmtTimestamp(ts: string | null | undefined): string {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  } catch {
+    return ts;
+  }
+}
+
+function fmtFloat(n: number | null | undefined, digits = 3): string {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toFixed(digits);
+}
+
+const completeness = completenessMeta(prov?.provenance_completeness);
+const gitShort = shortSha(prov?.pipeline_run?.git_commit);
+const gitHref = prov?.pipeline_run?.git_commit
+  ? `${REPO_BASE}/commit/${prov.pipeline_run.git_commit}`
+  : null;
+const runUuidShort = prov?.pipeline_run?.run_uuid
+  ? prov.pipeline_run.run_uuid.slice(0, 8)
+  : null;
+
+const sourcePapers: any[] = prov?.source_papers ?? [];
+const sortedPapers = [...sourcePapers].sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
+const drugMediatorCount = sourcePapers.filter((p) => (p.roles ?? []).includes('drug_mediator')).length;
+const mediatorOutcomeCount = sourcePapers.filter((p) => (p.roles ?? []).includes('mediator_outcome')).length;
+
+const claims: any[] = prov?.extracted_claims ?? [];
+const claimsAb = claims.filter((c) => c.side === 'drug_mediator');
+const claimsBc = claims.filter((c) => c.side === 'mediator_outcome');
+
+const downloadHref = `/data/provenance/${hypothesisId}.json`;
+const panelId = `prov-${hypothesisId}`;
+---
+
+{prov ? (
+  <section class="prov" id={panelId} data-hid={hypothesisId}>
+    <header class="prov__header">
+      <div class="prov__heading-block">
+        <p class="prov__eyebrow">Provenance trace</p>
+        <h2 class="prov__heading">Audit trail · {prov.triple.drug} → {prov.triple.mediator} → {prov.triple.outcome}</h2>
+        <p class="prov__sub">
+          {prov.source_paper_count} source paper{prov.source_paper_count === 1 ? '' : 's'},{' '}
+          {prov.extracted_claim_count} extracted claim{prov.extracted_claim_count === 1 ? '' : 's'},
+          scored by Swanson ABC chain.
+        </p>
+      </div>
+      <span class={`prov-badge prov-badge--${completeness.klass}`}>{completeness.label}</span>
+    </header>
+
+    {prov.completeness_notes && (
+      <p class="prov__notes">{prov.completeness_notes}</p>
+    )}
+
+    {/* Step 1: source papers */}
+    <details class="prov-step" open>
+      <summary>
+        <span class="prov-step__num">1</span>
+        <span class="prov-step__title">Source papers</span>
+        <span class="prov-step__count">{prov.source_paper_count}</span>
+      </summary>
+      <div class="prov-step__body">
+        <div class="prov-step__filters">
+          <span class="prov-step__filter-label">Filter</span>
+          <button type="button" class="prov-chip" data-prov-role="all" data-active="true">All ({sourcePapers.length})</button>
+          <button type="button" class="prov-chip" data-prov-role="drug_mediator">Drug → Mediator ({drugMediatorCount})</button>
+          <button type="button" class="prov-chip" data-prov-role="mediator_outcome">Mediator → Outcome ({mediatorOutcomeCount})</button>
+        </div>
+        <ul class="prov-papers" data-prov-papers>
+          {sortedPapers.map((p) => (
+            <li class="prov-paper" data-roles={(p.roles ?? []).join(',')}>
+              <div class="prov-paper__top">
+                <a class="prov-paper__title" href={p.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/` : (p.doi ? `https://doi.org/${p.doi}` : '#')} target="_blank" rel="noopener">
+                  {p.title ?? '(untitled)'}
+                </a>
+                <div class="prov-paper__role-badges">
+                  {(p.roles ?? []).includes('drug_mediator') && <span class="prov-role-badge prov-role-badge--ab">A→B</span>}
+                  {(p.roles ?? []).includes('mediator_outcome') && <span class="prov-role-badge prov-role-badge--bc">B→C</span>}
+                </div>
+              </div>
+              <div class="prov-paper__meta">
+                {p.journal && <span>{p.journal}</span>}
+                {p.year && <span>· {p.year}</span>}
+                {p.pmid && <span>· PMID <code>{p.pmid}</code></span>}
+                {p.doi && (
+                  <span>·
+                    <a href={`https://doi.org/${p.doi}`} target="_blank" rel="noopener" class="prov-paper__doi">doi</a>
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
+
+    {/* Step 2: extracted claims */}
+    <details class="prov-step">
+      <summary>
+        <span class="prov-step__num">2</span>
+        <span class="prov-step__title">Extracted claims</span>
+        <span class="prov-step__count">{prov.extracted_claim_count}</span>
+      </summary>
+      <div class="prov-step__body">
+        <p class="prov-step__hint">
+          Each row is one structured triple extracted by{' '}
+          <code>{prov.extraction.model}</code> (prompt <code>{prov.extraction.prompt_version}</code>,{' '}
+          source: <code>{prov.extraction.model_source}</code>). Confidence is the LLM's self-rating.
+        </p>
+        <input type="search" class="prov-search" data-prov-search placeholder="Filter claims by subject, predicate, object, or PMID…" />
+        <ul class="prov-claims" data-prov-claims>
+          {claims.map((c) => (
+            <li class="prov-claim" data-search-key={`${c.subject} ${c.predicate} ${c.object} ${c.context ?? ''} PMID:${c.work_id}`.toLowerCase()}>
+              <div class="prov-claim__row">
+                <span class="prov-claim__subject">{c.subject}</span>
+                <span class="prov-claim__predicate">{c.predicate}</span>
+                <span class="prov-claim__object">{c.object}</span>
+                <span class={`prov-side-badge prov-side-badge--${c.side === 'drug_mediator' ? 'ab' : 'bc'}`}>
+                  {c.side === 'drug_mediator' ? 'A→B' : 'B→C'}
+                </span>
+              </div>
+              <div class="prov-claim__meta">
+                {c.context && <span class="prov-claim__context">"{c.context}"</span>}
+                {c.polarity && c.polarity !== 'positive' && (
+                  <span class="prov-claim__polarity">polarity: {c.polarity}</span>
+                )}
+                <span>confidence {fmtFloat(c.confidence, 2)}</span>
+                <span>· extraction run #{c.extraction_run_id}</span>
+                <span>· claim #{c.claim_id}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p class="prov-step__hint" data-prov-no-results hidden>No claims match this filter.</p>
+      </div>
+    </details>
+
+    {/* Step 3: bridging logic */}
+    <details class="prov-step">
+      <summary>
+        <span class="prov-step__num">3</span>
+        <span class="prov-step__title">Bridging logic</span>
+        <span class="prov-step__count">Swanson ABC</span>
+      </summary>
+      <div class="prov-step__body">
+        <div class="prov-chain">
+          <div class="prov-chain__node">
+            <div class="prov-chain__node-label">Drug</div>
+            <div class="prov-chain__node-name">{prov.triple.drug}</div>
+          </div>
+          <div class="prov-chain__edge">
+            <div class="prov-chain__edge-predicate">{prov.bridge.a_to_b_predicate ?? 'modulates'}</div>
+            <div class="prov-chain__edge-arrow">→</div>
+            <div class="prov-chain__edge-count">{prov.bridge.a_to_b_evidence_count ?? 0} paper{(prov.bridge.a_to_b_evidence_count ?? 0) === 1 ? '' : 's'}</div>
+          </div>
+          <div class="prov-chain__node">
+            <div class="prov-chain__node-label">Mediator</div>
+            <div class="prov-chain__node-name">{prov.triple.mediator}</div>
+          </div>
+          <div class="prov-chain__edge">
+            <div class="prov-chain__edge-predicate">{prov.bridge.b_to_c_predicate ?? 'associated with'}</div>
+            <div class="prov-chain__edge-arrow">→</div>
+            <div class="prov-chain__edge-count">{prov.bridge.b_to_c_evidence_count ?? 0} paper{(prov.bridge.b_to_c_evidence_count ?? 0) === 1 ? '' : 's'}</div>
+          </div>
+          <div class="prov-chain__node">
+            <div class="prov-chain__node-label">Outcome</div>
+            <div class="prov-chain__node-name">{prov.triple.outcome}</div>
+          </div>
+        </div>
+        <dl class="prov-formula">
+          <div><dt>edge_support_log_ab</dt><dd>log(ab + 1) = <code>{fmtFloat(prov.bridge.edge_support_log_ab)}</code></dd></div>
+          <div><dt>edge_support_log_bc</dt><dd>log(bc + 1) = <code>{fmtFloat(prov.bridge.edge_support_log_bc)}</code></dd></div>
+          <div>
+            <dt>novelty_factor</dt>
+            <dd>
+              <code>{fmtFloat(prov.bridge.novelty_factor)}</code>
+              <span class="prov-formula__note">
+                ({prov.bridge.direct_a_to_c_count === 0
+                  ? 'no direct drug→outcome evidence — full novelty'
+                  : `${prov.bridge.direct_a_to_c_count} direct paper(s) found — penalised`})
+              </span>
+            </dd>
+          </div>
+          <div><dt>direct_a_to_c_count</dt><dd><code>{prov.bridge.direct_a_to_c_count}</code></dd></div>
+        </dl>
+      </div>
+    </details>
+
+    {/* Step 4: embedding disclosure */}
+    <details class="prov-step">
+      <summary>
+        <span class="prov-step__num">4</span>
+        <span class="prov-step__title">Embedding model</span>
+        <span class="prov-step__count">{prov.embedding.model}</span>
+      </summary>
+      <div class="prov-step__body">
+        <p class="prov-step__hint">
+          Embeddings are used at the L1 filtering stage to prune off-topic abstracts before claim
+          extraction. They do not directly score the hypothesis.
+        </p>
+        <dl class="prov-kv">
+          <div><dt>model</dt><dd><code>{prov.embedding.model}</code></dd></div>
+          <div><dt>dim</dt><dd><code>{prov.embedding.dim}</code></dd></div>
+          <div><dt>max_length</dt><dd><code>{prov.embedding.max_length}</code> tokens</dd></div>
+          <div>
+            <dt>similarity_scores</dt>
+            <dd>
+              {Object.keys(prov.embedding.similarity_scores ?? {}).length === 0
+                ? <span class="prov-step__hint">No per-hypothesis cosine scores stored.</span>
+                : <code>{JSON.stringify(prov.embedding.similarity_scores)}</code>}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </details>
+
+    {/* Step 5: final scoring */}
+    <details class="prov-step">
+      <summary>
+        <span class="prov-step__num">5</span>
+        <span class="prov-step__title">Final scoring</span>
+        <span class={`prov-step__count prov-step__count--tier-${prov.scoring.quality_tier ?? 'unknown'}`}>
+          {prov.scoring.quality_tier ?? 'tier unknown'} · {fmtFloat(prov.scoring.score, 3)}
+        </span>
+      </summary>
+      <div class="prov-step__body">
+        <dl class="prov-kv">
+          <div><dt>method</dt><dd><code>{prov.scoring.method}</code></dd></div>
+          <div><dt>formula</dt><dd><code>{prov.scoring.formula}</code></dd></div>
+          <div><dt>raw score</dt><dd><code>{fmtFloat(prov.scoring.score_raw, 4)}</code></dd></div>
+          <div><dt>outreach score</dt><dd><code>{fmtFloat(prov.scoring.score, 4)}</code></dd></div>
+          <div><dt>quality tier</dt><dd><code>{prov.scoring.quality_tier ?? '—'}</code></dd></div>
+          {prov.scoring.quality_reason && (
+            <div><dt>reason</dt><dd>{prov.scoring.quality_reason}</dd></div>
+          )}
+        </dl>
+      </div>
+    </details>
+
+    {/* Audit panel */}
+    <footer class="prov__audit">
+      <div class="prov__audit-row">
+        <dl class="prov__audit-dl">
+          <div>
+            <dt>Pipeline version</dt>
+            <dd>
+              {gitHref ? (
+                <a href={gitHref} target="_blank" rel="noopener"><code>{gitShort}</code></a>
+              ) : (
+                <code>—</code>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Pipeline run</dt>
+            <dd>
+              id <code>{prov.pipeline_run.id ?? '—'}</code>
+              {runUuidShort && <> · uuid <code>{runUuidShort}…</code></>}
+            </dd>
+          </div>
+          <div>
+            <dt>Pipeline command</dt>
+            <dd><code>{prov.pipeline_run.command ?? '—'}</code></dd>
+          </div>
+          <div>
+            <dt>Pipeline status</dt>
+            <dd><code>{prov.pipeline_run.status ?? '—'}</code></dd>
+          </div>
+          <div>
+            <dt>Generated</dt>
+            <dd><code>{fmtTimestamp(prov.generated_at)}</code></dd>
+          </div>
+          <div>
+            <dt>Schema version</dt>
+            <dd><code>{prov.schema_version}</code></dd>
+          </div>
+        </dl>
+        <a class="prov__download" href={downloadHref} download={`hypothesis_${hypothesisId}_provenance.json`}>
+          Download full provenance JSON
+        </a>
+      </div>
+    </footer>
+  </section>
+) : (
+  <section class="prov prov--missing">
+    <p>Provenance trace not available for hypothesis <code>{hypothesisId}</code>.</p>
+  </section>
+)}
+
+<script define:vars={{ panelId }}>
+  (() => {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    // Filter chips for source papers (Step 1)
+    const chips = Array.from(panel.querySelectorAll('[data-prov-role]'));
+    const papersList = panel.querySelector('[data-prov-papers]');
+    if (chips.length && papersList) {
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chips.forEach((c) => c.removeAttribute('data-active'));
+          chip.setAttribute('data-active', 'true');
+          const role = chip.getAttribute('data-prov-role');
+          const items = papersList.querySelectorAll('.prov-paper');
+          items.forEach((li) => {
+            const roles = (li.getAttribute('data-roles') ?? '').split(',');
+            if (role === 'all' || roles.includes(role)) {
+              li.removeAttribute('hidden');
+            } else {
+              li.setAttribute('hidden', '');
+            }
+          });
+        });
+      });
+    }
+
+    // Search box for claims (Step 2)
+    const search = panel.querySelector('[data-prov-search]');
+    const claimsList = panel.querySelector('[data-prov-claims]');
+    const noResults = panel.querySelector('[data-prov-no-results]');
+    if (search && claimsList) {
+      search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        let visible = 0;
+        const items = claimsList.querySelectorAll('.prov-claim');
+        items.forEach((li) => {
+          const key = li.getAttribute('data-search-key') ?? '';
+          if (!q || key.includes(q)) {
+            li.removeAttribute('hidden');
+            visible += 1;
+          } else {
+            li.setAttribute('hidden', '');
+          }
+        });
+        if (noResults) {
+          if (visible === 0 && q.length > 0) {
+            noResults.removeAttribute('hidden');
+          } else {
+            noResults.setAttribute('hidden', '');
+          }
+        }
+      });
+    }
+  })();
+</script>
+
+<style>
+  .prov {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    background: #fff;
+    padding: 1.75rem 1.75rem 1.5rem;
+    margin: 2rem 0;
+  }
+  .prov--missing {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1.5rem;
+  }
+  .prov__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .prov__heading-block { flex: 1 1 auto; min-width: 0; }
+  .prov__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.4rem;
+  }
+  .prov__heading {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0 0 0.3rem;
+    line-height: 1.35;
+  }
+  .prov__sub {
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0;
+  }
+  .prov__notes {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: #7c2d12;
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+  }
+
+  .prov-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .prov-badge--live { background: #d1fae5; color: #047857; }
+  .prov-badge--partial { background: #fef3c7; color: #92400e; }
+  .prov-badge--unknown { background: #f3f4f6; color: #4b5563; }
+
+  .prov-step {
+    border-top: 1px solid var(--border, #e5e7eb);
+    padding: 1rem 0;
+  }
+  .prov-step:first-of-type { border-top: 1px solid var(--border, #e5e7eb); margin-top: 0.5rem; }
+  .prov-step summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    user-select: none;
+  }
+  .prov-step summary::-webkit-details-marker { display: none; }
+  .prov-step summary::before {
+    content: '▸';
+    font-size: 0.7rem;
+    color: var(--text-muted, #6b7280);
+    width: 0.8rem;
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .prov-step[open] summary::before { transform: rotate(90deg); }
+  .prov-step__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: var(--accent, #0891b2);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .prov-step__title {
+    flex: 1 1 auto;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text, #1f2937);
+  }
+  .prov-step__count {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+    background: #f9fafb;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+  }
+  .prov-step__count--tier-high { background: #d1fae5; color: #047857; }
+  .prov-step__count--tier-mid { background: #e0e7ff; color: #3730a3; }
+  .prov-step__count--tier-low { background: #f3f4f6; color: #4b5563; }
+  .prov-step__body {
+    padding: 1rem 0 0.25rem 2.25rem;
+  }
+  .prov-step__hint {
+    font-size: 0.83rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0 0 0.75rem;
+    line-height: 1.5;
+  }
+
+  .prov-step__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.85rem;
+  }
+  .prov-step__filter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #6b7280);
+    margin-right: 0.25rem;
+  }
+  .prov-chip {
+    border: 1px solid var(--border, #e5e7eb);
+    background: #fff;
+    color: var(--text, #1f2937);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .prov-chip:hover {
+    border-color: var(--accent, #0891b2);
+    color: var(--accent, #0891b2);
+  }
+  .prov-chip[data-active='true'] {
+    background: var(--accent, #0891b2);
+    border-color: var(--accent, #0891b2);
+    color: #fff;
+  }
+
+  .prov-papers, .prov-claims {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .prov-paper, .prov-claim {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    background: #fafafa;
+  }
+  .prov-paper__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .prov-paper__title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text, #1f2937);
+    text-decoration: none;
+    line-height: 1.4;
+    flex: 1 1 auto;
+  }
+  .prov-paper__title:hover { color: var(--accent, #0891b2); text-decoration: underline; }
+  .prov-paper__role-badges {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .prov-role-badge {
+    font-size: 0.66rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .prov-role-badge--ab { background: #ddd6fe; color: #5b21b6; }
+  .prov-role-badge--bc { background: #fce7f3; color: #9d174d; }
+  .prov-paper__meta {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .prov-paper__meta code {
+    font-size: 0.76rem;
+    color: var(--text, #1f2937);
+  }
+  .prov-paper__doi {
+    color: var(--accent, #0891b2);
+    text-decoration: none;
+  }
+  .prov-paper__doi:hover { text-decoration: underline; }
+
+  .prov-search {
+    width: 100%;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 0.55rem 0.8rem;
+    font: inherit;
+    font-size: 0.88rem;
+    margin-bottom: 0.85rem;
+  }
+  .prov-search:focus {
+    outline: none;
+    border-color: var(--accent, #0891b2);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+  }
+
+  .prov-claim__row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+  }
+  .prov-claim__subject, .prov-claim__object {
+    font-weight: 600;
+    color: var(--text, #1f2937);
+  }
+  .prov-claim__predicate {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: var(--accent, #0891b2);
+    background: #ecfeff;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+  }
+  .prov-side-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.66rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+  }
+  .prov-side-badge--ab { background: #ddd6fe; color: #5b21b6; }
+  .prov-side-badge--bc { background: #fce7f3; color: #9d174d; }
+  .prov-claim__meta {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .prov-claim__context {
+    font-style: italic;
+    color: var(--text, #1f2937);
+    font-size: 0.8rem;
+  }
+
+  .prov-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .prov-chain__node {
+    flex: 1 1 8rem;
+    min-width: 7rem;
+    background: #f9fafb;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 0.7rem 0.85rem;
+    text-align: center;
+  }
+  .prov-chain__node-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: 0.25rem;
+  }
+  .prov-chain__node-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+  }
+  .prov-chain__edge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.25rem;
+    min-width: 5rem;
+  }
+  .prov-chain__edge-predicate {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--accent, #0891b2);
+    background: #ecfeff;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+  .prov-chain__edge-arrow {
+    font-size: 1.4rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0.15rem 0;
+  }
+  .prov-chain__edge-count {
+    font-size: 0.72rem;
+    color: var(--text-muted, #6b7280);
+  }
+
+  .prov-formula, .prov-kv {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .prov-formula div, .prov-kv div {
+    display: grid;
+    grid-template-columns: 14rem 1fr;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .prov-formula dt, .prov-kv dt {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .prov-formula dd, .prov-kv dd {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text, #1f2937);
+  }
+  .prov-formula__note {
+    margin-left: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .prov-formula code, .prov-kv code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.82rem;
+  }
+
+  .prov__audit {
+    margin-top: 1.5rem;
+    border-top: 2px solid var(--border, #e5e7eb);
+    padding-top: 1.25rem;
+  }
+  .prov__audit-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  .prov__audit-dl {
+    flex: 1 1 30rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.5rem 1rem;
+    margin: 0;
+  }
+  .prov__audit-dl div { display: flex; flex-direction: column; gap: 0.15rem; }
+  .prov__audit-dl dt {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #6b7280);
+  }
+  .prov__audit-dl dd {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text, #1f2937);
+  }
+  .prov__audit-dl code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+  }
+  .prov__audit-dl a { color: var(--accent, #0891b2); text-decoration: none; }
+  .prov__audit-dl a:hover { text-decoration: underline; }
+  .prov__download {
+    flex: 0 0 auto;
+    display: inline-block;
+    border: 1px solid var(--accent, #0891b2);
+    background: #fff;
+    color: var(--accent, #0891b2);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.55rem 1.1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .prov__download:hover { background: var(--accent, #0891b2); color: #fff; }
+
+  @media (max-width: 720px) {
+    .prov { padding: 1.25rem 1.1rem; }
+    .prov-step__body { padding-left: 0.5rem; }
+    .prov-formula div, .prov-kv div { grid-template-columns: 1fr; gap: 0.2rem; }
+    .prov-chain { gap: 0.4rem; }
+    .prov-chain__edge { min-width: 4rem; }
+    .prov__download { width: 100%; text-align: center; }
+  }
+</style>
