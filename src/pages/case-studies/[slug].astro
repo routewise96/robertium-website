@@ -261,9 +261,11 @@ const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
       <div class="cs-hero-badges">
         <span class={`cs-section-badge cs-section-badge--${data.section}`}>{sectionLabel}</span>
         <span class="cs-id-badge">Hypothesis #{data.hypothesis_id}</span>
-        {quality && quality !== 'unknown' && (
+        {isBenchmark ? (
+          <span class="cs-quality-badge cs-quality-badge--benchmark">Benchmark case</span>
+        ) : quality && quality !== 'unknown' ? (
           <span class={`cs-quality-badge cs-quality-badge--${quality}`}>{quality} quality</span>
-        )}
+        ) : null}
       </div>
       <h1>
         {data.drug.name}
@@ -658,7 +660,9 @@ const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border-subtle);
   }
-  .cs-hero.is-benchmark { background: var(--state-warning-bg); }
+  /* Hero background is identical for novel and benchmark cases — the orange
+     "Benchmark validation hit" eyebrow text is signal enough; a tinted bg
+     read as a quality warning in user testing. */
   .cs-back {
     display: inline-flex;
     align-items: center;
@@ -716,6 +720,11 @@ const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
   .cs-quality-badge--high { background: var(--state-success-bg); color: var(--state-success); }
   .cs-quality-badge--mid  { background: var(--state-warning-bg); color: var(--state-warning); }
   .cs-quality-badge--low  { background: var(--state-error-bg); color: var(--state-error); }
+  .cs-quality-badge--benchmark {
+    background: var(--bg-section);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+  }
 
   .cs-hero h1 {
     font-family: var(--font-base);
