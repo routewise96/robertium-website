@@ -8,6 +8,11 @@
     "canonical": "fingolimod",
     "type": "drug",
     "domain": "multiple_sclerosis",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Fingolimod",
+      "drugbank": "https://go.drugbank.com/drugs/DB08868",
+      "clinicaltrials": "https://clinicaltrials.gov/search?intr=Fingolimod"
+    },
     "TODO_common_name": "TODO Daniel: brand/common names if applicable",
     "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
   },
@@ -15,6 +20,10 @@
     "name": "HMGB1",
     "canonical": "HMGB1",
     "type": "protein",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/HMGB1",
+      "uniprot": "https://www.uniprot.org/uniprotkb/P09429"
+    },
     "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
   },
   "outcome": {
@@ -22,6 +31,10 @@
     "canonical": "amyotrophic lateral sclerosis",
     "type": "disease",
     "domain": "als",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Amyotrophic_lateral_sclerosis",
+      "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D000690"
+    },
     "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
   },
   "metrics": {
@@ -91,6 +104,7 @@
     "TODO_why_benchmark": "TODO Daniel: explain why this is a benchmark validation hit, not a novel surfacing",
     "TODO_what_it_validates": "TODO Daniel: what aspect of the pipeline this hit confirms"
   },
+  "limitations_paragraph": "This hypothesis was generated algorithmically through cross-domain literature analysis and has not been experimentally validated. Treat it as a starting point for further investigation, not a therapeutic recommendation. For established knowledge about each entity, refer to the authoritative sources linked above (Wikipedia, DrugBank, UniProt, MeSH).",
   "related_hypotheses": [
     {
       "id": 7644,
@@ -101,18 +115,18 @@
       "shared": "mediator"
     },
     {
-      "id": 5491,
-      "drug": "DOX",
+      "id": 32913,
+      "drug": "rhTM",
       "mediator": "HMGB1",
       "outcome": "epilepsy",
       "score": 0.24849066497880004,
       "shared": "mediator"
     },
     {
-      "id": 7646,
-      "drug": "glycyrrhizin",
+      "id": 23214,
+      "drug": "recombinant thrombomodulin",
       "mediator": "HMGB1",
-      "outcome": "drug-resistant epilepsy",
+      "outcome": "epilepsy",
       "score": 0.24849066497880004,
       "shared": "mediator"
     }

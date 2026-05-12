@@ -8,6 +8,10 @@
     "canonical": "ketogenic diet",
     "type": "drug",
     "domain": "epilepsy",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Ketogenic_diet",
+      "clinicaltrials": "https://clinicaltrials.gov/search?intr=ketogenic+diet"
+    },
     "TODO_common_name": "TODO Daniel: brand/common names if applicable",
     "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
   },
@@ -15,6 +19,10 @@
     "name": "Sod1",
     "canonical": "SOD1",
     "type": "gene",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Superoxide_dismutase",
+      "uniprot": "https://www.uniprot.org/uniprotkb/P00441"
+    },
     "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
   },
   "outcome": {
@@ -22,6 +30,10 @@
     "canonical": "amyotrophic lateral sclerosis",
     "type": "disease",
     "domain": "als",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Amyotrophic_lateral_sclerosis",
+      "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D000690"
+    },
     "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
   },
   "metrics": {
@@ -35,9 +47,13 @@
     "domain_target": "als",
     "predicate_ab": "upregulates",
     "predicate_bc": "associated_with",
-    "literature_status": null,
-    "clinical_trial_status": null,
-    "clinical_trial_nct_ids": []
+    "literature_status": "reproduces_known",
+    "clinical_trial_status": "active",
+    "clinical_trial_nct_ids": [
+      "NCT04204889",
+      "NCT01016522",
+      "NCT07233148"
+    ]
   },
   "evidence": {
     "ab_claims": [
@@ -328,6 +344,7 @@
     "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
   },
   "benchmark_context": null,
+  "limitations_paragraph": "This hypothesis was generated algorithmically through cross-domain literature analysis and has not been experimentally validated. Treat it as a starting point for further investigation, not a therapeutic recommendation. For established knowledge about each entity, refer to the authoritative sources linked above (Wikipedia, DrugBank, UniProt, MeSH).",
   "related_hypotheses": [
     {
       "id": 3773,
@@ -338,20 +355,20 @@
       "shared": "mediator"
     },
     {
-      "id": 23412,
-      "drug": "TOL",
+      "id": 32317,
+      "drug": "LWE",
       "mediator": "SOD1",
       "outcome": "ALS",
-      "score": 0.26390573296152586,
+      "score": 0.38286413964890953,
       "shared": "mediator"
     },
     {
-      "id": 2105,
-      "drug": "Ketogenic diet",
-      "mediator": "Sod1",
-      "outcome": "familial amyotrophic lateral sclerosis",
-      "score": 0.24849066497880004,
-      "shared": "drug"
+      "id": 39388,
+      "drug": "saxagliptin",
+      "mediator": "SOD1",
+      "outcome": "ALS",
+      "score": 0.38286413964890953,
+      "shared": "mediator"
     }
   ]
 }

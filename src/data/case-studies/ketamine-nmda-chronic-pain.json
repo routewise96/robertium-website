@@ -8,6 +8,11 @@
     "canonical": "ketamine",
     "type": "drug",
     "domain": "depression",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Ketamine",
+      "drugbank": "https://go.drugbank.com/drugs/DB01221",
+      "clinicaltrials": "https://clinicaltrials.gov/search?intr=ketamine"
+    },
     "TODO_common_name": "TODO Daniel: brand/common names if applicable",
     "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
   },
@@ -15,6 +20,10 @@
     "name": "NMDA receptor",
     "canonical": "nmda receptor",
     "type": "protein",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/NMDA_receptor",
+      "uniprot": "https://www.uniprot.org/uniprotkb?query=NMDA+receptor"
+    },
     "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
   },
   "outcome": {
@@ -22,6 +31,10 @@
     "canonical": "pain",
     "type": "phenotype",
     "domain": "als",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Pain",
+      "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D010146"
+    },
     "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
   },
   "metrics": {
@@ -163,6 +176,7 @@
     "TODO_why_benchmark": "TODO Daniel: explain why this is a benchmark validation hit, not a novel surfacing",
     "TODO_what_it_validates": "TODO Daniel: what aspect of the pipeline this hit confirms"
   },
+  "limitations_paragraph": "This hypothesis was generated algorithmically through cross-domain literature analysis and has not been experimentally validated. Treat it as a starting point for further investigation, not a therapeutic recommendation. For established knowledge about each entity, refer to the authoritative sources linked above (Wikipedia, DrugBank, UniProt, MeSH).",
   "related_hypotheses": [
     {
       "id": 5315,
@@ -173,18 +187,18 @@
       "shared": "drug"
     },
     {
-      "id": 10442,
+      "id": 22876,
       "drug": "ketamine",
       "mediator": "NMDA receptor",
-      "outcome": "neurodevelopmental disorders",
+      "outcome": "deterioration of visual acuity",
       "score": 0.2890371757896165,
       "shared": "drug"
     },
     {
-      "id": 5386,
+      "id": 22872,
       "drug": "ketamine",
       "mediator": "NMDA receptor",
-      "outcome": "cell-autonomous excitotoxicity",
+      "outcome": "actin destabilization",
       "score": 0.2890371757896165,
       "shared": "drug"
     }

@@ -18,14 +18,22 @@ interface PmidEntry {
   confidence?: number;
   extracted_at?: string;
 }
+type ExternalLinks = Partial<{
+  wikipedia: string;
+  drugbank: string;
+  clinicaltrials: string;
+  uniprot: string;
+  mesh: string;
+}>;
+
 interface CaseStudy {
   slug: string;
   hypothesis_id: number;
   section: 'novel' | 'benchmark';
   title: string;
-  drug: { name: string; canonical: string | null; type: string | null; domain: string | null };
-  mediator: { name: string; canonical: string | null; type: string | null };
-  outcome: { name: string; canonical: string | null; type: string | null; domain: string | null };
+  drug: { name: string; canonical: string | null; type: string | null; domain: string | null; external_links?: ExternalLinks };
+  mediator: { name: string; canonical: string | null; type: string | null; external_links?: ExternalLinks };
+  outcome: { name: string; canonical: string | null; type: string | null; domain: string | null; external_links?: ExternalLinks };
   metrics: {
     outreach_score: number | null;
     outreach_quality: string | null;
@@ -43,6 +51,7 @@ interface CaseStudy {
   evidence: { ab_claims: PmidEntry[]; bc_claims: PmidEntry[] };
   biological_context: Record<string, string>;
   benchmark_context: Record<string, string> | null;
+  limitations_paragraph?: string;
   related_hypotheses: Array<{
     id: number;
     drug: string;
@@ -178,6 +187,67 @@ const pubmedUrl = (pmid: string | null) =>
 
 const sectionLabel = isBenchmark ? 'Benchmark validation hit' : 'Top novel candidate';
 const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
+
+// ===== Literature status badge =====
+type LitStatus = 'novel_signal' | 'partial_evidence' | 'reproduces_known';
+const LIT_BADGE: Record<LitStatus, { label: string; tooltip: string }> = {
+  novel_signal: {
+    label: 'Novel cross-domain hypothesis',
+    tooltip:
+      'No direct repurposing or therapy-style PubMed mentions of this drug↔outcome pair: this is a candidate the literature has not yet surfaced.',
+  },
+  partial_evidence: {
+    label: 'Partial evidence baseline',
+    tooltip:
+      'Direct PubMed mentions of this drug↔outcome pair exist, but without repurposing or therapy framing — the connection is not yet established as a therapeutic claim.',
+  },
+  reproduces_known: {
+    label: 'Established repurposing',
+    tooltip:
+      'This drug–disease combination already has an established literature with repurposing or therapy framing. Robertium recovered a known signal.',
+  },
+};
+const litBadge =
+  data.metrics.literature_status &&
+  (data.metrics.literature_status as LitStatus) in LIT_BADGE
+    ? LIT_BADGE[data.metrics.literature_status as LitStatus]
+    : null;
+const litClass = data.metrics.literature_status
+  ? `cs-lit-badge--${data.metrics.literature_status}`
+  : '';
+
+// ===== Combined references list (dedup by PMID, sort by year desc) =====
+type RefEntry = { pmid: string | null; title: string; year: number | null; leg: 'A→B' | 'B→C' };
+const refMap = new Map<string, RefEntry>();
+for (const c of data.evidence.ab_claims) {
+  const key = c.pmid ?? `nopmid-ab-${c.title}`;
+  if (!refMap.has(key))
+    refMap.set(key, { pmid: c.pmid, title: c.title, year: c.year ?? null, leg: 'A→B' });
+}
+for (const c of data.evidence.bc_claims) {
+  const key = c.pmid ?? `nopmid-bc-${c.title}`;
+  if (!refMap.has(key))
+    refMap.set(key, { pmid: c.pmid, title: c.title, year: c.year ?? null, leg: 'B→C' });
+}
+const allRefs = Array.from(refMap.values()).sort(
+  (a, b) => (b.year ?? 0) - (a.year ?? 0),
+);
+
+// ===== External-link helpers =====
+const drugLinks = data.drug.external_links ?? {};
+const mediatorLinks = data.mediator.external_links ?? {};
+const outcomeLinks = data.outcome.external_links ?? {};
+const hasDrugLinks = Object.keys(drugLinks).length > 0;
+const hasMediatorLinks = Object.keys(mediatorLinks).length > 0;
+const hasOutcomeLinks = Object.keys(outcomeLinks).length > 0;
+
+const DEFAULT_LIMITATIONS =
+  'This hypothesis was generated algorithmically through cross-domain ' +
+  'literature analysis and has not been experimentally validated. Treat ' +
+  'it as a starting point for further investigation, not a therapeutic ' +
+  'recommendation. For established knowledge about each entity, refer to ' +
+  'the authoritative sources linked above (Wikipedia, DrugBank, UniProt, MeSH).';
+const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
 ---
 <Layout
   title={`${data.drug.name} → ${data.mediator.name} → ${data.outcome.name} — Robertium case study`}
@@ -185,15 +255,6 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
   current="case-studies"
   ogImage="/og/home.png"
 >
-  <div class="cs-draft-banner">
-    <div class="container">
-      <strong>DRAFT</strong>
-      This page is in active drafting. Biological interpretation is pending review by the author —
-      placeholder text is visible throughout. Quantitative data (PMIDs, scores, evidence counts)
-      is final.
-    </div>
-  </div>
-
   <section class={`cs-hero ${sectionClass}`}>
     <div class="container">
       <a href="/case-studies/" class="cs-back">← Case studies</a>
@@ -270,6 +331,24 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
 
   <section class="section">
     <div class="container">
+      {(litBadge || isBenchmark) && (
+        <div class="cs-quick-badges">
+          {litBadge && (
+            <span class={`cs-lit-badge ${litClass}`} title={litBadge.tooltip}>
+              {litBadge.label}
+            </span>
+          )}
+          {isBenchmark && (
+            <span
+              class="cs-lit-badge cs-lit-badge--benchmark"
+              title="Included as methodology validation against known repurposing literature, not as novel discovery."
+            >
+              Benchmark validation case
+            </span>
+          )}
+        </div>
+      )}
+
       <div class="cs-facts-grid">
         <div class="cs-facts-card">
           <div class="cs-facts-label">Outreach score</div>
@@ -323,66 +402,86 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
     </div>
   </section>
 
-  {isBenchmark && (
-    <section class="section section--gray">
-      <div class="container--narrow">
-        <div class="cs-callout cs-callout--benchmark">
-          <div class="cs-callout-eyebrow">Benchmark validation hit</div>
-          <h2 class="cs-callout-title">Not a top-ranked novel hypothesis</h2>
-          <p class="cs-callout-body">
-            This is an established drug–disease association that Robertium successfully recovered from
-            literature, demonstrating the pipeline can both surface novel candidates and reproduce known
-            repurposings. It appears with <strong>{quality}</strong> quality in the catalog because the
-            evidence base in our extraction is thin
-            ({data.metrics.ab_count ?? 0} paper{(data.metrics.ab_count ?? 0) === 1 ? '' : 's'} on the drug → mediator leg,
-            {' '}{data.metrics.bc_count ?? 0} paper{(data.metrics.bc_count ?? 0) === 1 ? '' : 's'} on the mediator → outcome leg).
-            See <a href="/benchmark">/benchmark</a> for context on how this hit was identified.
-          </p>
-          {data.benchmark_context && Object.entries(data.benchmark_context).map(([key, value]) => (
-            <p class="cs-callout-todo">[TODO Daniel — <code>{key.replace(/^TODO_/, '')}</code>: <em>{value}</em>]</p>
-          ))}
+  <section class="section">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </div>
+        <h2>The drug — {data.drug.name}</h2>
       </div>
-    </section>
-  )}
+      <p class="cs-ext-meta">
+        Source domain: <strong>{fmtDomain(data.drug.domain)}</strong>
+        {data.drug.type && <> · entity type: <code>{data.drug.type}</code></>}
+      </p>
+      {hasDrugLinks ? (
+        <ul class="cs-ext-links">
+          {drugLinks.wikipedia && (
+            <li><a href={drugLinks.wikipedia} target="_blank" rel="noopener">Wikipedia</a></li>
+          )}
+          {drugLinks.drugbank && (
+            <li><a href={drugLinks.drugbank} target="_blank" rel="noopener">DrugBank</a></li>
+          )}
+          {drugLinks.clinicaltrials && (
+            <li><a href={drugLinks.clinicaltrials} target="_blank" rel="noopener">ClinicalTrials.gov</a></li>
+          )}
+        </ul>
+      ) : (
+        <p class="cs-ext-meta">External references not curated for this entity.</p>
+      )}
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <h2>The mediator — {data.mediator.name}</h2>
+      </div>
+      <p class="cs-ext-meta">
+        {data.mediator.type && <>Entity type: <code>{data.mediator.type}</code></>}
+      </p>
+      {hasMediatorLinks ? (
+        <ul class="cs-ext-links">
+          {mediatorLinks.wikipedia && (
+            <li><a href={mediatorLinks.wikipedia} target="_blank" rel="noopener">Wikipedia</a></li>
+          )}
+          {mediatorLinks.uniprot && (
+            <li><a href={mediatorLinks.uniprot} target="_blank" rel="noopener">UniProt</a></li>
+          )}
+        </ul>
+      ) : (
+        <p class="cs-ext-meta">External references not curated for this entity.</p>
+      )}
+    </div>
+  </section>
 
   <section class="section">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </div>
-        <h2>The chain</h2>
+        <h2>The outcome — {data.outcome.name}</h2>
       </div>
-
-      <h3 class="cs-chain-sub">About the drug — {data.drug.name}</h3>
-      <p class="cs-todo-block">
-        [TODO Daniel — original indication: <em>{data.drug.TODO_original_indication}</em>]<br/>
-        [TODO Daniel — brand/common names: <em>{data.drug.TODO_common_name}</em>]<br/>
-        [TODO Daniel — drug action: <em>{data.biological_context.TODO_drug_action_summary}</em>]
-      </p>
-      <p class="cs-chain-meta">
-        Source domain: <strong>{fmtDomain(data.drug.domain)}</strong>
-        {data.drug.type && <> · entity type: <code>{data.drug.type}</code></>}
-      </p>
-
-      <h3 class="cs-chain-sub">About the mediator — {data.mediator.name}</h3>
-      <p class="cs-todo-block">
-        [TODO Daniel — mediator description: <em>{data.mediator.TODO_description_short}</em>]<br/>
-        [TODO Daniel — role in {data.outcome.name}: <em>{data.biological_context.TODO_mediator_role}</em>]
-      </p>
-      {data.mediator.type && (
-        <p class="cs-chain-meta">Entity type: <code>{data.mediator.type}</code></p>
-      )}
-
-      <h3 class="cs-chain-sub">About the outcome — {data.outcome.name}</h3>
-      <p class="cs-todo-block">
-        [TODO Daniel — full name / context: <em>{data.outcome.TODO_full_name}</em>]
-      </p>
-      <p class="cs-chain-meta">
+      <p class="cs-ext-meta">
         Target domain: <strong>{fmtDomain(data.outcome.domain)}</strong>
         {data.outcome.type && <> · entity type: <code>{data.outcome.type}</code></>}
       </p>
+      {hasOutcomeLinks ? (
+        <ul class="cs-ext-links">
+          {outcomeLinks.wikipedia && (
+            <li><a href={outcomeLinks.wikipedia} target="_blank" rel="noopener">Wikipedia</a></li>
+          )}
+          {outcomeLinks.mesh && (
+            <li><a href={outcomeLinks.mesh} target="_blank" rel="noopener">MeSH</a></li>
+          )}
+        </ul>
+      ) : (
+        <p class="cs-ext-meta">External references not curated for this entity.</p>
+      )}
     </div>
   </section>
 
@@ -455,57 +554,50 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--gray">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         </div>
-        <h2>{isBenchmark ? 'Why this matters' : 'Why this is novel'}</h2>
+        <h2>References</h2>
       </div>
-      <p class="cs-todo-block">
-        [TODO Daniel — novelty / significance argument: <em>{data.biological_context.TODO_novelty_argument}</em>]
+      <p class="cs-references-intro">
+        All PMID-linked papers cited in the evidence network above, deduplicated and sorted by
+        publication year.
       </p>
-
-      <div class="cs-gap-viz">
-        <div class="cs-gap-cluster cs-gap-cluster--ab">
-          <div class="cs-gap-cluster-label">A→B literature</div>
-          <div class="cs-gap-cluster-count">{data.metrics.ab_count ?? 0}</div>
-          <div class="cs-gap-cluster-meta">papers on {data.drug.name} → {data.mediator.name}</div>
-        </div>
-        <div class="cs-gap-arrow">
-          <div class="cs-gap-arrow-line"></div>
-          <div class="cs-gap-arrow-label">Direct A→C: <strong>{data.metrics.direct_evidence_count ?? 0}</strong></div>
-        </div>
-        <div class="cs-gap-cluster cs-gap-cluster--bc">
-          <div class="cs-gap-cluster-label">B→C literature</div>
-          <div class="cs-gap-cluster-count">{data.metrics.bc_count ?? 0}</div>
-          <div class="cs-gap-cluster-meta">papers on {data.mediator.name} → {data.outcome.name}</div>
-        </div>
-      </div>
-      <p class="cs-gap-caption">
-        Robertium identifies these split literatures and proposes the bridge: a drug from the
-        A→B cluster paired with a disease from the B→C cluster, sharing the same mediator.
-      </p>
+      {allRefs.length === 0 ? (
+        <p class="cs-evidence-empty">No PMID-linked papers indexed.</p>
+      ) : (
+        <ol class="cs-references">
+          {allRefs.map((r) => (
+            <li>
+              {r.pmid ? (
+                <a href={pubmedUrl(r.pmid)!} target="_blank" rel="noopener" class="cs-pmid">
+                  PMID {r.pmid}
+                </a>
+              ) : (
+                <span class="cs-pmid cs-pmid--no">no PMID</span>
+              )}
+              <span class="cs-ref-title">{r.title}</span>
+              {r.year && <span class="cs-ref-year">({r.year})</span>}
+              <span class={`cs-ref-leg cs-ref-leg--${r.leg === 'A→B' ? 'ab' : 'bc'}`}>{r.leg}</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   </section>
 
-  <section class="section section--gray">
+  <section class="section">
     <div class="container--narrow">
       <div class="section-header">
         <div class="section-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
-        <h2>Limitations</h2>
+        <h2>Limitations &amp; disclaimer</h2>
       </div>
-      <p class="cs-todo-block">
-        [TODO Daniel — honest limitations: <em>{data.biological_context.TODO_limitations}</em>]
-      </p>
-      <p>
-        This is a literature-derived hypothesis, not a clinical recommendation. Like every entry
-        in the Robertium catalog, it requires expert review, mechanistic validation, and clinical
-        trial design before it can inform patient care.
-      </p>
+      <p class="cs-disclaimer">{limitations}</p>
     </div>
   </section>
 
@@ -560,26 +652,6 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
 </Layout>
 
 <style>
-  /* ===== Draft banner (page-top) ===== */
-  .cs-draft-banner {
-    background: var(--state-error-bg);
-    border-bottom: 1px solid rgba(185, 28, 28, 0.2);
-    color: var(--state-error);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    line-height: var(--leading-snug);
-    padding: var(--space-3) 0;
-    text-align: center;
-  }
-  .cs-draft-banner strong {
-    color: var(--state-error);
-    font-weight: var(--weight-bold);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    margin-right: var(--space-2);
-    font-size: var(--text-xs);
-  }
-
   /* ===== Hero ===== */
   .cs-hero {
     padding: var(--space-20) 0 var(--space-16);
@@ -746,106 +818,79 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
     border-radius: 2px;
   }
 
-  /* ===== Benchmark callout (full-section bg) ===== */
-  .cs-callout {
-    background: var(--state-warning-bg);
-    border: 1px solid rgba(180, 83, 9, 0.2);
-    border-left: 4px solid var(--state-warning);
-    border-radius: var(--radius-lg);
-    padding: var(--space-8) var(--space-10);
+  /* ===== Quick-facts badges (literature_status + benchmark) ===== */
+  .cs-quick-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
   }
-  .cs-callout--benchmark { /* token alias */ }
-  .cs-callout-eyebrow {
+  .cs-lit-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: 999px;
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wide);
+    cursor: help;
+    border: 1px solid transparent;
+  }
+  .cs-lit-badge--novel_signal {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: var(--accent-light);
+  }
+  .cs-lit-badge--partial_evidence {
+    background: var(--state-warning-bg);
     color: var(--state-warning);
-    margin-bottom: var(--space-3);
+    border-color: rgba(180, 83, 9, 0.2);
   }
-  .cs-callout-title {
-    font-family: var(--font-base);
-    font-size: var(--text-xl);
-    font-weight: var(--weight-bold);
-    letter-spacing: var(--tracking-tight);
-    color: var(--text-primary);
-    margin: 0 0 var(--space-4);
-    line-height: var(--leading-tight);
-  }
-  .cs-callout-body {
-    font-size: var(--text-base);
+  .cs-lit-badge--reproduces_known {
+    background: var(--bg-section);
     color: var(--text-secondary);
-    line-height: var(--leading-normal);
-    margin: 0 0 var(--space-6);
-    max-width: 760px;
+    border-color: var(--border-default);
   }
-  .cs-callout-body strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
-  .cs-callout-body a {
+  .cs-lit-badge--benchmark {
+    background: #eef2ff;
+    color: #3730a3;
+    border-color: #c7d2fe;
+  }
+
+  /* ===== External links (drug / mediator / outcome) ===== */
+  .cs-ext-links {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-4) 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .cs-ext-links li a {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
     color: var(--accent);
     text-decoration: none;
     font-weight: var(--weight-medium);
-  }
-  .cs-callout-body a:hover { color: var(--accent-hover); text-decoration: underline; }
-
-  /* ===== DRAFT / TODO blocks (callout card with red border) ===== */
-  .cs-todo-block,
-  .cs-callout-todo {
-    background: var(--state-error-bg);
-    border: 1px solid rgba(185, 28, 28, 0.25);
-    border-left: 4px solid var(--state-error);
-    border-radius: var(--radius-lg);
-    padding: var(--space-6) var(--space-6);
-    margin: var(--space-4) 0;
-    color: var(--text-secondary);
-    line-height: var(--leading-normal);
-    font-family: var(--font-base);
     font-size: var(--text-sm);
+    transition: border-color .15s ease, background .15s ease;
   }
-  .cs-todo-block::before,
-  .cs-callout-todo::before {
-    content: "Draft — author review pending";
-    display: block;
-    font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    color: var(--state-error);
-    margin-bottom: var(--space-3);
+  .cs-ext-links li a:hover {
+    border-color: var(--accent);
+    background: var(--accent-bg);
   }
-  .cs-todo-block em,
-  .cs-callout-todo em {
-    color: var(--text-secondary);
-    font-style: italic;
-    font-weight: var(--weight-normal);
-  }
-  .cs-callout-todo code {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    background: rgba(185, 28, 28, 0.08);
-    color: var(--state-error);
-    padding: 1px var(--space-2);
-    border-radius: var(--radius-sm);
-    font-weight: var(--weight-medium);
-    font-style: normal;
-  }
-
-  /* ===== Chain subsections ===== */
-  .cs-chain-sub {
-    font-family: var(--font-base);
-    font-size: var(--text-xl);
-    font-weight: var(--weight-bold);
-    color: var(--text-primary);
-    letter-spacing: var(--tracking-tight);
-    margin: var(--space-10) 0 var(--space-4);
-  }
-  .cs-chain-sub:first-of-type { margin-top: 0; }
-  .cs-chain-meta {
+  .cs-ext-meta {
     font-size: var(--text-sm);
     color: var(--text-tertiary);
-    margin-top: var(--space-3);
+    margin: 0 0 var(--space-2);
   }
-  .cs-chain-meta strong { color: var(--text-secondary); font-weight: var(--weight-semibold); }
-  .cs-chain-meta code {
+  .cs-ext-meta strong { color: var(--text-secondary); font-weight: var(--weight-semibold); }
+  .cs-ext-meta code {
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     background: var(--bg-section);
@@ -945,74 +990,59 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
     margin: 0;
   }
 
-  /* ===== Literature gap viz ===== */
-  .cs-gap-viz {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: var(--space-8);
-    align-items: center;
-    margin: var(--space-8) 0 var(--space-4);
-    padding: var(--space-8);
-    background: var(--bg-section);
-    border-radius: var(--radius-lg);
-  }
-  .cs-gap-cluster {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: var(--space-6);
-    text-align: center;
-  }
-  .cs-gap-cluster-label {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    color: var(--text-tertiary);
-    margin-bottom: var(--space-3);
-  }
-  .cs-gap-cluster-count {
-    font-size: var(--text-3xl);
-    font-weight: var(--weight-extrabold);
-    color: var(--accent);
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-    margin-bottom: var(--space-2);
-    letter-spacing: var(--tracking-tight);
-  }
-  .cs-gap-cluster-meta {
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    line-height: var(--leading-snug);
-  }
-  .cs-gap-arrow {
-    display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
-    min-width: 100px;
-  }
-  .cs-gap-arrow-line {
-    width: 60px; height: 2px;
-    background: var(--text-tertiary);
-    position: relative;
-  }
-  .cs-gap-arrow-line::after {
-    content: ''; position: absolute; right: -1px; top: -3px;
-    width: 0; height: 0;
-    border-left: 8px solid var(--text-tertiary);
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-  }
-  .cs-gap-arrow-label {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
-  }
-  .cs-gap-arrow-label strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
-  .cs-gap-caption {
+  /* ===== References list ===== */
+  .cs-references-intro {
     font-size: var(--text-base);
     color: var(--text-secondary);
     line-height: var(--leading-normal);
-    margin: var(--space-4) 0 0;
-    max-width: 760px;
+    margin: 0 0 var(--space-6);
+    max-width: 720px;
+  }
+  .cs-references {
+    padding-left: var(--space-6);
+    margin: 0;
+    list-style: decimal;
+  }
+  .cs-references li {
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: var(--space-3);
+    align-items: baseline;
+  }
+  .cs-references li:last-child { border-bottom: 0; }
+  .cs-ref-title { color: var(--text-primary); font-weight: var(--weight-medium); }
+  .cs-ref-year {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .cs-ref-leg {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    background: var(--bg-section);
+    border: 1px solid var(--border-subtle);
+  }
+  .cs-ref-leg--ab { color: var(--accent); background: var(--accent-bg); }
+  .cs-ref-leg--bc { color: var(--state-warning); background: var(--state-warning-bg); }
+
+  /* ===== Limitations & disclaimer ===== */
+  .cs-disclaimer {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    max-width: 65ch;
+    margin: 0;
   }
 
   /* ===== Evidence network intro ===== */
@@ -1131,10 +1161,13 @@ const sectionClass = isBenchmark ? 'is-benchmark' : 'is-novel';
     .cs-hero { padding: var(--space-12) 0 var(--space-10); }
     .cs-hero h1 { font-size: var(--text-2xl); }
     .cs-hero-arrow { display: inline-block; padding: 0 var(--space-1); }
-    .cs-gap-viz { grid-template-columns: 1fr; }
-    .cs-gap-arrow { transform: rotate(90deg); margin: var(--space-2) 0; }
     .cs-footer-links { grid-template-columns: 1fr; }
-    .cs-callout { padding: var(--space-6); }
+    .cs-references li {
+      grid-template-columns: auto 1fr;
+      grid-auto-rows: auto;
+    }
+    .cs-references li .cs-ref-year,
+    .cs-references li .cs-ref-leg { grid-column: 2; }
   }
   @media (max-width: 540px) {
     .cs-facts-grid { grid-template-columns: 1fr; }

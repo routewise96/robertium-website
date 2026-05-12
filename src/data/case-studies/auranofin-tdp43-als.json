@@ -1,17 +1,17 @@
 {
-  "slug": "curcumin-tdp43-als",
-  "hypothesis_id": 3772,
+  "slug": "auranofin-tdp43-als",
+  "hypothesis_id": 37636,
   "section": "novel",
-  "title": "curcumin → TDP-43 → ALS",
+  "title": "Auranofin → TDP-43 → ALS",
   "drug": {
-    "name": "curcumin",
-    "canonical": "curcumin",
+    "name": "Auranofin",
+    "canonical": "auranofin",
     "type": "drug",
-    "domain": "alzheimer",
+    "domain": "rheumatoid_arthritis",
     "external_links": {
-      "wikipedia": "https://en.wikipedia.org/wiki/Curcumin",
-      "drugbank": "https://go.drugbank.com/drugs/DB11672",
-      "clinicaltrials": "https://clinicaltrials.gov/search?intr=curcumin"
+      "wikipedia": "https://en.wikipedia.org/wiki/Auranofin",
+      "drugbank": "https://go.drugbank.com/drugs/DB00995",
+      "clinicaltrials": "https://clinicaltrials.gov/search?intr=Auranofin"
     },
     "TODO_common_name": "TODO Daniel: brand/common names if applicable",
     "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
@@ -44,30 +44,27 @@
     "ab_count": 1,
     "bc_count": 29,
     "direct_evidence_count": 0,
-    "domain_source": "alzheimer",
+    "domain_source": "rheumatoid_arthritis",
     "domain_target": "als",
-    "predicate_ab": "binds_to",
+    "predicate_ab": "inhibits",
     "predicate_bc": "associated_with",
-    "literature_status": "reproduces_known",
-    "clinical_trial_status": "completed",
-    "clinical_trial_nct_ids": [
-      "NCT04654689",
-      "NCT04499963"
-    ]
+    "literature_status": "partial_evidence",
+    "clinical_trial_status": "none",
+    "clinical_trial_nct_ids": []
   },
   "evidence": {
     "ab_claims": [
       {
-        "pmid": "30092839",
-        "title": "Different curcumin forms selectively bind fibrillar amyloid beta in post mortem Alzheimer’s disease brains: Implications for in-vivo diagnostics",
-        "doi": "10.1186/s40478-018-0577-2",
+        "pmid": "29396541",
+        "title": "TDP-43 self-interaction is modulated by redox-active compounds Auranofin, Chelerythrine and Riluzole",
+        "doi": "10.1038/s41598-018-20565-0",
         "year": 2018,
-        "subject": "curcumin",
-        "predicate": "binds_to",
+        "subject": "auranofin",
+        "predicate": "inhibits",
         "object": "TDP-43",
-        "claim_text": "in frontotemporal lobar degeneration brains with TDP-43 inclusions",
-        "confidence": 0.9,
-        "extracted_at": "2026-05-08T23:40:48.3594+00:00"
+        "claim_text": "self-interaction",
+        "confidence": 0.95,
+        "extracted_at": "2026-05-12T06:25:30.453097+00:00"
       }
     ],
     "bc_claims": [
@@ -419,20 +416,12 @@
   "limitations_paragraph": "This hypothesis was generated algorithmically through cross-domain literature analysis and has not been experimentally validated. Treat it as a starting point for further investigation, not a therapeutic recommendation. For established knowledge about each entity, refer to the authoritative sources linked above (Wikipedia, DrugBank, UniProt, MeSH).",
   "related_hypotheses": [
     {
-      "id": 37636,
-      "drug": "Auranofin",
+      "id": 3772,
+      "drug": "curcumin",
       "mediator": "TDP-43",
       "outcome": "ALS",
       "score": 0.614151684333315,
       "shared": "mediator"
-    },
-    {
-      "id": 33750,
-      "drug": "Curcumin",
-      "mediator": "STAT3",
-      "outcome": "prurigo nodularis",
-      "score": 0.4158883083359671,
-      "shared": "drug"
     },
     {
       "id": 37635,
@@ -441,6 +430,14 @@
       "outcome": "ALS",
       "score": 0.40943445622221003,
       "shared": "mediator"
+    },
+    {
+      "id": 39004,
+      "drug": "Auranofin",
+      "mediator": "Nrf2",
+      "outcome": "chemoresistance",
+      "score": 0.4062075301653315,
+      "shared": "drug"
     }
   ]
 }

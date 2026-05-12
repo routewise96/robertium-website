@@ -27,12 +27,98 @@ CATALOG_PATH = ROOT / "public" / "data" / "hypotheses.json"
 
 # (slug, hypothesis_id, section)
 CASES: list[tuple[str, int, str]] = [
+    ("auranofin-tdp43-als", 37636, "novel"),
     ("carbamazepine-kras-pancreatic-cancer", 7049, "novel"),
     ("curcumin-tdp43-als", 3772, "novel"),
     ("ketogenic-diet-sod1-als", 2091, "novel"),
     ("ketamine-nmda-chronic-pain", 5385, "benchmark"),
     ("fingolimod-hmgb1-als", 23443, "benchmark"),
 ]
+
+# Hardcoded external links per entity (matched on the raw DB name).
+# Drugs link to Wikipedia / DrugBank / ClinicalTrials.gov; mediators to
+# Wikipedia / UniProt; outcomes to Wikipedia / MeSH.
+EXTERNAL_LINKS: dict[str, dict[str, dict[str, str]]] = {
+    "drugs": {
+        "Auranofin": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Auranofin",
+            "drugbank": "https://go.drugbank.com/drugs/DB00995",
+            "clinicaltrials": "https://clinicaltrials.gov/search?intr=Auranofin",
+        },
+        "carbamazepine": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Carbamazepine",
+            "drugbank": "https://go.drugbank.com/drugs/DB00564",
+            "clinicaltrials": "https://clinicaltrials.gov/search?intr=carbamazepine",
+        },
+        "curcumin": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Curcumin",
+            "drugbank": "https://go.drugbank.com/drugs/DB11672",
+            "clinicaltrials": "https://clinicaltrials.gov/search?intr=curcumin",
+        },
+        "Ketogenic diet": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Ketogenic_diet",
+            "clinicaltrials": "https://clinicaltrials.gov/search?intr=ketogenic+diet",
+        },
+        "ketamine": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Ketamine",
+            "drugbank": "https://go.drugbank.com/drugs/DB01221",
+            "clinicaltrials": "https://clinicaltrials.gov/search?intr=ketamine",
+        },
+        "Fingolimod": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Fingolimod",
+            "drugbank": "https://go.drugbank.com/drugs/DB08868",
+            "clinicaltrials": "https://clinicaltrials.gov/search?intr=Fingolimod",
+        },
+    },
+    "mediators": {
+        "TDP-43": {
+            "wikipedia": "https://en.wikipedia.org/wiki/TARDBP",
+            "uniprot": "https://www.uniprot.org/uniprotkb/Q13148",
+        },
+        "KRAS": {
+            "wikipedia": "https://en.wikipedia.org/wiki/KRAS",
+            "uniprot": "https://www.uniprot.org/uniprotkb/P01116",
+        },
+        "Sod1": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Superoxide_dismutase",
+            "uniprot": "https://www.uniprot.org/uniprotkb/P00441",
+        },
+        "NMDA receptor": {
+            "wikipedia": "https://en.wikipedia.org/wiki/NMDA_receptor",
+            "uniprot": "https://www.uniprot.org/uniprotkb?query=NMDA+receptor",
+        },
+        "HMGB1": {
+            "wikipedia": "https://en.wikipedia.org/wiki/HMGB1",
+            "uniprot": "https://www.uniprot.org/uniprotkb/P09429",
+        },
+    },
+    "outcomes": {
+        "ALS": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Amyotrophic_lateral_sclerosis",
+            "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D000690",
+        },
+        "pancreatic ductal adenocarcinoma": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Pancreatic_cancer",
+            "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D021441",
+        },
+        "pain": {
+            "wikipedia": "https://en.wikipedia.org/wiki/Pain",
+            "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D010146",
+        },
+    },
+}
+
+# Standard limitations & disclaimer paragraph in English. Daniel may swap in
+# a custom Russian (then translated) version per case study later by editing
+# the JSON directly without re-running this script.
+LIMITATIONS_PARAGRAPH = (
+    "This hypothesis was generated algorithmically through cross-domain "
+    "literature analysis and has not been experimentally validated. Treat "
+    "it as a starting point for further investigation, not a therapeutic "
+    "recommendation. For established knowledge about each entity, refer to "
+    "the authoritative sources linked above (Wikipedia, DrugBank, UniProt, "
+    "MeSH)."
+)
 
 
 def psql_json(sql: str) -> Any:
@@ -231,6 +317,7 @@ def build_case(slug: str, hyp_id: int, section: str, catalog: list[dict]) -> dic
             "canonical": h.get("drug_canonical"),
             "type": h.get("drug_type"),
             "domain": h.get("drug_domain"),
+            "external_links": EXTERNAL_LINKS["drugs"].get(h["drug"], {}),
             "TODO_common_name": "TODO Daniel: brand/common names if applicable",
             "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for",
         },
@@ -238,6 +325,7 @@ def build_case(slug: str, hyp_id: int, section: str, catalog: list[dict]) -> dic
             "name": h["mediator"],
             "canonical": h.get("mediator_canonical"),
             "type": h.get("mediator_type"),
+            "external_links": EXTERNAL_LINKS["mediators"].get(h["mediator"], {}),
             "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically",
         },
         "outcome": {
@@ -245,6 +333,7 @@ def build_case(slug: str, hyp_id: int, section: str, catalog: list[dict]) -> dic
             "canonical": h.get("outcome_canonical"),
             "type": h.get("outcome_type"),
             "domain": h.get("outcome_domain"),
+            "external_links": EXTERNAL_LINKS["outcomes"].get(h["outcome"], {}),
             "TODO_full_name": "TODO Daniel: full disease name if abbreviation",
         },
         "metrics": {
@@ -280,6 +369,7 @@ def build_case(slug: str, hyp_id: int, section: str, catalog: list[dict]) -> dic
             if section == "benchmark"
             else None
         ),
+        "limitations_paragraph": LIMITATIONS_PARAGRAPH,
         "related_hypotheses": related,
     }
 

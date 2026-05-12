@@ -8,6 +8,11 @@
     "canonical": "carbamazepine",
     "type": "drug",
     "domain": "epilepsy",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Carbamazepine",
+      "drugbank": "https://go.drugbank.com/drugs/DB00564",
+      "clinicaltrials": "https://clinicaltrials.gov/search?intr=carbamazepine"
+    },
     "TODO_common_name": "TODO Daniel: brand/common names if applicable",
     "TODO_original_indication": "TODO Daniel: what disease/use was this drug originally developed for"
   },
@@ -15,6 +20,10 @@
     "name": "KRAS",
     "canonical": "kras",
     "type": "gene",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/KRAS",
+      "uniprot": "https://www.uniprot.org/uniprotkb/P01116"
+    },
     "TODO_description_short": "TODO Daniel: 1-line description of what this molecule/protein does biologically"
   },
   "outcome": {
@@ -22,6 +31,10 @@
     "canonical": "pancreatic ductal adenocarcinoma",
     "type": "disease",
     "domain": "pancreatic_cancer",
+    "external_links": {
+      "wikipedia": "https://en.wikipedia.org/wiki/Pancreatic_cancer",
+      "mesh": "https://meshb.nlm.nih.gov/record/ui?ui=D021441"
+    },
     "TODO_full_name": "TODO Daniel: full disease name if abbreviation"
   },
   "metrics": {
@@ -172,6 +185,7 @@
     "TODO_limitations": "TODO Daniel: honest assessment of what could be wrong with this hypothesis"
   },
   "benchmark_context": null,
+  "limitations_paragraph": "This hypothesis was generated algorithmically through cross-domain literature analysis and has not been experimentally validated. Treat it as a starting point for further investigation, not a therapeutic recommendation. For established knowledge about each entity, refer to the authoritative sources linked above (Wikipedia, DrugBank, UniProt, MeSH).",
   "related_hypotheses": [
     {
       "id": 7050,
