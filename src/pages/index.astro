@@ -22,7 +22,76 @@ import Subscribe from '../components/Subscribe.astro';
   <Problem />
   <Approach />
   <Open />
+  <section class="section section--gray prov-callout">
+    <div class="container--narrow prov-callout__inner">
+      <p class="prov-callout__eyebrow">Audit-grade transparency</p>
+      <h2 class="prov-callout__heading">Every hypothesis has a full provenance trace</h2>
+      <p class="prov-callout__sub">
+        Source papers, extracted claims, scoring code, embedding model, prompt version,
+        and the exact pipeline run that produced the row. Downloadable JSON. No black boxes.
+      </p>
+      <p class="prov-callout__cta-row">
+        <a class="prov-callout__cta" href="/hypothesis/37636/">See an example trace →</a>
+        <a class="prov-callout__link" href="/method/#provenance">How it works</a>
+      </p>
+    </div>
+  </section>
   <FeaturedHypotheses />
   <Contact />
   <Subscribe />
 </Layout>
+
+<style>
+  .prov-callout__inner {
+    text-align: center;
+    padding: 1rem 0;
+  }
+  .prov-callout__eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0 0 0.5rem;
+  }
+  .prov-callout__heading {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.75rem;
+  }
+  .prov-callout__sub {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    max-width: 38rem;
+    margin: 0 auto 1.5rem;
+    line-height: 1.55;
+  }
+  .prov-callout__cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+  }
+  .prov-callout__cta {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.65rem 1.4rem;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .prov-callout__cta:hover { background: var(--accent-hover, #0e7490); }
+  .prov-callout__link {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .prov-callout__link:hover { color: var(--accent); text-decoration: underline; }
+</style>

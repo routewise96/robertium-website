@@ -271,6 +271,29 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
+  <section id="provenance" class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg></div>
+        <h2>Provenance &amp; reproducibility</h2>
+      </div>
+      <p>Every hypothesis in the catalog ships with a full provenance trace: the source papers it was inferred from, the structured claims the LLM extracted from each abstract, the bridging logic that joined the chain, the embedding model and prompt version we used, and the scoring formula that produced the final tier.</p>
+      <p>We do not believe drug repurposing tools should be black boxes. We disclose:</p>
+      <ul class="method-list">
+        <li><strong>LLM &amp; prompt</strong> — model name and prompt version (bumped whenever the system prompt changes), so any rerun is byte-identical</li>
+        <li><strong>Embedding model</strong> — bge-m3, 1024-dim, max-length 8192 — used only for L1 relevance filtering, never for hypothesis scoring</li>
+        <li><strong>Scoring code</strong> — the exact formula <code>score = min((log(ab+1)+log(bc+1)) · novelty / 10, 1)</code> with <code>novelty = 1.0</code> if no direct A→C evidence exists, else <code>0.7/(direct+1)</code></li>
+        <li><strong>Source papers</strong> — full PMID, DOI, title, journal, publication date, plus a role tag (drug→mediator vs mediator→outcome)</li>
+        <li><strong>Pipeline run</strong> — the git commit, command, host, status, and timestamps of the orchestrator invocation that produced the row</li>
+        <li><strong>Completeness self-disclosure</strong> — a badge on every trace declares whether it was captured live during generation, backfilled retroactively from DB state, or has unresolvable gaps</li>
+      </ul>
+      <p>Example: see the full trace for <a href="/hypothesis/37636/">auranofin → TDP-43 → ALS</a>. The JSON behind it is downloadable from a button at the bottom of the panel; you can reproduce our analysis on your own data.</p>
+      <div style="margin-top: 24px;">
+        <a href="https://github.com/routewise96/robertium" class="btn btn--secondary">View provenance schema on GitHub →</a>
+      </div>
+    </div>
+  </section>
+
   <section class="section">
     <div class="container--narrow">
       <div class="section-header">

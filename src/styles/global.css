@@ -999,6 +999,8 @@ a { color: inherit; }
 .hyp-badge--lit-known        { background: var(--bg-section); color: var(--text-tertiary); }
 .hyp-badge--featured         { background: var(--state-warning-bg); color: var(--state-warning); text-decoration: none; cursor: pointer; }
 .hyp-badge--featured:hover   { background: var(--state-warning-bg); }
+.hyp-badge--trace            { background: var(--accent-bg); color: var(--accent); text-decoration: none; cursor: pointer; font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace); }
+.hyp-badge--trace:hover      { background: var(--accent); color: #fff; }
 
 .hyp-validation-cell {
   padding: 14px 8px;
