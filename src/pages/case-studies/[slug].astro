@@ -96,6 +96,33 @@ try {
   // No cached trials JSON for this hypothesis - panel renders empty state
 }
 
+// Cross-link to /drugs/{drug_id}. Slug matches generate_drug_index.py
+// (lowercase, non-alphanumeric → dash). Only render the link when the drug
+// canonical exists; case-study drugs absent from the outreach catalog will
+// 404, so we additionally check the drug_index data for membership.
+const drugIdForUrl = (data.drug.canonical || data.drug.name || '')
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+let drugPageExists = false;
+if (drugIdForUrl) {
+  try {
+    const drugIndexPath = path.join(
+      process.cwd(),
+      'src',
+      'data',
+      'drug_index.json',
+    );
+    const drugIndex = JSON.parse(fs.readFileSync(drugIndexPath, 'utf-8'));
+    drugPageExists = drugIndex.drugs.some(
+      (d: { drug_id: string }) => d.drug_id === drugIdForUrl,
+    );
+  } catch {
+    drugPageExists = false;
+  }
+}
+
 const fmtDomain = (d: string | null | undefined) =>
   d ? formatDomainName(d) : 'cross-domain';
 const fmtPredicate = (p: string | null) => (p ?? 'modulates').replace(/_/g, ' ');
@@ -465,6 +492,13 @@ const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
         </ul>
       ) : (
         <p class="cs-ext-meta">External references not curated for this entity.</p>
+      )}
+      {drugPageExists && (
+        <p class="cs-cross-link">
+          <a href={`/drugs/${drugIdForUrl}/`}>
+            View all hypotheses for {data.drug.name} →
+          </a>
+        </p>
       )}
     </div>
   </section>
@@ -942,6 +976,16 @@ const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
     padding: 2px var(--space-2);
     border-radius: var(--radius-sm);
   }
+  .cs-cross-link {
+    margin-top: var(--space-3, 0.75rem);
+    font-size: var(--text-sm);
+  }
+  .cs-cross-link a {
+    color: var(--accent, #0891b2);
+    font-weight: var(--weight-semibold, 600);
+    text-decoration: none;
+  }
+  .cs-cross-link a:hover { text-decoration: underline; }
 
   /* ===== Evidence (two-column on desktop) ===== */
   .cs-evidence-warning {

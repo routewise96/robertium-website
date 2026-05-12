@@ -1,0 +1,137 @@
+---
+// Three-way entry into the catalog: by disease (catalog), by drug, and by
+// prediction status (prospective tracking leaderboard). Lives on the
+// homepage between PredictionsBanner and FeaturedHypotheses.
+---
+
+<section class="browse-three">
+  <div class="container">
+    <p class="browse-three__eyebrow">EXPLORE</p>
+    <h2 class="browse-three__heading">Browse three ways</h2>
+    <p class="browse-three__lede">
+      Same 1,618 outreach-quality hypotheses, three different lenses.
+    </p>
+    <ul class="browse-three__grid">
+      <li>
+        <a href="/hypotheses/" class="browse-three__card">
+          <span class="browse-three__tag">By disease</span>
+          <h3>Hypothesis catalog</h3>
+          <p>
+            The full table grouped by therapeutic domain. Filter by quality
+            tier, literature status, clinical trial status. Best when you
+            already know which indication you are exploring.
+          </p>
+          <span class="browse-three__cta">Open catalog →</span>
+        </a>
+      </li>
+      <li>
+        <a href="/drugs/" class="browse-three__card">
+          <span class="browse-three__tag">By drug</span>
+          <h3>Drug index</h3>
+          <p>
+            411 unique drugs. Click any drug to see every hypothesis it
+            appears in across all disease domains, plus the registered
+            ClinicalTrials.gov record for each pair.
+          </p>
+          <span class="browse-three__cta">Open drug index →</span>
+        </a>
+      </li>
+      <li>
+        <a href="/predictions/" class="browse-three__card">
+          <span class="browse-three__tag">By prediction status</span>
+          <h3>Prospective tracking</h3>
+          <p>
+            Live leaderboard of Robertium-surfaced hypotheses, ordered by
+            how much new PubMed evidence has emerged since they were
+            frozen. Where the methodology is being put to the test.
+          </p>
+          <span class="browse-three__cta">Open leaderboard →</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style>
+  .browse-three {
+    padding: 4rem 0;
+    background: #fff;
+  }
+  .browse-three__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.5rem;
+  }
+  .browse-three__heading {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text, #1f2937);
+    margin: 0 0 0.5rem;
+    line-height: 1.2;
+  }
+  .browse-three__lede {
+    font-size: 1.05rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0 0 2rem;
+    max-width: 38rem;
+  }
+  .browse-three__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .browse-three__card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1.5rem 1.25rem;
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+  .browse-three__card:hover {
+    border-color: var(--accent, #0891b2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  .browse-three__tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent, #0891b2);
+    margin-bottom: 0.6rem;
+  }
+  .browse-three__card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0 0 0.6rem;
+  }
+  .browse-three__card p {
+    font-size: 0.95rem;
+    color: var(--text-muted, #6b7280);
+    line-height: 1.55;
+    margin: 0 0 1rem;
+    flex: 1;
+  }
+  .browse-three__cta {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent, #0891b2);
+  }
+
+  @media (max-width: 540px) {
+    .browse-three { padding: 2.5rem 0; }
+    .browse-three__heading { font-size: 1.5rem; }
+  }
+</style>
