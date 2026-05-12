@@ -131,13 +131,37 @@ import Layout from '../layouts/Layout.astro';
             <td class="num">4,706</td>
             <td class="num">27.2%</td>
           </tr>
+          <tr>
+            <td>Multiple sclerosis</td>
+            <td class="num">16,881</td>
+            <td class="num">8,546</td>
+            <td class="num">50.6%</td>
+          </tr>
+          <tr>
+            <td>Type 2 diabetes</td>
+            <td class="num">17,712</td>
+            <td class="num">13,275</td>
+            <td class="num">74.9%</td>
+          </tr>
+          <tr>
+            <td>Rheumatoid arthritis</td>
+            <td class="num">16,210</td>
+            <td class="num">10,565</td>
+            <td class="num">65.2%</td>
+          </tr>
+          <tr>
+            <td>Inflammatory bowel disease</td>
+            <td class="num">17,210</td>
+            <td class="num">10,525</td>
+            <td class="num">61.2%</td>
+          </tr>
         </tbody>
         <tfoot>
           <tr>
             <td>Total</td>
-            <td class="num">99,132</td>
-            <td class="num">47,255</td>
-            <td class="num">47.7%</td>
+            <td class="num">167,145</td>
+            <td class="num">90,166</td>
+            <td class="num">54.0%</td>
           </tr>
         </tfoot>
       </table>
@@ -198,17 +222,41 @@ import Layout from '../layouts/Layout.astro';
             <td class="num">13,303</td>
             <td class="num">2.8</td>
           </tr>
+          <tr>
+            <td>Multiple sclerosis</td>
+            <td class="num">8,546</td>
+            <td class="num">23,794</td>
+            <td class="num">2.8</td>
+          </tr>
+          <tr>
+            <td>Type 2 diabetes</td>
+            <td class="num">13,275</td>
+            <td class="num">42,048</td>
+            <td class="num">3.2</td>
+          </tr>
+          <tr>
+            <td>Rheumatoid arthritis</td>
+            <td class="num">10,565</td>
+            <td class="num">31,934</td>
+            <td class="num">3.0</td>
+          </tr>
+          <tr>
+            <td>Inflammatory bowel disease</td>
+            <td class="num">10,525</td>
+            <td class="num">32,837</td>
+            <td class="num">3.1</td>
+          </tr>
         </tbody>
         <tfoot>
           <tr>
             <td>Total</td>
-            <td class="num">47,255</td>
-            <td class="num">140,178</td>
+            <td class="num">90,166</td>
+            <td class="num">270,791</td>
             <td class="num">3.0</td>
           </tr>
         </tfoot>
       </table>
-      <p>Variation in claims-per-paper reflects literature density: review papers and detailed mechanistic studies yield more claims than short clinical correspondences. Total: 140,178 structured claims across 6 domains, all linked to source PMIDs.</p>
+      <p>Variation in claims-per-paper reflects literature density: review papers and detailed mechanistic studies yield more claims than short clinical correspondences. Total: 270,791 structured claims across 10 domains, all linked to source PMIDs.</p>
     </div>
   </section>
 
@@ -221,19 +269,19 @@ import Layout from '../layouts/Layout.astro';
       <p>All claims are imported into a Kuzu graph database. Each unique entity (after lexical normalization) becomes a node; each claim becomes an edge with the predicate as label.</p>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-num">81,328</div>
+          <div class="stat-num">160,955</div>
           <div class="stat-label">total<br>nodes</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">140,178</div>
+          <div class="stat-num">270,791</div>
           <div class="stat-label">claim<br>edges</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">6</div>
+          <div class="stat-num">10</div>
           <div class="stat-label">domains<br>in graph</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">7,957</div>
+          <div class="stat-num">24,285</div>
           <div class="stat-label">cross-domain<br>hypotheses</div>
         </div>
       </div>

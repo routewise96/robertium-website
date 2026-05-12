@@ -25,15 +25,15 @@ import Layout from '../layouts/Layout.astro';
         <div class="section-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
         <h2>Pipeline overview</h2>
       </div>
-      <p>The pipeline runs end-to-end across six therapeutic domains. Each stage is independently reproducible: same input, same output. Numbers below reflect the current corpus.</p>
+      <p>The pipeline runs end-to-end across ten therapeutic domains. Each stage is independently reproducible: same input, same output. Numbers below reflect the current corpus.</p>
       <div class="pipeline-diagram" role="img" aria-label="Robertium pipeline diagram from biomedical literature to novel candidates">
         <ol class="pipeline-steps">
           <li class="pipe-step">
             <div class="pipe-step-num">1</div>
             <div class="pipe-step-body">
               <div class="pipe-step-title">Ingest</div>
-              <div class="pipe-step-source">OpenAlex API · 6 domain concept IDs</div>
-              <div class="pipe-step-stat"><strong>99,132</strong> papers</div>
+              <div class="pipe-step-source">OpenAlex API · 10 domain concept IDs</div>
+              <div class="pipe-step-stat"><strong>167,145</strong> papers</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -42,7 +42,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">L1 biomedical filter</div>
               <div class="pipe-step-source">PubTator (NCBI) · ≥2 recognised entities</div>
-              <div class="pipe-step-stat"><strong>47,255</strong> papers passed</div>
+              <div class="pipe-step-stat"><strong>90,166</strong> papers passed</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -51,7 +51,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Structured claim extraction</div>
               <div class="pipe-step-source">instruction-tuned LLM · 21 predicates · 9 entity types</div>
-              <div class="pipe-step-stat"><strong>140,178</strong> claims (subject–predicate–object + PMID)</div>
+              <div class="pipe-step-stat"><strong>270,791</strong> claims (subject–predicate–object + PMID)</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -60,7 +60,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Knowledge graph</div>
               <div class="pipe-step-source">Kuzu · cross-domain bridges</div>
-              <div class="pipe-step-stat"><strong>81,328</strong> entities · <strong>140,178</strong> edges</div>
+              <div class="pipe-step-stat"><strong>160,955</strong> entities · <strong>270,791</strong> edges</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -68,8 +68,8 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-num">5</div>
             <div class="pipe-step-body">
               <div class="pipe-step-title">Swanson ABC discovery</div>
-              <div class="pipe-step-source">30 directional pairs · mediator + drug-vocabulary filters</div>
-              <div class="pipe-step-stat"><strong>7,957</strong> candidates · <strong>640</strong> outreach-quality (56 high + 584 mid, after dedup)</div>
+              <div class="pipe-step-source">90 directional pairs · mediator + drug-vocabulary filters</div>
+              <div class="pipe-step-stat"><strong>24,285</strong> candidates · <strong>1,618</strong> outreach-quality (197 high + 1,421 mid, after dedup)</div>
             </div>
           </li>
           <li class="pipe-arrow" aria-hidden="true">↓</li>
@@ -78,7 +78,7 @@ import Layout from '../layouts/Layout.astro';
             <div class="pipe-step-body">
               <div class="pipe-step-title">Validation enrichment</div>
               <div class="pipe-step-source">ClinicalTrials.gov v2 · PubMed E-utilities</div>
-              <div class="pipe-step-stat"><strong>341</strong> novel candidates · <strong>49</strong> reproduce active trials</div>
+              <div class="pipe-step-stat"><strong>856</strong> novel candidates · <strong>112</strong> reproduce active trials</div>
             </div>
           </li>
         </ol>
@@ -121,7 +121,7 @@ import Layout from '../layouts/Layout.astro';
   `}<span class="json-key">"confidence"</span>: <span class="json-num">0.85</span>{`
 }`}</pre>
       </div>
-      <p>Across the 99,132 papers in the current corpus, we extract an average of 3.0 claims per abstract that passes the L1 biomedical-relevance filter. Total: 140,178 structured claims across six therapeutic domains. All claims are linked to source PMIDs for verification.</p>
+      <p>Across the 167,145 papers in the current corpus, we extract an average of 3.0 claims per abstract that passes the L1 biomedical-relevance filter. Total: 270,791 structured claims across ten therapeutic domains. All claims are linked to source PMIDs for verification.</p>
     </div>
   </section>
 
@@ -134,11 +134,11 @@ import Layout from '../layouts/Layout.astro';
       <p>Claims are imported into a Kuzu graph database. Each unique entity becomes a node; each claim becomes an edge with the predicate as label. Entities mentioned in multiple domains are merged at the lexical level (with planned upgrades to UMLS-based normalization).</p>
       <div class="method-stat-pair">
         <div class="stat-card">
-          <div class="stat-num">81,328</div>
+          <div class="stat-num">160,955</div>
           <div class="stat-label">unique<br>entities</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">140,178</div>
+          <div class="stat-num">270,791</div>
           <div class="stat-label">claim<br>edges</div>
         </div>
       </div>
@@ -192,7 +192,7 @@ import Layout from '../layouts/Layout.astro';
         <span>osimertinib (glioblastoma lit.) </span><span class="chain-pred">--[inhibits]--&gt;</span><span> EGFR (protein)<br></span><span class="chain-pred">                              --[associated_with]--&gt;</span><span> pancreatic ductal adenocarcinoma</span>
       </div>
       <p>Osimertinib is a third-generation FDA-approved EGFR inhibitor used in non-small-cell lung cancer and frequently studied as a glioblastoma candidate. EGFR is an established oncogenic driver in pancreatic ductal adenocarcinoma. The two literatures rarely overlap; Robertium surfaces the connection automatically through the shared mediator. Direct co-mentions of osimertinib and PDAC: zero. Indirect chain: 3 + 2 supporting papers, outreach-grade score 0.373.</p>
-      <p>The cross-domain orchestrator analyzes all 30 directional pairs across the six therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder). Raw output: 7,957 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), and after collapsing 20 phrasing duplicates into their canonical entries, 640 hypotheses pass outreach-quality criteria, of which 56 are scored as high-confidence and 584 as mid-confidence. Other examples in the high-confidence tier include <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective candidate surfaced through the ALS–Alzheimer's mediator chain) and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature via matrix metalloproteinase signaling).</p>
+      <p>The cross-domain orchestrator analyzes all 90 directional pairs across the ten therapeutic domains (glioblastoma, epilepsy, ALS, Alzheimer's, pancreatic cancer, major depressive disorder, multiple sclerosis, type 2 diabetes, rheumatoid arthritis, inflammatory bowel disease). Raw output: 24,285 candidate hypotheses. After filtering for specific mediators — generic inflammatory cytokines (TNF-α, IL-6, NF-κB) and trivial pathway terms (inflammation, cell death, autophagy) are excluded — and clean drug vocabulary (botanical extracts, undefined nano-formulations are excluded), and after collapsing 279 phrasing duplicates into their canonical entries, 1,618 hypotheses pass outreach-quality criteria, of which 197 are scored as high-confidence and 1,421 as mid-confidence. Other examples in the high-confidence tier include <em>metformin → α-synuclein → Parkinson's disease</em> (a neuroprotective candidate surfaced through the ALS–Alzheimer's mediator chain) and <em>Riluzole → MMP-9 → epilepsy</em> (an ALS drug bridging into seizure literature via matrix metalloproteinase signaling).</p>
     </div>
   </section>
 
