@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import EvidenceNetwork from '../../components/EvidenceNetwork.astro';
 import ClinicalTrialsPanel from '../../components/ClinicalTrialsPanel.astro';
+import ProvenanceTrace from '../../components/ProvenanceTrace.astro';
 import { formatDomainName } from '../../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -463,6 +464,23 @@ const limitations = data.limitations_paragraph ?? DEFAULT_LIMITATIONS;
         hypothesisId={data.hypothesis_id}
         searchUrl={trialsSearchUrl}
       />
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+        </div>
+        <h2>Provenance trace</h2>
+      </div>
+      <p class="cs-evnet-intro">
+        Full audit trail of how this hypothesis was generated: source papers,
+        extracted claims, bridging logic, embedding model, and scoring. Every
+        step is recorded and reproducible.
+      </p>
+      <ProvenanceTrace hypothesisId={data.hypothesis_id} />
     </div>
   </section>
 
