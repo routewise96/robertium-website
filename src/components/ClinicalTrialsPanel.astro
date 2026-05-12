@@ -1,0 +1,397 @@
+---
+// Compact panel that surfaces ClinicalTrials.gov registry data alongside a
+// hypothesis or drug. Pass either `hypothesisId` (renders trials for that
+// drug+outcome pair) or `drugSlug` (renders all drug-only trials).
+//
+// Build-time we already know the total count via `totalTrials` so the
+// summary line renders without an extra request. The full trial list is
+// fetched lazily from /data/trials/by_hypothesis/{id}.json or
+// /data/trials/by_drug/{slug}.json only when the user expands details,
+// keeping initial payload small even on the 411 drug detail pages.
+interface Props {
+  totalTrials: number;
+  drugDisplayName: string;
+  outcome?: string;
+  hypothesisId?: number;
+  drugSlug?: string;
+  searchUrl: string;
+}
+
+const {
+  totalTrials,
+  drugDisplayName,
+  outcome,
+  hypothesisId,
+  drugSlug,
+  searchUrl,
+} = Astro.props;
+
+if (!hypothesisId && !drugSlug) {
+  throw new Error('ClinicalTrialsPanel requires hypothesisId or drugSlug');
+}
+
+const fetchUrl = hypothesisId
+  ? `/data/trials/by_hypothesis/${hypothesisId}.json`
+  : `/data/trials/by_drug/${drugSlug}.json`;
+
+const panelId = `ct-panel-${hypothesisId ?? drugSlug}`;
+
+const summaryText = outcome
+  ? `${totalTrials} registered ${totalTrials === 1 ? 'trial' : 'trials'} for ${drugDisplayName} in ${outcome}`
+  : `${totalTrials} registered ${totalTrials === 1 ? 'trial' : 'trials'} for ${drugDisplayName}`;
+---
+
+<section id={panelId} class="ct-panel" data-fetch-url={fetchUrl}>
+  <header class="ct-panel__header">
+    <div class="ct-panel__heading-block">
+      <p class="ct-panel__eyebrow">Clinical trials</p>
+      <h2 class="ct-panel__heading">{summaryText}</h2>
+      <p class="ct-panel__sub">
+        Source: <a href="https://clinicaltrials.gov" target="_blank" rel="noopener">ClinicalTrials.gov</a>
+      </p>
+    </div>
+    {totalTrials > 0 && (
+      <button type="button" class="ct-panel__toggle" data-ct-toggle aria-expanded="false" aria-controls={`${panelId}-body`}>
+        Show details
+      </button>
+    )}
+  </header>
+
+  {totalTrials > 0 ? (
+    <div id={`${panelId}-body`} class="ct-panel__body" data-ct-body hidden>
+      <div class="ct-panel__filters">
+        <span class="ct-panel__filter-label">Status</span>
+        <button type="button" class="ct-chip" data-ct-status="ALL" data-active="true">All</button>
+        <button type="button" class="ct-chip" data-ct-status="RECRUITING">Recruiting</button>
+        <button type="button" class="ct-chip" data-ct-status="ACTIVE_NOT_RECRUITING">Active</button>
+        <button type="button" class="ct-chip" data-ct-status="NOT_YET_RECRUITING">Not yet recruiting</button>
+        <button type="button" class="ct-chip" data-ct-status="COMPLETED">Completed</button>
+        <button type="button" class="ct-chip" data-ct-status="TERMINATED">Terminated</button>
+      </div>
+      <div class="ct-panel__table-wrap" data-ct-table-wrap>
+        <p class="ct-panel__loading">Loading trials…</p>
+      </div>
+      <a class="ct-panel__link" href={searchUrl} target="_blank" rel="noopener">
+        View all on ClinicalTrials.gov →
+      </a>
+    </div>
+  ) : (
+    <div class="ct-panel__empty-wrap">
+      <p class="ct-panel__empty">
+        No registered trials found on ClinicalTrials.gov. This could indicate either an unexplored indication or a gap in registry coverage.
+      </p>
+      <a class="ct-panel__link" href={searchUrl} target="_blank" rel="noopener">
+        Search ClinicalTrials.gov →
+      </a>
+    </div>
+  )}
+</section>
+
+<script define:vars={{ panelId, fetchUrl }}>
+  (() => {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const toggleBtn = panel.querySelector('[data-ct-toggle]');
+    if (!toggleBtn) return;
+    const body = panel.querySelector('[data-ct-body]');
+    const tableWrap = panel.querySelector('[data-ct-table-wrap]');
+    const filterBtns = Array.from(panel.querySelectorAll('[data-ct-status]'));
+    let loaded = false;
+    let trials = [];
+    let currentFilter = 'ALL';
+
+    const statusLabel = {
+      RECRUITING: 'Recruiting',
+      ACTIVE_NOT_RECRUITING: 'Active',
+      NOT_YET_RECRUITING: 'Not yet recruiting',
+      ENROLLING_BY_INVITATION: 'Enrolling by invitation',
+      COMPLETED: 'Completed',
+      TERMINATED: 'Terminated',
+      SUSPENDED: 'Suspended',
+      WITHDRAWN: 'Withdrawn',
+      UNKNOWN: 'Unknown status',
+    };
+
+    function statusClass(s) {
+      if (['RECRUITING', 'ACTIVE_NOT_RECRUITING', 'ENROLLING_BY_INVITATION'].includes(s)) {
+        return 'ct-status ct-status--active';
+      }
+      if (s === 'NOT_YET_RECRUITING') return 'ct-status ct-status--pending';
+      if (s === 'COMPLETED') return 'ct-status ct-status--completed';
+      if (['TERMINATED', 'SUSPENDED', 'WITHDRAWN'].includes(s)) return 'ct-status ct-status--ended';
+      return 'ct-status ct-status--unknown';
+    }
+
+    function fmtDate(d) {
+      if (!d) return '—';
+      return d.length >= 7 ? d.slice(0, 7) : d;
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function render() {
+      const filtered =
+        currentFilter === 'ALL'
+          ? trials
+          : trials.filter((t) => t.overall_status === currentFilter);
+      if (filtered.length === 0) {
+        tableWrap.innerHTML = '<p class="ct-panel__empty-filter">No trials match this filter.</p>';
+        return;
+      }
+      const rows = filtered
+        .map((t) => {
+          const phase = (t.phases || []).map((p) => p.replace(/_/g, ' ')).join(', ') || '—';
+          const label = statusLabel[t.overall_status] || statusLabel.UNKNOWN;
+          return `<tr>
+            <td><a href="https://clinicaltrials.gov/study/${encodeURIComponent(t.nct_id)}" target="_blank" rel="noopener" class="ct-table__nct">${escapeHtml(t.nct_id)}</a></td>
+            <td class="ct-table__title">${escapeHtml(t.title) || '—'}</td>
+            <td>${escapeHtml(phase)}</td>
+            <td><span class="${statusClass(t.overall_status)}">${escapeHtml(label)}</span></td>
+            <td class="ct-table__sponsor">${escapeHtml(t.sponsor) || '—'}</td>
+            <td class="ct-table__date">${escapeHtml(fmtDate(t.last_update_date))}</td>
+          </tr>`;
+        })
+        .join('');
+      tableWrap.innerHTML = `
+        <div class="ct-table__scroll">
+          <table class="ct-table">
+            <thead><tr><th>NCT ID</th><th>Title</th><th>Phase</th><th>Status</th><th>Sponsor</th><th>Last update</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        trials = Array.isArray(data.trials) ? data.trials : [];
+        loaded = true;
+        render();
+      } catch (err) {
+        tableWrap.innerHTML = '<p class="ct-panel__error">Unable to load trial details.</p>';
+      }
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = !body.hasAttribute('hidden');
+      if (isOpen) {
+        body.setAttribute('hidden', '');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        toggleBtn.textContent = 'Show details';
+      } else {
+        body.removeAttribute('hidden');
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        toggleBtn.textContent = 'Hide details';
+        if (!loaded) load();
+      }
+    });
+
+    filterBtns.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        filterBtns.forEach((c) => c.removeAttribute('data-active'));
+        chip.setAttribute('data-active', 'true');
+        currentFilter = chip.dataset.ctStatus;
+        if (loaded) render();
+      });
+    });
+  })();
+</script>
+
+<style>
+  .ct-panel {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    background: #fff;
+    margin: 2rem 0;
+  }
+  .ct-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .ct-panel__heading-block { flex: 1 1 auto; min-width: 0; }
+  .ct-panel__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.4rem;
+  }
+  .ct-panel__heading {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0 0 0.35rem;
+    line-height: 1.35;
+  }
+  .ct-panel__sub {
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0;
+  }
+  .ct-panel__sub a { color: inherit; text-decoration: underline; }
+  .ct-panel__toggle {
+    border: 1px solid var(--accent, #0891b2);
+    background: #fff;
+    color: var(--accent, #0891b2);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .ct-panel__toggle:hover {
+    background: var(--accent, #0891b2);
+    color: #fff;
+  }
+  .ct-panel__body { margin-top: 1.5rem; }
+  .ct-panel__empty-wrap { margin-top: 1.25rem; }
+  .ct-panel__empty {
+    background: #fafafa;
+    border: 1px dashed var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    color: var(--text-muted, #6b7280);
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem;
+  }
+  .ct-panel__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .ct-panel__filter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #6b7280);
+    margin-right: 0.25rem;
+  }
+  .ct-chip {
+    border: 1px solid var(--border, #e5e7eb);
+    background: #fff;
+    color: var(--text, #1f2937);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .ct-chip:hover {
+    border-color: var(--accent, #0891b2);
+    color: var(--accent, #0891b2);
+  }
+  .ct-chip[data-active='true'] {
+    background: var(--accent, #0891b2);
+    border-color: var(--accent, #0891b2);
+    color: #fff;
+  }
+  .ct-panel__table-wrap { margin-bottom: 1rem; }
+  .ct-panel__loading,
+  .ct-panel__error,
+  .ct-panel__empty-filter {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.9rem;
+    padding: 0.75rem 0;
+    margin: 0;
+  }
+  .ct-table__scroll { overflow-x: auto; }
+  .ct-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .ct-table thead {
+    background: #f9fafb;
+  }
+  .ct-table th {
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #6b7280);
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    white-space: nowrap;
+  }
+  .ct-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+  }
+  .ct-table tr:last-child td { border-bottom: none; }
+  .ct-table__nct {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.8rem;
+    color: var(--accent, #0891b2);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .ct-table__nct:hover { text-decoration: underline; }
+  .ct-table__title {
+    min-width: 18rem;
+    max-width: 28rem;
+    color: var(--text, #1f2937);
+  }
+  .ct-table__sponsor {
+    max-width: 14rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .ct-table__date {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+    white-space: nowrap;
+  }
+  .ct-status {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .ct-status--active { background: #d1fae5; color: #047857; }
+  .ct-status--pending { background: #fef3c7; color: #92400e; }
+  .ct-status--completed { background: #e0e7ff; color: #3730a3; }
+  .ct-status--ended { background: #fee2e2; color: #991b1b; }
+  .ct-status--unknown { background: #f3f4f6; color: #4b5563; }
+  .ct-panel__link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--accent, #0891b2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .ct-panel__link:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .ct-panel { padding: 1.25rem 1.1rem; }
+    .ct-panel__toggle { width: 100%; }
+  }
+</style>

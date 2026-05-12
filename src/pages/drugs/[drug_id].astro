@@ -1,0 +1,476 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ClinicalTrialsPanel from '../../components/ClinicalTrialsPanel.astro';
+import { formatDomainName } from '../../lib/format';
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface DrugHypothesis {
+  hypothesis_id: number;
+  mediator: string | null;
+  mediator_canonical: string | null;
+  outcome: string | null;
+  outcome_canonical: string | null;
+  outcome_domain: string | null;
+  predicate_ab: string | null;
+  predicate_bc: string | null;
+  score: number | null;
+  quality_tier: string | null;
+  literature_status: string | null;
+  clinical_trial_status: string | null;
+  clinical_trial_nct_ids: string[];
+  is_case_study: boolean;
+  case_study_slug: string | null;
+}
+
+interface DrugRecord {
+  drug_id: string;
+  canonical: string;
+  display_name: string;
+  drugbank_id: string | null;
+  wikipedia_url: string;
+  approved_indication: string | null;
+  hypothesis_count: number;
+  case_study_count: number;
+  outcome_domains_covered: string[];
+  mediators_covered: string[];
+  hypotheses: DrugHypothesis[];
+}
+
+export async function getStaticPaths() {
+  const indexPath = path.join(process.cwd(), 'src', 'data', 'drug_index.json');
+  const data = JSON.parse(fs.readFileSync(indexPath, 'utf-8')) as {
+    drugs: DrugRecord[];
+  };
+  return data.drugs.map((drug) => ({
+    params: { drug_id: drug.drug_id },
+    props: { drug },
+  }));
+}
+
+const { drug } = Astro.props as { drug: DrugRecord };
+
+// Build-time trials count for the panel.
+let trialsTotal = 0;
+let trialsSearchUrl = `https://clinicaltrials.gov/search?intr=${encodeURIComponent(drug.display_name)}`;
+try {
+  const trialsPath = path.join(
+    process.cwd(),
+    'public',
+    'data',
+    'trials',
+    'by_drug',
+    `${drug.drug_id}.json`,
+  );
+  const raw = fs.readFileSync(trialsPath, 'utf-8');
+  const tdata = JSON.parse(raw);
+  trialsTotal = tdata.total_trials ?? 0;
+  if (tdata.search_url) trialsSearchUrl = tdata.search_url;
+} catch {
+  // No cached drug-only trials JSON for this drug
+}
+
+// Group hypotheses by outcome domain. Within each group, high tier first then score desc.
+const byDomain = new Map<string, DrugHypothesis[]>();
+for (const h of drug.hypotheses) {
+  const key = h.outcome_domain || 'unknown';
+  const bucket = byDomain.get(key) ?? [];
+  bucket.push(h);
+  byDomain.set(key, bucket);
+}
+for (const [, list] of byDomain) {
+  list.sort((a, b) => {
+    if ((a.quality_tier === 'high') !== (b.quality_tier === 'high')) {
+      return a.quality_tier === 'high' ? -1 : 1;
+    }
+    return (b.score ?? 0) - (a.score ?? 0);
+  });
+}
+const sortedDomains = Array.from(byDomain.keys()).sort((a, b) =>
+  formatDomainName(a).localeCompare(formatDomainName(b)),
+);
+
+// Cross-domain insight: only when drug spans 3+ domains AND we can name
+// mediators it shares across them. Factual aggregation only - no biological
+// interpretation per the AI-narrative policy.
+const isMultiDomain = drug.outcome_domains_covered.length >= 3;
+let crossDomainMediators: string[] = [];
+if (isMultiDomain) {
+  const mediatorDomains = new Map<string, Set<string>>();
+  for (const h of drug.hypotheses) {
+    if (!h.mediator || !h.outcome_domain) continue;
+    const set = mediatorDomains.get(h.mediator) ?? new Set<string>();
+    set.add(h.outcome_domain);
+    mediatorDomains.set(h.mediator, set);
+  }
+  crossDomainMediators = Array.from(mediatorDomains.entries())
+    .filter(([, doms]) => doms.size >= 2)
+    .sort((a, b) => b[1].size - a[1].size)
+    .map(([m]) => m)
+    .slice(0, 6);
+}
+
+const drugbankUrl = drug.drugbank_id
+  ? `https://go.drugbank.com/drugs/${drug.drugbank_id}`
+  : null;
+
+const fmtScore = (s: number | null) =>
+  s == null ? '—' : s.toFixed(3);
+
+const tierLabel = (t: string | null) => {
+  if (t === 'high') return 'High';
+  if (t === 'mid') return 'Mid';
+  return t || '—';
+};
+---
+
+<Layout
+  title={`${drug.display_name} — drug repurposing hypotheses · Robertium`}
+  description={`All ${drug.hypothesis_count} Robertium-surfaced repurposing hypotheses for ${drug.display_name}, grouped by therapeutic domain, with registered clinical trials cross-referenced.`}
+  current="drugs"
+  ogImage="/og/home.png"
+>
+  <section class="drug-hero">
+    <div class="container--narrow">
+      <p class="drug-hero__eyebrow">DRUG</p>
+      <h1 class="drug-hero__name">{drug.display_name}</h1>
+      <ul class="drug-hero__links">
+        <li>
+          <a href={drug.wikipedia_url} target="_blank" rel="noopener">Wikipedia</a>
+        </li>
+        {drugbankUrl && (
+          <li>
+            <a href={drugbankUrl} target="_blank" rel="noopener">
+              DrugBank ({drug.drugbank_id})
+            </a>
+          </li>
+        )}
+        <li>
+          <a href={trialsSearchUrl} target="_blank" rel="noopener">
+            ClinicalTrials.gov
+          </a>
+        </li>
+      </ul>
+      {drug.approved_indication && (
+        <p class="drug-hero__indication">{drug.approved_indication}</p>
+      )}
+      <p class="drug-hero__stats">
+        <strong>{drug.hypothesis_count}</strong>
+        {drug.hypothesis_count === 1 ? ' hypothesis ' : ' hypotheses '}
+        across <strong>{drug.outcome_domains_covered.length}</strong>
+        therapeutic
+        {drug.outcome_domains_covered.length === 1 ? ' domain' : ' domains'}
+      </p>
+    </div>
+  </section>
+
+  {isMultiDomain && crossDomainMediators.length > 0 && (
+    <section class="section section--gray">
+      <div class="container--narrow">
+        <p class="cs-eyebrow">CROSS-DOMAIN PATTERN</p>
+        <h2 class="cs-h2">Same drug, multiple disease domains</h2>
+        <p class="drug-cross-pattern">
+          {drug.display_name} appears in hypotheses across{' '}
+          <strong>{drug.outcome_domains_covered.length}</strong> disease
+          domains: {drug.outcome_domains_covered.map(formatDomainName).join(', ')}.
+          Shared mediators that recur across at least two of those domains:{' '}
+          <strong>{crossDomainMediators.join(', ')}</strong>.
+        </p>
+        <p class="drug-cross-pattern__note">
+          Aggregated from the catalog. Biological interpretation of any
+          multi-indication mechanism would require independent validation —
+          this is a structural observation only.
+        </p>
+      </div>
+    </section>
+  )}
+
+  <section class="section">
+    <div class="container--narrow">
+      <p class="cs-eyebrow">ALL HYPOTHESES</p>
+      <h2 class="cs-h2">Repurposing candidates for {drug.display_name}</h2>
+      {sortedDomains.map((dom) => {
+        const list = byDomain.get(dom) ?? [];
+        return (
+          <div class="drug-domain-group">
+            <h3 class="drug-domain-group__heading">
+              {formatDomainName(dom)}
+              <span class="drug-domain-group__count">{list.length}</span>
+            </h3>
+            <div class="drug-domain-group__scroll">
+              <table class="drug-hyp-table">
+                <thead>
+                  <tr>
+                    <th>Mediator</th>
+                    <th>Outcome</th>
+                    <th>Score</th>
+                    <th>Tier</th>
+                    <th>Lit. status</th>
+                    <th>Trial</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((h) => (
+                    <tr>
+                      <td class="drug-hyp-table__med">{h.mediator || '—'}</td>
+                      <td class="drug-hyp-table__out">{h.outcome || '—'}</td>
+                      <td class="drug-hyp-table__score">{fmtScore(h.score)}</td>
+                      <td>
+                        <span class={`q-tier q-tier--${h.quality_tier ?? 'unknown'}`}>
+                          {tierLabel(h.quality_tier)}
+                        </span>
+                      </td>
+                      <td>
+                        {h.literature_status ? (
+                          <span class={`lit-tag lit-tag--${h.literature_status}`}>
+                            {h.literature_status.replace(/_/g, ' ')}
+                          </span>
+                        ) : (
+                          <span class="lit-tag lit-tag--unknown">unknown</span>
+                        )}
+                      </td>
+                      <td>
+                        {h.clinical_trial_status && h.clinical_trial_status !== 'none' ? (
+                          <span class={`trial-tag trial-tag--${h.clinical_trial_status}`}>
+                            {h.clinical_trial_status.replace(/_/g, ' ')}
+                          </span>
+                        ) : (
+                          <span class="trial-tag trial-tag--none">none</span>
+                        )}
+                      </td>
+                      <td class="drug-hyp-table__link">
+                        {h.is_case_study && h.case_study_slug ? (
+                          <a href={`/case-studies/${h.case_study_slug}/`}>
+                            Case study →
+                          </a>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+
+  <section class="section section--gray">
+    <div class="container--narrow">
+      <ClinicalTrialsPanel
+        totalTrials={trialsTotal}
+        drugDisplayName={drug.display_name}
+        drugSlug={drug.drug_id}
+        searchUrl={trialsSearchUrl}
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container--narrow drug-back">
+      <a href="/drugs/">← All drugs</a>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .drug-hero {
+    padding: 3rem 0 2rem;
+    background: #fff;
+  }
+  .drug-hero__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.5rem;
+  }
+  .drug-hero__name {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text, #1f2937);
+    margin: 0 0 1rem;
+    line-height: 1.2;
+    text-transform: capitalize;
+  }
+  .drug-hero__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+  }
+  .drug-hero__links a {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent, #0891b2);
+    text-decoration: none;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--accent, #0891b2);
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .drug-hero__links a:hover {
+    background: var(--accent, #0891b2);
+    color: #fff;
+  }
+  .drug-hero__indication {
+    font-size: 1rem;
+    color: var(--text, #1f2937);
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border-left: 3px solid var(--accent, #0891b2);
+    border-radius: 0 6px 6px 0;
+  }
+  .drug-hero__stats {
+    font-size: 1rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0;
+  }
+  .drug-hero__stats strong { color: var(--text, #1f2937); font-weight: 700; }
+
+  .cs-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.5rem;
+  }
+  .cs-h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text, #1f2937);
+    margin: 0 0 1.5rem;
+    line-height: 1.25;
+  }
+
+  .drug-cross-pattern {
+    font-size: 1rem;
+    color: var(--text, #1f2937);
+    line-height: 1.6;
+    margin: 0 0 0.75rem;
+  }
+  .drug-cross-pattern__note {
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .drug-domain-group { margin-bottom: 2rem; }
+  .drug-domain-group__heading {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    text-transform: capitalize;
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .drug-domain-group__count {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+    font-weight: 500;
+  }
+  .drug-domain-group__scroll { overflow-x: auto; }
+
+  .drug-hyp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .drug-hyp-table thead { background: #f9fafb; }
+  .drug-hyp-table th {
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #6b7280);
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    white-space: nowrap;
+  }
+  .drug-hyp-table td {
+    padding: 0.6rem 0.7rem;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+  }
+  .drug-hyp-table tr:last-child td { border-bottom: none; }
+  .drug-hyp-table__med {
+    font-weight: 600;
+    color: var(--text, #1f2937);
+    min-width: 8rem;
+  }
+  .drug-hyp-table__out {
+    color: var(--text, #1f2937);
+    min-width: 10rem;
+  }
+  .drug-hyp-table__score {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.82rem;
+    color: var(--text-muted, #6b7280);
+    white-space: nowrap;
+  }
+  .drug-hyp-table__link a {
+    color: var(--accent, #0891b2);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .drug-hyp-table__link a:hover { text-decoration: underline; }
+
+  .q-tier {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+  }
+  .q-tier--high { background: #d1fae5; color: #047857; }
+  .q-tier--mid { background: #fef3c7; color: #92400e; }
+  .q-tier--unknown { background: #f3f4f6; color: #6b7280; }
+
+  .lit-tag, .trial-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.18rem 0.5rem;
+    border-radius: 4px;
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+  .lit-tag--novel_signal { background: #ccfbf1; color: #0f766e; }
+  .lit-tag--partial_evidence { background: #fef3c7; color: #92400e; }
+  .lit-tag--reproduces_known { background: #f3f4f6; color: #4b5563; }
+  .lit-tag--unknown { background: #f3f4f6; color: #6b7280; }
+  .trial-tag--active { background: #d1fae5; color: #047857; }
+  .trial-tag--completed { background: #e0e7ff; color: #3730a3; }
+  .trial-tag--preclinical_only { background: #fef3c7; color: #92400e; }
+  .trial-tag--none { background: #f3f4f6; color: #9ca3af; }
+  .trial-tag--unknown { background: #f3f4f6; color: #6b7280; }
+
+  .drug-back {
+    padding: 1.5rem 0;
+  }
+  .drug-back a {
+    color: var(--accent, #0891b2);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .drug-back a:hover { text-decoration: underline; }
+
+  @media (max-width: 540px) {
+    .drug-hero__name { font-size: 1.75rem; }
+    .cs-h2 { font-size: 1.35rem; }
+  }
+</style>

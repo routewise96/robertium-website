@@ -1,0 +1,474 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { formatDomainName } from '../../lib/format';
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface DrugRecord {
+  drug_id: string;
+  canonical: string;
+  display_name: string;
+  drugbank_id: string | null;
+  wikipedia_url: string;
+  approved_indication: string | null;
+  hypothesis_count: number;
+  case_study_count: number;
+  outcome_domains_covered: string[];
+  mediators_covered: string[];
+  hypotheses: Array<{
+    hypothesis_id: number;
+    outcome_domain: string | null;
+    quality_tier: string | null;
+    literature_status: string | null;
+  }>;
+}
+
+const indexPath = path.join(process.cwd(), 'src', 'data', 'drug_index.json');
+const indexData = JSON.parse(fs.readFileSync(indexPath, 'utf-8')) as {
+  metadata: {
+    generated_at: string;
+    total_drugs: number;
+    total_hypotheses: number;
+    drugs_with_drugbank_id: number;
+    drugs_with_case_study: number;
+  };
+  drugs: DrugRecord[];
+};
+
+const { metadata, drugs } = indexData;
+
+const novelSignalCount = (d: DrugRecord) =>
+  d.hypotheses.filter((h) => h.literature_status === 'novel_signal').length;
+
+const top10 = [...drugs].slice(0, 10);
+
+const allDomains = Array.from(
+  new Set(drugs.flatMap((d) => d.outcome_domains_covered)),
+).sort();
+
+const drugCards = drugs.map((d) => ({
+  drug_id: d.drug_id,
+  display_name: d.display_name,
+  hypothesis_count: d.hypothesis_count,
+  case_study_count: d.case_study_count,
+  novel_count: novelSignalCount(d),
+  outcome_domains_covered: d.outcome_domains_covered,
+  approved_indication: d.approved_indication,
+  drugbank_id: d.drugbank_id,
+}));
+---
+
+<Layout
+  title="Browse hypotheses by drug — Robertium"
+  description={`Search across ${metadata.total_drugs} unique drugs in the Robertium catalog. Click any drug to see every hypothesis it appears in across all therapeutic domains, plus registered clinical trials.`}
+  current="drugs"
+  ogImage="/og/home.png"
+>
+  <section class="hyp-hero">
+    <div class="container">
+      <h1>Browse hypotheses by drug</h1>
+      <p class="subtitle">
+        Flip the catalog: pick a drug, see every hypothesis it appears in
+        across all disease domains. Useful for pharma BD, off-label
+        researchers, and patient advocacy groups looking for multi-indication
+        signal.
+      </p>
+      <p class="meta">
+        <strong>{metadata.total_drugs}</strong> unique drugs across
+        <strong>{metadata.total_hypotheses}</strong> outreach-quality
+        hypotheses · <strong>{metadata.drugs_with_drugbank_id}</strong> with
+        curated DrugBank IDs · <strong>{metadata.drugs_with_case_study}</strong>
+        with featured case studies
+      </p>
+    </div>
+  </section>
+
+  <section class="section drugs-top-section">
+    <div class="container--narrow">
+      <p class="drugs-eyebrow">Top 10 by hypothesis count</p>
+      <h2 class="drugs-top-heading">Most-cited repurposing candidates</h2>
+      <ol class="drugs-top-list">
+        {top10.map((d) => (
+          <li>
+            <a href={`/drugs/${d.drug_id}/`} class="drugs-top-link">
+              <span class="drugs-top-name">{d.display_name}</span>
+              <span class="drugs-top-count">{d.hypothesis_count}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section drugs-list-section">
+    <div class="container">
+      <div class="drugs-controls">
+        <div class="drugs-search-wrap">
+          <input
+            type="search"
+            id="drug-search"
+            class="drugs-search"
+            placeholder="Search drug name…"
+            autocomplete="off"
+          />
+        </div>
+        <div class="drugs-sort-wrap">
+          <label for="drug-sort" class="drugs-sort-label">Sort by</label>
+          <select id="drug-sort" class="drugs-sort">
+            <option value="count">Most hypotheses</option>
+            <option value="alpha">Alphabetical</option>
+            <option value="novel">Most novel signal</option>
+            <option value="case">Has case study first</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="drugs-domain-filter" aria-label="Filter by therapeutic domain">
+        <span class="drugs-filter-label">Domains</span>
+        <button type="button" class="ct-chip" data-domain-filter="ALL" data-active="true">
+          All
+        </button>
+        {allDomains.map((d) => (
+          <button type="button" class="ct-chip" data-domain-filter={d}>
+            {formatDomainName(d)}
+          </button>
+        ))}
+      </div>
+
+      <p class="drugs-count" data-drugs-count>
+        Showing <strong>{drugs.length}</strong> drugs
+      </p>
+
+      <ul class="drugs-grid" data-drugs-grid>
+        {drugCards.map((d) => (
+          <li
+            class="drug-card"
+            data-name={d.display_name.toLowerCase()}
+            data-count={d.hypothesis_count}
+            data-novel={d.novel_count}
+            data-case={d.case_study_count}
+            data-domains={d.outcome_domains_covered.join('|')}
+          >
+            <a href={`/drugs/${d.drug_id}/`} class="drug-card__link">
+              <div class="drug-card__header">
+                <h3 class="drug-card__name">{d.display_name}</h3>
+                {d.case_study_count > 0 && (
+                  <span class="drug-card__case-badge">Case study</span>
+                )}
+              </div>
+              <p class="drug-card__count">
+                <strong>{d.hypothesis_count}</strong>
+                {d.hypothesis_count === 1 ? ' hypothesis' : ' hypotheses'}
+              </p>
+              <div class="drug-card__chips">
+                {d.outcome_domains_covered.map((dom) => (
+                  <span class="drug-card__chip">{formatDomainName(dom)}</span>
+                ))}
+              </div>
+              {d.approved_indication && (
+                <p class="drug-card__indication">{d.approved_indication}</p>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <p class="drugs-empty" data-drugs-empty hidden>
+        No drugs match the current filter.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  const grid = document.querySelector<HTMLElement>('[data-drugs-grid]');
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('.drug-card'));
+  const search = document.querySelector<HTMLInputElement>('#drug-search');
+  const sortSelect = document.querySelector<HTMLSelectElement>('#drug-sort');
+  const domainButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-domain-filter]'),
+  );
+  const countEl = document.querySelector<HTMLElement>('[data-drugs-count]');
+  const emptyEl = document.querySelector<HTMLElement>('[data-drugs-empty]');
+
+  let activeDomain = 'ALL';
+  let activeQuery = '';
+  let activeSort = 'count';
+
+  function apply() {
+    const q = activeQuery.trim().toLowerCase();
+    let visible = 0;
+    cards.forEach((card) => {
+      const name = card.dataset.name || '';
+      const domains = (card.dataset.domains || '').split('|').filter(Boolean);
+      const matchQuery = q === '' || name.includes(q);
+      const matchDomain = activeDomain === 'ALL' || domains.includes(activeDomain);
+      const show = matchQuery && matchDomain;
+      card.hidden = !show;
+      if (show) visible++;
+    });
+    if (countEl) {
+      countEl.innerHTML = `Showing <strong>${visible}</strong> of ${cards.length} drugs`;
+    }
+    if (emptyEl) emptyEl.hidden = visible !== 0;
+  }
+
+  function sortGrid() {
+    if (!grid) return;
+    const items = Array.from(grid.children) as HTMLElement[];
+    items.sort((a, b) => {
+      switch (activeSort) {
+        case 'alpha':
+          return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+        case 'novel':
+          return Number(b.dataset.novel || 0) - Number(a.dataset.novel || 0);
+        case 'case':
+          return (
+            Number(b.dataset.case || 0) - Number(a.dataset.case || 0) ||
+            Number(b.dataset.count || 0) - Number(a.dataset.count || 0)
+          );
+        case 'count':
+        default:
+          return Number(b.dataset.count || 0) - Number(a.dataset.count || 0);
+      }
+    });
+    items.forEach((el) => grid.appendChild(el));
+  }
+
+  search?.addEventListener('input', (e) => {
+    activeQuery = (e.target as HTMLInputElement).value;
+    apply();
+  });
+
+  sortSelect?.addEventListener('change', (e) => {
+    activeSort = (e.target as HTMLSelectElement).value;
+    sortGrid();
+  });
+
+  domainButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      domainButtons.forEach((b) => b.removeAttribute('data-active'));
+      btn.setAttribute('data-active', 'true');
+      activeDomain = btn.dataset.domainFilter || 'ALL';
+      apply();
+    });
+  });
+</script>
+
+<style>
+  .drugs-top-section { padding-top: 2.5rem; padding-bottom: 2.5rem; background: #fafafa; }
+  .drugs-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.4rem;
+  }
+  .drugs-top-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0 0 1.5rem;
+  }
+  .drugs-top-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: drug-rank;
+  }
+  .drugs-top-list li { counter-increment: drug-rank; }
+  .drugs-top-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    background: #fff;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .drugs-top-link:hover {
+    border-color: var(--accent, #0891b2);
+    background: #f0fdfa;
+  }
+  .drugs-top-link::before {
+    content: counter(drug-rank);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted, #6b7280);
+    min-width: 1.25rem;
+  }
+  .drugs-top-name {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text, #1f2937);
+    text-transform: capitalize;
+  }
+  .drugs-top-count {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.85rem;
+    color: var(--accent, #0891b2);
+    font-weight: 700;
+  }
+
+  .drugs-list-section { padding-top: 2rem; padding-bottom: 4rem; }
+  .drugs-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+  }
+  .drugs-search-wrap { flex: 1 1 280px; }
+  .drugs-search {
+    width: 100%;
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    background: #fff;
+  }
+  .drugs-search:focus {
+    outline: none;
+    border-color: var(--accent, #0891b2);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+  }
+  .drugs-sort-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .drugs-sort-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #6b7280);
+  }
+  .drugs-sort {
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .drugs-domain-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 0;
+    border-top: 1px solid var(--border, #e5e7eb);
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    margin-bottom: 1rem;
+  }
+  .drugs-filter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #6b7280);
+    margin-right: 0.25rem;
+  }
+  .drugs-count {
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0.5rem 0 1rem;
+  }
+  .drugs-empty {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.95rem;
+    padding: 2rem 0;
+    text-align: center;
+  }
+  .drugs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .drug-card {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .drug-card:hover {
+    border-color: var(--accent, #0891b2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  .drug-card__link {
+    display: block;
+    padding: 1.1rem 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  .drug-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .drug-card__name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0;
+    text-transform: capitalize;
+    line-height: 1.3;
+  }
+  .drug-card__case-badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.45rem;
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 999px;
+  }
+  .drug-card__count {
+    font-size: 0.9rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0 0 0.6rem;
+  }
+  .drug-card__count strong { color: var(--accent, #0891b2); }
+  .drug-card__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+  .drug-card__chip {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    background: #f3f4f6;
+    color: var(--text-muted, #6b7280);
+    border-radius: 4px;
+  }
+  .drug-card__indication {
+    font-size: 0.8rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 540px) {
+    .drugs-controls { flex-direction: column; align-items: stretch; }
+    .drugs-sort-wrap { flex-direction: row; align-items: center; gap: 0.75rem; }
+  }
+</style>
