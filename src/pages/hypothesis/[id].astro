@@ -1,0 +1,207 @@
+---
+// Per-hypothesis standalone page: minimal layout that surfaces the
+// ProvenanceTrace component for every hypothesis Robertium emitted under
+// the v2 snapshot. Built at SSG time from public/data/provenance/*.json.
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../../layouts/Layout.astro';
+import ProvenanceTrace from '../../components/ProvenanceTrace.astro';
+import { formatDomainName } from '../../lib/format';
+
+export async function getStaticPaths() {
+  const provDir = path.join(process.cwd(), 'public', 'data', 'provenance');
+  if (!fs.existsSync(provDir)) return [];
+
+  // Build hypothesis_id -> case study slug map so each page can link back.
+  const csDir = path.join(process.cwd(), 'src', 'data', 'case-studies');
+  const caseStudyMap: Record<number, string> = {};
+  if (fs.existsSync(csDir)) {
+    for (const csFile of fs.readdirSync(csDir).filter((f) => f.endsWith('.json'))) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(csDir, csFile), 'utf-8'));
+        if (data.hypothesis_id && data.slug) {
+          caseStudyMap[data.hypothesis_id] = data.slug;
+        }
+      } catch {
+        /* skip malformed */
+      }
+    }
+  }
+
+  return fs
+    .readdirSync(provDir)
+    .filter((f) => f.endsWith('.json'))
+    .map((filename) => {
+      const id = filename.replace('.json', '');
+      let prov: any = null;
+      try {
+        prov = JSON.parse(fs.readFileSync(path.join(provDir, filename), 'utf-8'));
+      } catch {
+        prov = null;
+      }
+      return {
+        params: { id },
+        props: { prov, caseStudySlug: caseStudyMap[Number(id)] ?? null },
+      };
+    });
+}
+
+interface Props {
+  prov: any;
+  caseStudySlug: string | null;
+}
+
+const { id } = Astro.params;
+const { prov, caseStudySlug } = Astro.props as Props;
+
+const drug = prov?.triple?.drug ?? 'Hypothesis';
+const mediator = prov?.triple?.mediator ?? '';
+const outcome = prov?.triple?.outcome ?? '';
+const triple = mediator && outcome ? `${drug} → ${mediator} → ${outcome}` : `Hypothesis #${id}`;
+
+const title = `${triple} — provenance trace | Robertium`;
+const description = prov
+  ? `Full audit trail for ${triple}: source papers, extracted claims, bridging logic, embedding model, and final scoring.`
+  : `Provenance for Robertium hypothesis #${id}.`;
+
+const score = prov?.scoring?.score;
+const tier = prov?.scoring?.quality_tier;
+const domainSource = prov?.domain?.source ? formatDomainName(prov.domain.source) : null;
+const domainTarget = prov?.domain?.target ? formatDomainName(prov.domain.target) : null;
+---
+<Layout title={title} description={description}>
+  <main class="hyp-page">
+    <section class="hyp-page__hero">
+      <div class="container--narrow">
+        <p class="hyp-page__eyebrow">Hypothesis #{id}</p>
+        <h1 class="hyp-page__title">
+          <span class="hyp-page__entity">{drug}</span>
+          {mediator && <>
+            <span class="hyp-page__arrow">→</span>
+            <span class="hyp-page__entity">{mediator}</span>
+          </>}
+          {outcome && <>
+            <span class="hyp-page__arrow">→</span>
+            <span class="hyp-page__entity">{outcome}</span>
+          </>}
+        </h1>
+        <div class="hyp-page__meta">
+          {domainSource && (
+            <span class="hyp-page__meta-item">Drug domain: <strong>{domainSource}</strong></span>
+          )}
+          {domainTarget && (
+            <span class="hyp-page__meta-item">Outcome domain: <strong>{domainTarget}</strong></span>
+          )}
+          {score !== undefined && score !== null && (
+            <span class="hyp-page__meta-item">Score: <strong>{Number(score).toFixed(3)}</strong></span>
+          )}
+          {tier && (
+            <span class="hyp-page__meta-item">Quality: <strong>{tier}</strong></span>
+          )}
+        </div>
+        <p class="hyp-page__nav">
+          {caseStudySlug ? (
+            <a class="hyp-page__cta" href={`/case-studies/${caseStudySlug}/`}>
+              View full case study →
+            </a>
+          ) : null}
+          <a class="hyp-page__back" href="/hypotheses/">← Back to all hypotheses</a>
+        </p>
+      </div>
+    </section>
+
+    <section class="hyp-page__body">
+      <div class="container--narrow">
+        <ProvenanceTrace hypothesisId={id} />
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .hyp-page__hero {
+    background: var(--surface-muted, #f9fafb);
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    padding: 2.5rem 0 2rem;
+  }
+  .hyp-page__eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.5rem;
+  }
+  .hyp-page__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.8rem;
+    margin: 0 0 1rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text, #1f2937);
+  }
+  .hyp-page__entity {
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 0.35rem 0.8rem;
+    font-size: 1.05rem;
+  }
+  .hyp-page__arrow {
+    color: var(--text-muted, #6b7280);
+    font-weight: 400;
+    font-size: 1.4rem;
+  }
+  .hyp-page__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.88rem;
+    color: var(--text-muted, #6b7280);
+    margin-bottom: 1.25rem;
+  }
+  .hyp-page__meta-item strong {
+    color: var(--text, #1f2937);
+    font-weight: 600;
+  }
+  .hyp-page__nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+  }
+  .hyp-page__cta {
+    display: inline-block;
+    background: var(--accent, #0891b2);
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0.55rem 1.1rem;
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  .hyp-page__cta:hover { background: #0e7490; }
+  .hyp-page__back {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.88rem;
+    text-decoration: none;
+  }
+  .hyp-page__back:hover { color: var(--accent, #0891b2); text-decoration: underline; }
+
+  .hyp-page__body {
+    padding: 2rem 0 4rem;
+  }
+
+  @media (max-width: 720px) {
+    .hyp-page__hero { padding: 2rem 0 1.5rem; }
+    .hyp-page__title { font-size: 1.4rem; gap: 0.4rem; }
+    .hyp-page__entity { font-size: 0.92rem; padding: 0.3rem 0.6rem; }
+    .hyp-page__arrow { font-size: 1.1rem; }
+    .hyp-page__cta { width: 100%; text-align: center; }
+  }
+</style>
