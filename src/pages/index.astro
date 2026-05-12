@@ -17,6 +17,16 @@ import Subscribe from '../components/Subscribe.astro';
   ogImage="/og/home.png"
 >
   <Hero />
+  <aside class="digest-strip">
+    <div class="container digest-strip__inner">
+      <p class="digest-strip__text">
+        <span class="digest-strip__pulse" aria-hidden="true"></span>
+        <strong>What's new this week:</strong>
+        live discovery signals — top movers, recruiting trials, featured cases.
+      </p>
+      <a class="digest-strip__cta" href="/digest">Open the digest →</a>
+    </div>
+  </aside>
   <PredictionsBanner />
   <BrowseThreeWays />
   <Problem />
@@ -42,6 +52,55 @@ import Subscribe from '../components/Subscribe.astro';
 </Layout>
 
 <style>
+  .digest-strip {
+    background: linear-gradient(180deg, rgba(8,145,178,0.06) 0%, rgba(8,145,178,0.02) 100%);
+    border-top: 1px solid var(--border, #e5e7eb);
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    padding: 0.75rem 0;
+  }
+  .digest-strip__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+  }
+  .digest-strip__text {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-secondary, #4b5563);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+  .digest-strip__text strong { color: var(--text, #1f2937); font-weight: 600; }
+  .digest-strip__pulse {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--accent, #0891b2);
+    box-shadow: 0 0 0 0 rgba(8,145,178, 0.6);
+    animation: digestPulse 1.8s ease-out infinite;
+  }
+  @keyframes digestPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(8,145,178, 0.55); }
+    70%  { box-shadow: 0 0 0 0.55rem rgba(8,145,178, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(8,145,178, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .digest-strip__pulse { animation: none; }
+  }
+  .digest-strip__cta {
+    color: var(--accent, #0891b2);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .digest-strip__cta:hover { text-decoration: underline; }
+
   .prov-callout__inner {
     text-align: center;
     padding: 1rem 0;

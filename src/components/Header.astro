@@ -9,6 +9,7 @@ const { current = '' } = Astro.props;
     </a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="https://github.com/routewise96/robertium">GitHub</a>
+      <a href="/digest" aria-current={current === 'digest' ? 'page' : undefined}>Digest</a>
       <a href="/hypotheses" aria-current={current === 'hypotheses' ? 'page' : undefined}>Hypotheses</a>
       <a href="/drugs" aria-current={current === 'drugs' ? 'page' : undefined}>Drugs</a>
       <a href="/predictions" aria-current={current === 'predictions' ? 'page' : undefined}>Predictions</a>
