@@ -1,0 +1,773 @@
+---
+// /digest — discovery dashboard. Surfaces live signals from the prospective
+// tracker, clinical trial cache, and curated case studies so a researcher
+// landing on Robertium sees "what's worth looking at this week" instead of a
+// static catalog.
+//
+// All data is read in this frontmatter (SSG). The page auto-refreshes on
+// every site rebuild — no client-side fetching, no scheduled jobs.
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../layouts/Layout.astro';
+import { formatDomainName } from '../lib/format';
+import { DIGEST_CONFIG } from '../data/digest_config';
+
+// --- Prospective tracker (movers + strong cohort) --------------------------
+
+interface ProspectiveRow {
+  hypothesis_id: number;
+  drug: string;
+  mediator: string;
+  outcome: string;
+  domain_source: string | null;
+  domain_target: string | null;
+  quality_tier: 'high' | 'mid' | string;
+  score: number;
+  status: 'pending' | 'partial_support' | 'strong_support';
+  current_pmid_count: number;
+  baseline_pmid_count: number;
+  new_pmids_since_freeze: unknown[];
+  new_trial_nct_ids: unknown[];
+  support_first_seen_at: string | null;
+  last_check_date: string | null;
+}
+
+const prospectivePath = path.join(process.cwd(), 'public', 'data', 'prospective.json');
+const prospective: { metadata: any; rows: ProspectiveRow[] } = JSON.parse(
+  fs.readFileSync(prospectivePath, 'utf-8'),
+);
+
+const supported = prospective.rows.filter(
+  (r) => r.status === 'partial_support' || r.status === 'strong_support',
+);
+const moversAll = [...supported].sort(
+  (a, b) =>
+    b.current_pmid_count - a.current_pmid_count ||
+    (b.new_pmids_since_freeze.length ?? 0) - (a.new_pmids_since_freeze.length ?? 0) ||
+    b.score - a.score,
+);
+const movers = moversAll.slice(0, DIGEST_CONFIG.top_n_movers);
+
+const strongCohortAll = prospective.rows
+  .filter((r) => r.status === 'strong_support')
+  .sort(
+    (a, b) =>
+      b.current_pmid_count - a.current_pmid_count ||
+      b.score - a.score,
+  );
+const strongCohort = strongCohortAll.slice(0, DIGEST_CONFIG.top_n_strong);
+
+// --- Drug index map (hypothesis count, links) ------------------------------
+
+interface DrugIndexEntry {
+  drug_id: string;
+  canonical: string;
+  display_name: string;
+  hypothesis_count: number;
+  case_study_count: number;
+}
+
+const drugIndexPath = path.join(process.cwd(), 'src', 'data', 'drug_index.json');
+const drugIndex: { drugs: DrugIndexEntry[] } = JSON.parse(
+  fs.readFileSync(drugIndexPath, 'utf-8'),
+);
+const drugById = new Map<string, DrugIndexEntry>();
+for (const d of drugIndex.drugs) {
+  drugById.set(d.drug_id, d);
+}
+
+// --- Trials by drug — count RECRUITING per drug at build time -------------
+
+const trialsDir = path.join(process.cwd(), 'public', 'data', 'trials', 'by_drug');
+interface DrugRecruitingRow {
+  drug_id: string;
+  display_name: string;
+  recruiting: number;
+  total_trials: number;
+  hypothesis_count: number;
+  case_study_count: number;
+}
+
+let drugRecruiting: DrugRecruitingRow[] = [];
+if (fs.existsSync(trialsDir)) {
+  for (const file of fs.readdirSync(trialsDir)) {
+    if (!file.endsWith('.json')) continue;
+    const drug_id = file.replace(/\.json$/, '');
+    let trials: any[] = [];
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(trialsDir, file), 'utf-8'));
+      trials = Array.isArray(data) ? data : (data.trials ?? []);
+    } catch {
+      continue;
+    }
+    const recruiting = trials.filter(
+      (t) => t && t.overall_status === 'RECRUITING',
+    ).length;
+    if (recruiting === 0) continue;
+    const idx = drugById.get(drug_id);
+    drugRecruiting.push({
+      drug_id,
+      display_name: idx?.display_name ?? drug_id,
+      recruiting,
+      total_trials: trials.length,
+      hypothesis_count: idx?.hypothesis_count ?? 0,
+      case_study_count: idx?.case_study_count ?? 0,
+    });
+  }
+}
+// Prefer drugs that are *also* in our hypothesis catalog — that's the whole
+// point of this section ("recruiting trials with novel hypotheses"). Among
+// those, rank by recruiting count.
+drugRecruiting.sort((a, b) => {
+  const aInCatalog = a.hypothesis_count > 0 ? 1 : 0;
+  const bInCatalog = b.hypothesis_count > 0 ? 1 : 0;
+  if (aInCatalog !== bInCatalog) return bInCatalog - aInCatalog;
+  return b.recruiting - a.recruiting;
+});
+const recruitingTop = drugRecruiting.slice(0, DIGEST_CONFIG.top_n_drugs);
+
+// --- Featured case studies -------------------------------------------------
+
+const csDir = path.join(process.cwd(), 'src', 'data', 'case-studies');
+interface FeaturedCaseStudy {
+  slug: string;
+  title: string;
+  drug: string;
+  mediator: string;
+  outcome: string;
+  outreach_quality?: string;
+  outreach_score?: number;
+  section?: string;
+}
+const featuredCaseStudies: FeaturedCaseStudy[] = [];
+for (const slug of DIGEST_CONFIG.case_studies_featured) {
+  const fp = path.join(csDir, `${slug}.json`);
+  if (!fs.existsSync(fp)) continue;
+  try {
+    const cs = JSON.parse(fs.readFileSync(fp, 'utf-8'));
+    featuredCaseStudies.push({
+      slug: cs.slug,
+      title: cs.title ?? `${cs.drug?.name} → ${cs.mediator?.name} → ${cs.outcome?.name}`,
+      drug: cs.drug?.name ?? '',
+      mediator: cs.mediator?.name ?? '',
+      outcome: cs.outcome?.name ?? '',
+      outreach_quality: cs.metrics?.outreach_quality,
+      outreach_score: cs.metrics?.outreach_score,
+      section: cs.section,
+    });
+  } catch {
+    /* skip malformed */
+  }
+}
+
+// --- Header timestamps -----------------------------------------------------
+
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toISOString().slice(0, 10);
+  } catch {
+    return iso;
+  }
+}
+
+const snapshotDate = prospective.metadata.snapshot_date ?? '—';
+const lastChecked = prospective.metadata.last_checked_at ?? prospective.metadata.exported_at;
+const totalTracked = prospective.metadata.total ?? prospective.rows.length;
+const totalStrong = prospective.metadata.strong_support ?? strongCohortAll.length;
+const totalPartial = prospective.metadata.partial_support ?? 0;
+const totalNewPmids = prospective.metadata.total_new_pmids ?? 0;
+
+const subscribeHref = `mailto:${DIGEST_CONFIG.subscribe_email}?subject=${encodeURIComponent(
+  DIGEST_CONFIG.subscribe_subject,
+)}&body=${encodeURIComponent(DIGEST_CONFIG.subscribe_body)}`;
+
+function tierClass(tier: string | undefined): string {
+  if (tier === 'high') return 'digest-tier digest-tier--high';
+  if (tier === 'mid') return 'digest-tier digest-tier--mid';
+  return 'digest-tier digest-tier--unknown';
+}
+
+function statusLabel(s: string): string {
+  if (s === 'strong_support') return 'Strong support';
+  if (s === 'partial_support') return 'Partial support';
+  return s;
+}
+function statusClass(s: string): string {
+  if (s === 'strong_support') return 'digest-status digest-status--strong';
+  if (s === 'partial_support') return 'digest-status digest-status--partial';
+  return 'digest-status';
+}
+---
+<Layout
+  title="Digest — Robertium drug repurposing weekly signals"
+  description="Live discovery dashboard: hypotheses gaining literature support, drugs with active recruiting trials, featured case studies. Refreshed every site build."
+  current="digest"
+  ogImage="/og/home.png"
+>
+  <main class="digest">
+    <!-- 1. Header -->
+    <section class="digest__hero">
+      <div class="container--narrow">
+        <p class="digest__eyebrow">Discovery dashboard</p>
+        <h1 class="digest__title">What's new in drug repurposing this week</h1>
+        <p class="digest__sub">
+          Live signals from <strong>{totalTracked.toLocaleString()} hypotheses</strong>
+          tracked since <strong>{snapshotDate}</strong>.
+          <strong>{totalStrong}</strong> have reached strong support,
+          <strong>{totalPartial}</strong> have partial support,
+          <strong>{totalNewPmids}</strong> new PubMed citations recorded.
+        </p>
+        <p class="digest__updated">Last refresh: <code>{fmtDate(lastChecked)}</code></p>
+      </div>
+    </section>
+
+    <!-- 2. Movers -->
+    <section class="digest__section">
+      <div class="container--narrow">
+        <div class="digest-section-header">
+          <h2>Hypotheses gaining literature support</h2>
+          <p class="digest-section-sub">
+            New PubMed citations matching the drug × outcome pair since the {snapshotDate} snapshot.
+            Strong support = 3+ new PMIDs or any phase-2+ trial; partial = 1-2 new PMIDs.
+          </p>
+        </div>
+        <ol class="digest-cards">
+          {movers.map((m, idx) => (
+            <li class="digest-card">
+              <span class="digest-card__rank">#{idx + 1}</span>
+              <div class="digest-card__main">
+                <a class="digest-card__chain" href={`/hypothesis/${m.hypothesis_id}/`}>
+                  <span class="digest-card__entity">{m.drug}</span>
+                  <span class="digest-card__arrow">→</span>
+                  <span class="digest-card__entity">{m.mediator}</span>
+                  <span class="digest-card__arrow">→</span>
+                  <span class="digest-card__entity">{m.outcome}</span>
+                </a>
+                <div class="digest-card__meta">
+                  <span class={statusClass(m.status)}>{statusLabel(m.status)}</span>
+                  <span class="digest-card__pill digest-card__pill--pmid">
+                    +{m.current_pmid_count} new PMID{m.current_pmid_count === 1 ? '' : 's'}
+                  </span>
+                  <span class={tierClass(m.quality_tier)}>{m.quality_tier} quality</span>
+                  <span class="digest-card__pill">score {Number(m.score).toFixed(3)}</span>
+                  {m.domain_source && m.domain_target && (
+                    <span class="digest-card__pill digest-card__pill--domain">
+                      {formatDomainName(m.domain_source)} → {formatDomainName(m.domain_target)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <a class="digest-card__cta" href={`/hypothesis/${m.hypothesis_id}/`}>
+                View trace →
+              </a>
+            </li>
+          ))}
+        </ol>
+        <p class="digest__more-link">
+          <a href="/predictions">View all {totalTracked.toLocaleString()} tracked hypotheses →</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- 3. Strong support cohort -->
+    <section class="digest__section digest__section--gray">
+      <div class="container--narrow">
+        <div class="digest-section-header">
+          <h2>Strong-support cohort</h2>
+          <p class="digest-section-sub">
+            The full {totalStrong}-hypothesis short list that crossed the strong-support threshold.
+            <span class="digest-tooltip" tabindex="0">
+              What does this mean?
+              <span class="digest-tooltip__body" role="tooltip">
+                A tracked hypothesis transitions to <strong>strong support</strong> when at least
+                3 new PubMed citations match the drug × outcome pair since the snapshot, or any
+                phase-2+ clinical trial is registered. Partial = 1-2 new citations.
+              </span>
+            </span>
+          </p>
+        </div>
+        <ul class="digest-strong-list">
+          {strongCohort.map((s) => (
+            <li class="digest-strong">
+              <a class="digest-strong__chain" href={`/hypothesis/${s.hypothesis_id}/`}>
+                <span>{s.drug}</span>
+                <span class="digest-strong__arrow">→</span>
+                <span>{s.mediator}</span>
+                <span class="digest-strong__arrow">→</span>
+                <span>{s.outcome}</span>
+              </a>
+              <span class="digest-strong__pmids">+{s.current_pmid_count} new PMIDs</span>
+              <span class={tierClass(s.quality_tier)}>{s.quality_tier}</span>
+            </li>
+          ))}
+        </ul>
+        {strongCohortAll.length > strongCohort.length && (
+          <p class="digest__more-link">
+            <a href="/predictions">+{strongCohortAll.length - strongCohort.length} more on /predictions →</a>
+          </p>
+        )}
+      </div>
+    </section>
+
+    <!-- 4. Recruiting trials -->
+    {recruitingTop.length > 0 && (
+      <section class="digest__section">
+        <div class="container--narrow">
+          <div class="digest-section-header">
+            <h2>Drugs with the most active recruiting trials</h2>
+            <p class="digest-section-sub">
+              Cross-referenced with the Robertium catalog: drugs that are actively recruiting
+              patients <em>and</em> have novel cross-domain hypotheses are the highest-priority
+              candidates for outreach.
+            </p>
+          </div>
+          <ol class="digest-cards">
+            {recruitingTop.map((d, idx) => (
+              <li class="digest-card">
+                <span class="digest-card__rank">#{idx + 1}</span>
+                <div class="digest-card__main">
+                  <a class="digest-card__title" href={`/drugs/${d.drug_id}/`}>{d.display_name}</a>
+                  <div class="digest-card__meta">
+                    <span class="digest-card__pill digest-card__pill--recruiting">
+                      {d.recruiting} recruiting
+                    </span>
+                    <span class="digest-card__pill">{d.total_trials} total trials</span>
+                    {d.hypothesis_count > 0 ? (
+                      <span class="digest-card__pill digest-card__pill--novel">
+                        {d.hypothesis_count} hypothes{d.hypothesis_count === 1 ? 'is' : 'es'}
+                      </span>
+                    ) : (
+                      <span class="digest-card__pill">not in catalog</span>
+                    )}
+                    {d.case_study_count > 0 && (
+                      <span class="digest-card__pill digest-card__pill--featured">
+                        ★ featured case study
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <a class="digest-card__cta" href={`/drugs/${d.drug_id}/`}>
+                  View drug →
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p class="digest__more-link">
+            <a href="/drugs">Browse all {drugIndex.drugs.length.toLocaleString()} drugs →</a>
+          </p>
+        </div>
+      </section>
+    )}
+
+    <!-- 5. Featured case studies -->
+    {featuredCaseStudies.length > 0 && (
+      <section class="digest__section digest__section--gray">
+        <div class="container--narrow">
+          <div class="digest-section-header">
+            <h2>Featured case studies</h2>
+            <p class="digest-section-sub">
+              Walk-throughs of why a specific hypothesis matters: source papers, mechanism,
+              competitive landscape, limitations.
+            </p>
+          </div>
+          <ul class="digest-cases">
+            {featuredCaseStudies.map((cs) => (
+              <li class="digest-case">
+                <a class="digest-case__link" href={`/case-studies/${cs.slug}/`}>
+                  <h3 class="digest-case__title">{cs.drug} → {cs.mediator} → {cs.outcome}</h3>
+                  <div class="digest-case__meta">
+                    {cs.outreach_quality && (
+                      <span class={tierClass(cs.outreach_quality)}>{cs.outreach_quality} quality</span>
+                    )}
+                    {cs.outreach_score !== undefined && (
+                      <span class="digest-case__score">score {Number(cs.outreach_score).toFixed(3)}</span>
+                    )}
+                    {cs.section && <span class="digest-case__section">{cs.section}</span>}
+                  </div>
+                  <span class="digest-case__cta">Read case study →</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p class="digest__more-link">
+            <a href="/case-studies">All case studies →</a>
+          </p>
+        </div>
+      </section>
+    )}
+
+    <!-- 6. Footer / subscribe -->
+    <section class="digest__section digest__footer">
+      <div class="container--narrow">
+        <h2>Get the next digest in your inbox</h2>
+        <p class="digest__footer-sub">
+          Plain text, signal-only, no marketing. Sent monthly while the catalog refreshes weekly.
+          MVP infrastructure: replies go straight to a maintainer who will add you to the list
+          manually until subscription justifies automation.
+        </p>
+        <p class="digest__footer-cta">
+          <a class="digest__footer-btn" href={subscribeHref}>Subscribe via email</a>
+          <a class="digest__footer-link" href="/api/">Or build your own digest with the API →</a>
+        </p>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .digest {
+    color: var(--text);
+  }
+
+  .digest__hero {
+    background: var(--surface-muted, #f9fafb);
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    padding: 2.5rem 0 2rem;
+  }
+  .digest__eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent, #0891b2);
+    margin: 0 0 0.5rem;
+  }
+  .digest__title {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0 0 0.75rem;
+    line-height: 1.2;
+  }
+  .digest__sub {
+    font-size: 1rem;
+    color: var(--text-secondary, #4b5563);
+    max-width: 44rem;
+    line-height: 1.6;
+    margin: 0 0 0.75rem;
+  }
+  .digest__sub strong { color: var(--text, #1f2937); font-weight: 600; }
+  .digest__updated {
+    font-size: 0.82rem;
+    color: var(--text-muted, #6b7280);
+    margin: 0;
+  }
+  .digest__updated code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.8rem;
+  }
+
+  .digest__section { padding: 2.5rem 0; }
+  .digest__section--gray { background: var(--surface-muted, #f9fafb); }
+  .digest-section-header { margin-bottom: 1.5rem; }
+  .digest-section-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0 0 0.5rem;
+  }
+  .digest-section-sub {
+    font-size: 0.92rem;
+    color: var(--text-secondary, #4b5563);
+    line-height: 1.55;
+    max-width: 46rem;
+    margin: 0;
+  }
+
+  /* Cards (movers + recruiting drugs) */
+  .digest-cards {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .digest-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+  .digest-card__rank {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted, #6b7280);
+    background: #f9fafb;
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    flex: 0 0 auto;
+  }
+  .digest-card__main { flex: 1 1 auto; min-width: 0; }
+  .digest-card__chain, .digest-card__title {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text, #1f2937);
+    text-decoration: none;
+    line-height: 1.4;
+  }
+  .digest-card__chain:hover, .digest-card__title:hover {
+    color: var(--accent, #0891b2);
+  }
+  .digest-card__entity {
+    background: #f3f4f6;
+    border-radius: 4px;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.95rem;
+  }
+  .digest-card__arrow { color: var(--text-muted, #6b7280); font-weight: 400; }
+  .digest-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+  }
+  .digest-card__pill {
+    background: #f9fafb;
+    color: var(--text-muted, #6b7280);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+  }
+  .digest-card__pill--pmid { background: #d1fae5; color: #047857; }
+  .digest-card__pill--recruiting { background: #d1fae5; color: #047857; }
+  .digest-card__pill--novel { background: #ddd6fe; color: #5b21b6; }
+  .digest-card__pill--featured { background: #fef3c7; color: #92400e; }
+  .digest-card__pill--domain { background: #ecfeff; color: #0e7490; }
+  .digest-card__cta {
+    flex: 0 0 auto;
+    color: var(--accent, #0891b2);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .digest-card__cta:hover { text-decoration: underline; }
+
+  .digest-status {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+  }
+  .digest-status--strong { background: #fef3c7; color: #92400e; }
+  .digest-status--partial { background: #e0e7ff; color: #3730a3; }
+
+  .digest-tier {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+  }
+  .digest-tier--high { background: #d1fae5; color: #047857; }
+  .digest-tier--mid { background: #e0e7ff; color: #3730a3; }
+  .digest-tier--unknown { background: #f3f4f6; color: #4b5563; }
+
+  /* Strong-support list (compact rows) */
+  .digest-strong-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .digest-strong {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.92rem;
+  }
+  .digest-strong__chain {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text, #1f2937);
+    text-decoration: none;
+    font-weight: 600;
+    flex: 1 1 22rem;
+    min-width: 0;
+  }
+  .digest-strong__chain:hover { color: var(--accent, #0891b2); }
+  .digest-strong__arrow { color: var(--text-muted, #6b7280); }
+  .digest-strong__pmids {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: #047857;
+    background: #d1fae5;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+  }
+
+  /* Tooltip */
+  .digest-tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted var(--text-muted, #6b7280);
+    cursor: help;
+    margin-left: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
+  }
+  .digest-tooltip__body {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.15s;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 0.4rem;
+    width: max-content;
+    max-width: 22rem;
+    background: #1f2937;
+    color: #fff;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    z-index: 10;
+    white-space: normal;
+  }
+  .digest-tooltip:hover .digest-tooltip__body,
+  .digest-tooltip:focus-within .digest-tooltip__body {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  /* Case-study grid */
+  .digest-cases {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0.85rem;
+  }
+  .digest-case {
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .digest-case:hover { border-color: var(--accent, #0891b2); transform: translateY(-2px); }
+  .digest-case__link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.1rem;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  .digest-case__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text, #1f2937);
+    margin: 0;
+    line-height: 1.35;
+  }
+  .digest-case__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+  }
+  .digest-case__score {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--text-muted, #6b7280);
+    background: #f9fafb;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+  }
+  .digest-case__section {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    background: #f3f4f6;
+    color: var(--text-muted, #6b7280);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+  }
+  .digest-case__cta {
+    margin-top: auto;
+    color: var(--accent, #0891b2);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .digest__more-link {
+    margin: 1rem 0 0;
+    font-size: 0.9rem;
+  }
+  .digest__more-link a {
+    color: var(--accent, #0891b2);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .digest__more-link a:hover { text-decoration: underline; }
+
+  /* Footer */
+  .digest__footer { background: var(--surface-muted, #f9fafb); border-top: 1px solid var(--border, #e5e7eb); padding: 2.5rem 0 3rem; }
+  .digest__footer h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: var(--text, #1f2937);
+  }
+  .digest__footer-sub {
+    font-size: 0.92rem;
+    color: var(--text-secondary, #4b5563);
+    line-height: 1.55;
+    max-width: 40rem;
+    margin: 0 0 1.25rem;
+  }
+  .digest__footer-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+  }
+  .digest__footer-btn {
+    display: inline-block;
+    background: var(--accent, #0891b2);
+    color: #fff;
+    padding: 0.65rem 1.3rem;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  .digest__footer-btn:hover { background: var(--accent-hover, #0e7490); }
+  .digest__footer-link {
+    color: var(--text-secondary, #4b5563);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .digest__footer-link:hover { color: var(--accent, #0891b2); text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    .digest__hero { padding: 2rem 0 1.5rem; }
+    .digest__section { padding: 2rem 0; }
+    .digest-card { flex-wrap: wrap; }
+    .digest-card__cta { width: 100%; text-align: right; }
+  }
+</style>

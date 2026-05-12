@@ -1,5 +1,44 @@
 ---
+// Header with grouped navigation.
+//
+// Desktop: 4 top-level items (Home, Explore▾, Predictions, Research▾) — the
+// two dropdowns use native <details>/<summary> so they work without JS;
+// a small enhancement script opens them on hover/focus and closes on
+// click-outside / Escape. Mobile (≤768px) collapses everything into a
+// hamburger panel that lists the groups expanded inline.
+//
+// Active state: the calling page passes `current` and we also fall back to
+// Astro.url.pathname so a path like /case-studies/auranofin-tdp43-als
+// highlights the Explore group even though it doesn't pass a current value.
 const { current = '' } = Astro.props;
+const pathname = (Astro.url?.pathname ?? '/').toLowerCase();
+
+function pathStartsWith(prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+const isHome = current === 'home' || pathname === '/' || pathname === '';
+const isPredictions = current === 'predictions' || pathStartsWith('/predictions');
+
+const exploreKeys = new Set(['hypotheses', 'drugs', 'case-studies', 'digest']);
+const exploreActive =
+  exploreKeys.has(current) ||
+  pathStartsWith('/hypotheses') ||
+  pathStartsWith('/hypothesis') ||
+  pathStartsWith('/drugs') ||
+  pathStartsWith('/case-studies') ||
+  pathStartsWith('/digest');
+
+const researchKeys = new Set(['method', 'api', 'openapi']);
+const researchActive =
+  researchKeys.has(current) ||
+  pathStartsWith('/method') ||
+  pathStartsWith('/api') ||
+  pathStartsWith('/openapi');
+
+function activePage(slug: string, prefix: string): boolean {
+  return current === slug || pathStartsWith(prefix);
+}
 ---
 <header class="site-header">
   <div class="container">
@@ -7,18 +46,352 @@ const { current = '' } = Astro.props;
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/><line x1="9.5" y1="10.5" x2="5.5" y2="7.5"/><line x1="14.5" y1="10.5" x2="18.5" y2="7.5"/><line x1="9.5" y1="13.5" x2="5.5" y2="16.5"/><line x1="14.5" y1="13.5" x2="18.5" y2="16.5"/></svg>
       <span>Robertium</span>
     </a>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="https://github.com/routewise96/robertium">GitHub</a>
-      <a href="/hypotheses" aria-current={current === 'hypotheses' ? 'page' : undefined}>Hypotheses</a>
-      <a href="/drugs" aria-current={current === 'drugs' ? 'page' : undefined}>Drugs</a>
-      <a href="/predictions" aria-current={current === 'predictions' ? 'page' : undefined}>Predictions</a>
-      <a href="/case-studies" aria-current={current === 'case-studies' ? 'page' : undefined}>Case studies</a>
-      <a href="/applications" aria-current={current === 'applications' ? 'page' : undefined}>Applications</a>
-      <a href="/benchmark" aria-current={current === 'benchmark' ? 'page' : undefined}>Benchmark</a>
-      <a href="/api" aria-current={current === 'api' ? 'page' : undefined}>Research access</a>
-      <a href="/about" aria-current={current === 'about' ? 'page' : undefined}>About</a>
-      <a href="/author" aria-current={current === 'author' ? 'page' : undefined}>Author</a>
-      <a href="/faq" aria-current={current === 'faq' ? 'page' : undefined}>FAQ</a>
+
+    <button class="site-nav__hamburger" type="button" aria-controls="site-nav-panel" aria-expanded="false" aria-label="Open menu" data-nav-toggle>
+      <span class="site-nav__hamburger-bar"></span>
+      <span class="site-nav__hamburger-bar"></span>
+      <span class="site-nav__hamburger-bar"></span>
+    </button>
+
+    <nav id="site-nav-panel" class="site-nav" aria-label="Main navigation" data-nav-panel>
+      <a href="/" data-active={isHome ? 'true' : undefined} aria-current={isHome ? 'page' : undefined}>Home</a>
+
+      <details class="nav-group" data-active={exploreActive ? 'true' : undefined} data-nav-group>
+        <summary aria-haspopup="true">
+          Explore
+          <svg class="nav-group__caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="nav-dropdown" role="menu">
+          <a href="/hypotheses" role="menuitem" data-active={activePage('hypotheses', '/hypotheses') ? 'true' : undefined}>
+            <span class="nav-item__label">Hypotheses</span>
+            <span class="nav-item__hint">All 24,285 candidates · filterable catalog</span>
+          </a>
+          <a href="/drugs" role="menuitem" data-active={activePage('drugs', '/drugs') ? 'true' : undefined}>
+            <span class="nav-item__label">Drugs</span>
+            <span class="nav-item__hint">411 drugs, ranked by hypothesis support</span>
+          </a>
+          <a href="/case-studies" role="menuitem" data-active={activePage('case-studies', '/case-studies') ? 'true' : undefined}>
+            <span class="nav-item__label">Case studies</span>
+            <span class="nav-item__hint">Walk-through deep dives</span>
+          </a>
+          <a href="/digest" role="menuitem" data-active={activePage('digest', '/digest') ? 'true' : undefined}>
+            <span class="nav-item__label">Digest</span>
+            <span class="nav-item__hint">What's worth looking at this week</span>
+          </a>
+        </div>
+      </details>
+
+      <a href="/predictions" data-active={isPredictions ? 'true' : undefined} aria-current={isPredictions ? 'page' : undefined}>Predictions</a>
+
+      <details class="nav-group" data-active={researchActive ? 'true' : undefined} data-nav-group>
+        <summary aria-haspopup="true">
+          Research
+          <svg class="nav-group__caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="nav-dropdown" role="menu">
+          <a href="/method" role="menuitem" data-active={activePage('method', '/method') ? 'true' : undefined}>
+            <span class="nav-item__label">Methodology</span>
+            <span class="nav-item__hint">Pipeline, scoring, provenance</span>
+          </a>
+          <a href="/api" role="menuitem" data-active={current === 'api' && !pathStartsWith('/openapi') ? 'true' : undefined}>
+            <span class="nav-item__label">API reference</span>
+            <span class="nav-item__hint">Research access &amp; quotas</span>
+          </a>
+          <a href="/openapi" role="menuitem" data-active={pathStartsWith('/openapi') ? 'true' : undefined}>
+            <span class="nav-item__label">OpenAPI spec</span>
+            <span class="nav-item__hint">Machine-readable schema</span>
+          </a>
+          <a href="https://github.com/routewise96/robertium" role="menuitem" target="_blank" rel="noopener">
+            <span class="nav-item__label">GitHub <span class="nav-item__external" aria-hidden="true">↗</span></span>
+            <span class="nav-item__hint">Source code, issues, releases</span>
+          </a>
+        </div>
+      </details>
     </nav>
   </div>
 </header>
+
+<script>
+  // Progressive enhancement: open dropdowns on hover/focus (desktop only),
+  // close on click-outside or Escape. Mobile hamburger toggles the panel.
+  (() => {
+    const groups = Array.from(document.querySelectorAll('[data-nav-group]')) as HTMLDetailsElement[];
+    const toggle = document.querySelector('[data-nav-toggle]') as HTMLButtonElement | null;
+    const panel = document.querySelector('[data-nav-panel]') as HTMLElement | null;
+    if (!groups.length && !toggle) return;
+
+    const desktopMq = window.matchMedia('(min-width: 769px)');
+    const hoverMq = window.matchMedia('(hover: hover)');
+    let hoverEnabled = desktopMq.matches && hoverMq.matches;
+
+    function isDesktopHover(): boolean {
+      return hoverEnabled;
+    }
+
+    // Open on hover/focus, close on mouseleave/blur with a small grace period.
+    groups.forEach((group) => {
+      let closeTimer: number | undefined;
+      const summary = group.querySelector('summary');
+      function openSoon() {
+        if (!isDesktopHover()) return;
+        if (closeTimer) { window.clearTimeout(closeTimer); closeTimer = undefined; }
+        group.open = true;
+        summary?.setAttribute('aria-expanded', 'true');
+      }
+      function closeSoon() {
+        if (!isDesktopHover()) return;
+        if (closeTimer) window.clearTimeout(closeTimer);
+        closeTimer = window.setTimeout(() => {
+          group.open = false;
+          summary?.setAttribute('aria-expanded', 'false');
+        }, 160);
+      }
+      group.addEventListener('mouseenter', openSoon);
+      group.addEventListener('mouseleave', closeSoon);
+      group.addEventListener('focusin', openSoon);
+      group.addEventListener('focusout', (e) => {
+        const next = (e as FocusEvent).relatedTarget as Node | null;
+        if (next && group.contains(next)) return;
+        closeSoon();
+      });
+      // Keep aria-expanded in sync with native open/close (click on summary).
+      group.addEventListener('toggle', () => {
+        summary?.setAttribute('aria-expanded', String(group.open));
+      });
+    });
+
+    // Click outside / Escape close (desktop only).
+    document.addEventListener('click', (e) => {
+      if (!isDesktopHover()) return;
+      const target = e.target as Node;
+      groups.forEach((group) => {
+        if (!group.contains(target)) {
+          group.open = false;
+          group.querySelector('summary')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      groups.forEach((group) => {
+        if (group.open) {
+          group.open = false;
+          group.querySelector('summary')?.setAttribute('aria-expanded', 'false');
+          group.querySelector('summary')?.focus();
+        }
+      });
+      if (panel?.classList.contains('is-open')) closeMobile();
+    });
+
+    // Mobile hamburger.
+    function openMobile() {
+      if (!panel || !toggle) return;
+      panel.classList.add('is-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', 'Close menu');
+      document.body.classList.add('site-nav-open');
+    }
+    function closeMobile() {
+      if (!panel || !toggle) return;
+      panel.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+      document.body.classList.remove('site-nav-open');
+    }
+    toggle?.addEventListener('click', () => {
+      if (panel?.classList.contains('is-open')) closeMobile();
+      else openMobile();
+    });
+
+    // Recompute hoverEnabled on resize / orientation change.
+    function refresh() {
+      hoverEnabled = desktopMq.matches && hoverMq.matches;
+      if (desktopMq.matches) closeMobile(); // hide mobile panel when we go back to desktop
+    }
+    desktopMq.addEventListener('change', refresh);
+    hoverMq.addEventListener('change', refresh);
+  })();
+</script>
+
+<style>
+  /* Hamburger — hidden on desktop, visible on mobile */
+  .site-nav__hamburger {
+    display: none;
+    background: transparent;
+    border: 0;
+    padding: 0.5rem;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 4px;
+    border-radius: 4px;
+  }
+  .site-nav__hamburger:hover { background: var(--bg-section, #f3f4f6); }
+  .site-nav__hamburger-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text-primary, #1f2937);
+    border-radius: 1px;
+  }
+
+  /* Top-level nav items */
+  .site-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 0.6rem);
+  }
+  .site-nav > a {
+    position: relative;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-3, 0.85rem);
+    border-radius: 6px;
+    transition: color 0.15s, background-color 0.15s;
+    white-space: nowrap;
+  }
+  .site-nav > a:hover { color: var(--accent); background: rgba(8, 145, 178, 0.06); }
+  .site-nav > a[data-active='true'] {
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+    background: rgba(8, 145, 178, 0.08);
+  }
+
+  /* Dropdown groups */
+  .nav-group {
+    position: relative;
+  }
+  .nav-group > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--text-secondary);
+    padding: var(--space-2) var(--space-3, 0.85rem);
+    border-radius: 6px;
+    transition: color 0.15s, background-color 0.15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .nav-group > summary::-webkit-details-marker { display: none; }
+  .nav-group > summary:hover { color: var(--accent); background: rgba(8, 145, 178, 0.06); }
+  .nav-group[data-active='true'] > summary {
+    color: var(--text-primary);
+    font-weight: var(--weight-semibold);
+    background: rgba(8, 145, 178, 0.08);
+  }
+  .nav-group__caret {
+    color: currentColor;
+    transition: transform 0.15s;
+  }
+  .nav-group[open] > summary .nav-group__caret {
+    transform: rotate(180deg);
+  }
+
+  .nav-dropdown {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    min-width: 18rem;
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -3px rgba(0, 0, 0, 0.05);
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    z-index: 110;
+  }
+  .nav-dropdown a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--text-primary, #1f2937);
+    transition: background 0.12s;
+  }
+  .nav-dropdown a:hover { background: var(--bg-section, #f3f4f6); }
+  .nav-dropdown a[data-active='true'] {
+    background: rgba(8, 145, 178, 0.1);
+    color: var(--accent);
+  }
+  .nav-item__label {
+    font-size: var(--text-sm, 0.9rem);
+    font-weight: var(--weight-semibold, 600);
+  }
+  .nav-item__hint {
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+    line-height: 1.35;
+  }
+  .nav-item__external {
+    font-size: 0.78rem;
+    color: var(--text-muted, #6b7280);
+    margin-left: 0.2rem;
+  }
+
+  @media (max-width: 768px) {
+    .site-nav__hamburger { display: inline-flex; }
+    .site-nav {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #fff;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.25rem;
+      padding: 1rem 1.25rem 2rem;
+      border-top: 1px solid var(--border, #e5e7eb);
+      overflow-y: auto;
+      transform: translateY(-12px);
+      opacity: 0;
+      visibility: hidden;
+      transition: transform 0.15s, opacity 0.15s, visibility 0s linear 0.15s;
+    }
+    .site-nav.is-open {
+      transform: translateY(0);
+      opacity: 1;
+      visibility: visible;
+      transition: transform 0.15s, opacity 0.15s, visibility 0s linear 0s;
+    }
+    .site-nav > a,
+    .nav-group > summary {
+      padding: 0.9rem 0.75rem;
+      font-size: 1rem;
+      border-radius: 6px;
+    }
+    .nav-group {
+      border-top: 1px solid var(--border-subtle, #f3f4f6);
+      padding-top: 0.5rem;
+    }
+    .nav-group:first-of-type { border-top: 0; padding-top: 0; }
+    .nav-dropdown {
+      position: static;
+      box-shadow: none;
+      border: 0;
+      padding: 0 0 0 0.75rem;
+      min-width: 0;
+      background: transparent;
+    }
+    .nav-dropdown a {
+      padding: 0.65rem 0.75rem;
+    }
+    body.site-nav-open {
+      overflow: hidden;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-group__caret { transition: none; }
+    .site-nav { transition: none !important; }
+  }
+</style>
