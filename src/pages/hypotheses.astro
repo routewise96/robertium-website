@@ -328,11 +328,15 @@ const noTrialNovelCount = data.hypotheses.filter(
           ? `<a class="hyp-badge hyp-badge--featured" href="/case-studies/${slug}/" title="Featured case study">★ featured</a>`
           : '';
       };
+      // Every hypothesis has a full provenance trace at /hypothesis/{id}/
+      // (the page itself links back to the case study when one exists).
+      const traceBadge = (id) =>
+        `<a class="hyp-badge hyp-badge--trace" href="/hypothesis/${id}/" title="Audit trail: source papers, claims, scoring">trace →</a>`;
 
       const renderRow = (h, index) => {
         const score = h.score != null ? h.score.toFixed(3) : '—';
         const evidence = `${h.ab_count ?? 0} + ${h.bc_count ?? 0}`;
-        const badges = `${featuredBadge(h.id)}${trialBadge(h.clinical_trial_status)}${litBadge(h.literature_status)}`;
+        const badges = `${featuredBadge(h.id)}${trialBadge(h.clinical_trial_status)}${litBadge(h.literature_status)}${traceBadge(h.id)}`;
         let html = `
           <tr class="hyp-row" data-id="${h.id}">
             <td class="num">${index + 1}</td>
