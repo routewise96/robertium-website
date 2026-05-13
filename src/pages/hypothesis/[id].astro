@@ -7,6 +7,7 @@ import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
 import ProvenanceTrace from '../../components/ProvenanceTrace.astro';
 import SimilarHypotheses from '../../components/SimilarHypotheses.astro';
+import TrajectoryChart from '../../components/TrajectoryChart.astro';
 import { formatDomainName } from '../../lib/format';
 
 export async function getStaticPaths() {
@@ -122,6 +123,12 @@ const domainTarget = prov?.domain?.target ? formatDomainName(prov.domain.target)
         <SimilarHypotheses hypothesisId={id} />
       </div>
     </section>
+
+    <section class="hyp-page__trajectory">
+      <div class="container--narrow">
+        <TrajectoryChart hypothesisId={id} />
+      </div>
+    </section>
   </main>
 </Layout>
 
@@ -204,9 +211,12 @@ const domainTarget = prov?.domain?.target ? formatDomainName(prov.domain.target)
     padding: 2rem 0 1rem;
   }
   .hyp-page__similar {
-    padding: 1rem 0 4rem;
+    padding: 1rem 0 1rem;
     border-top: 1px solid var(--border, #e5e7eb);
     margin-top: 1.5rem;
+  }
+  .hyp-page__trajectory {
+    padding: 0 0 4rem;
   }
 
   @media (max-width: 720px) {

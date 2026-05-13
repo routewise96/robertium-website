@@ -1,0 +1,513 @@
+---
+// TrajectoryChart — pure-SVG line chart of one hypothesis's score across
+// catalog snapshots. No client JS, no chart library.
+//
+// Reads /public/data/trajectories.json at build time (SSG, one fetch reused
+// across every hypothesis page). Renders score as the primary line, evidence
+// count as a secondary dashed line on a right-hand axis. Native <title>
+// tooltips per point.
+//
+// Edge cases:
+//   * No trajectory data        → component renders nothing (returns null).
+//   * Single-point trajectory   → placeholder message, no chart.
+//   * Multi-point trajectory    → full chart with axes, lines, annotations.
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface Props {
+  hypothesisId: number | string;
+}
+const { hypothesisId } = Astro.props;
+
+const trajectoriesPath = path.join(
+  process.cwd(),
+  'public',
+  'data',
+  'trajectories.json',
+);
+
+let payload: any = null;
+if (fs.existsSync(trajectoriesPath)) {
+  try {
+    payload = JSON.parse(fs.readFileSync(trajectoriesPath, 'utf-8'));
+  } catch {
+    payload = null;
+  }
+}
+
+type SnapshotMeta = {
+  name: string;
+  kind: 'freeze' | 'monthly_catalog';
+  captured_at: string;
+  total_hypotheses: number;
+  notes: string | null;
+  git_commit: string | null;
+};
+
+type HistoryEntry = {
+  snapshot: string;
+  score: number | null;
+  raw_score: number | null;
+  evidence_count: number | null;
+  ct_status: string | null;
+  lit_status: string | null;
+  oq: string | null;
+};
+
+const snapshotsMeta: SnapshotMeta[] = payload?.snapshots_meta ?? [];
+const trajectory = payload?.hypotheses?.[String(hypothesisId)] ?? null;
+
+const metaByName: Record<string, SnapshotMeta> = {};
+for (const s of snapshotsMeta) metaByName[s.name] = s;
+
+const history: (HistoryEntry & {
+  captured_at: string | undefined;
+  kind: SnapshotMeta['kind'] | undefined;
+  notes: string | null | undefined;
+})[] = (trajectory?.history ?? []).map((h: HistoryEntry) => ({
+  ...h,
+  captured_at: metaByName[h.snapshot]?.captured_at,
+  kind: metaByName[h.snapshot]?.kind,
+  notes: metaByName[h.snapshot]?.notes,
+}));
+
+const N = history.length;
+const hasMulti = N >= 2;
+const hasSingle = N === 1;
+
+// --- chart geometry ---
+const W = 800;
+const H = 280;
+const PAD = { top: 24, right: 60, bottom: 56, left: 60 };
+const innerW = W - PAD.left - PAD.right;
+const innerH = H - PAD.top - PAD.bottom;
+
+const scores = history.map((e) => e.score ?? 0);
+const evs = history.map((e) => e.evidence_count ?? 0);
+
+const scoreMaxRaw = scores.length ? Math.max(...scores) : 0;
+const scoreMax = Math.max(scoreMaxRaw * 1.15, 0.05);
+const evMaxRaw = evs.length ? Math.max(...evs) : 0;
+const evMax = Math.max(evMaxRaw, 1);
+
+const xPos = (i: number) =>
+  N === 1 ? PAD.left + innerW / 2 : PAD.left + (i / (N - 1)) * innerW;
+const scoreY = (s: number) => PAD.top + innerH - (s / scoreMax) * innerH;
+const evY = (e: number) => PAD.top + innerH - (e / evMax) * innerH;
+
+const scorePoints = history
+  .map((e, i) => `${xPos(i).toFixed(1)},${scoreY(e.score ?? 0).toFixed(1)}`)
+  .join(' ');
+const evPoints = history
+  .map((e, i) => `${xPos(i).toFixed(1)},${evY(e.evidence_count ?? 0).toFixed(1)}`)
+  .join(' ');
+
+// Y-axis ticks based on scoreMax, ~4 steps
+function niceStep(max: number): number {
+  const exp = Math.floor(Math.log10(max));
+  const base = Math.pow(10, exp);
+  const m = max / base;
+  if (m <= 2) return 0.5 * base;
+  if (m <= 5) return 1 * base;
+  return 2 * base;
+}
+const yStep = niceStep(scoreMax);
+const yTicks: number[] = [];
+for (let t = 0; t <= scoreMax; t += yStep) yTicks.push(Number(t.toFixed(4)));
+if (yTicks[yTicks.length - 1] < scoreMax) yTicks.push(yTicks[yTicks.length - 1] + yStep);
+
+const evStep = niceStep(evMax);
+const evTicks: number[] = [];
+for (let t = 0; t <= evMax; t += evStep) evTicks.push(Math.round(t));
+if (evTicks[evTicks.length - 1] < evMax) evTicks.push(evTicks[evTicks.length - 1] + evStep);
+
+function fmtDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function fmtDateLong(iso?: string): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+function fmtScore(s: number | null | undefined): string {
+  if (s === null || s === undefined) return '—';
+  return s.toFixed(3);
+}
+function pointTooltip(e: (typeof history)[number]): string {
+  const parts = [
+    fmtDateLong(e.captured_at),
+    `score ${fmtScore(e.score)}`,
+    `${e.evidence_count ?? 0} evidence`,
+    e.ct_status ? `CT: ${e.ct_status}` : null,
+    e.lit_status ? `Lit: ${e.lit_status}` : null,
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+---
+
+{hasMulti && (
+  <section class="trajectory">
+    <header class="trajectory__head">
+      <span class="trajectory__eyebrow">Score trajectory</span>
+      <h2 class="trajectory__title">How this hypothesis evolved</h2>
+      <p class="trajectory__caption">
+        First captured {fmtDateLong(history[0].captured_at)}, latest{' '}
+        {fmtDateLong(history[N - 1].captured_at)}. {N} snapshots.
+      </p>
+    </header>
+
+    <div class="trajectory__chart-wrap">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        class="trajectory__svg"
+        role="img"
+        aria-label={`Score trajectory across ${N} snapshots`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* gridlines */}
+        {yTicks.map((t) => (
+          <line
+            class="traj-grid"
+            x1={PAD.left}
+            y1={scoreY(t)}
+            x2={W - PAD.right}
+            y2={scoreY(t)}
+          />
+        ))}
+
+        {/* axes */}
+        <line
+          class="traj-axis"
+          x1={PAD.left}
+          y1={PAD.top}
+          x2={PAD.left}
+          y2={H - PAD.bottom}
+        />
+        <line
+          class="traj-axis"
+          x1={W - PAD.right}
+          y1={PAD.top}
+          x2={W - PAD.right}
+          y2={H - PAD.bottom}
+        />
+        <line
+          class="traj-axis"
+          x1={PAD.left}
+          y1={H - PAD.bottom}
+          x2={W - PAD.right}
+          y2={H - PAD.bottom}
+        />
+
+        {/* left y ticks (score) */}
+        {yTicks.map((t) => (
+          <g>
+            <line
+              class="traj-tick"
+              x1={PAD.left - 4}
+              y1={scoreY(t)}
+              x2={PAD.left}
+              y2={scoreY(t)}
+            />
+            <text
+              class="traj-tick-label"
+              x={PAD.left - 8}
+              y={scoreY(t) + 3}
+              text-anchor="end"
+            >
+              {t.toFixed(2)}
+            </text>
+          </g>
+        ))}
+
+        {/* right y ticks (evidence) */}
+        {evTicks.map((t) => (
+          <g>
+            <line
+              class="traj-tick"
+              x1={W - PAD.right}
+              y1={evY(t)}
+              x2={W - PAD.right + 4}
+              y2={evY(t)}
+            />
+            <text
+              class="traj-tick-label"
+              x={W - PAD.right + 8}
+              y={evY(t) + 3}
+              text-anchor="start"
+            >
+              {t}
+            </text>
+          </g>
+        ))}
+
+        {/* axis titles */}
+        <text
+          class="traj-axis-title"
+          transform={`rotate(-90 16 ${PAD.top + innerH / 2})`}
+          x={16}
+          y={PAD.top + innerH / 2}
+          text-anchor="middle"
+        >
+          score
+        </text>
+        <text
+          class="traj-axis-title"
+          transform={`rotate(90 ${W - 16} ${PAD.top + innerH / 2})`}
+          x={W - 16}
+          y={PAD.top + innerH / 2}
+          text-anchor="middle"
+        >
+          evidence count
+        </text>
+
+        {/* evidence line (dashed, secondary) */}
+        <polyline class="traj-line traj-line--evidence" points={evPoints} />
+
+        {/* score line (primary) */}
+        <polyline class="traj-line traj-line--score" points={scorePoints} />
+
+        {/* points */}
+        {history.map((e, i) => (
+          <g class="traj-point">
+            {/* evidence point */}
+            <circle
+              class="traj-circle traj-circle--evidence"
+              cx={xPos(i)}
+              cy={evY(e.evidence_count ?? 0)}
+              r="3"
+            />
+            {/* score point */}
+            <circle
+              class="traj-circle traj-circle--score"
+              cx={xPos(i)}
+              cy={scoreY(e.score ?? 0)}
+              r="5"
+            >
+              <title>{pointTooltip(e)}</title>
+            </circle>
+            {/* x label */}
+            <text
+              class="traj-x-label"
+              x={xPos(i)}
+              y={H - PAD.bottom + 18}
+              text-anchor="middle"
+            >
+              {fmtDate(e.captured_at)}
+            </text>
+            {/* snapshot kind badge under date */}
+            <text
+              class={`traj-x-kind traj-x-kind--${e.kind ?? 'unknown'}`}
+              x={xPos(i)}
+              y={H - PAD.bottom + 32}
+              text-anchor="middle"
+            >
+              {e.kind === 'monthly_catalog' ? 'monthly' : 'freeze'}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+
+    <div class="trajectory__legend">
+      <span class="traj-legend">
+        <span class="traj-swatch traj-swatch--score"></span>
+        Score (left axis)
+      </span>
+      <span class="traj-legend">
+        <span class="traj-swatch traj-swatch--evidence"></span>
+        Evidence count (right axis, dashed)
+      </span>
+    </div>
+  </section>
+)}
+
+{hasSingle && (
+  <section class="trajectory trajectory--placeholder">
+    <header class="trajectory__head">
+      <span class="trajectory__eyebrow">Score trajectory</span>
+      <h2 class="trajectory__title">How this hypothesis evolved</h2>
+    </header>
+    <p class="trajectory__placeholder-msg">
+      Only one snapshot captured so far ({fmtDateLong(history[0].captured_at)}).
+      Trajectory will appear after the next snapshot.
+    </p>
+  </section>
+)}
+
+<style>
+  .trajectory {
+    margin-top: var(--space-12);
+    padding: var(--space-8);
+    background: var(--bg-card);
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+
+  .trajectory__head {
+    margin-bottom: var(--space-6);
+  }
+
+  .trajectory__eyebrow {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--space-2);
+  }
+
+  .trajectory__title {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-extrabold);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .trajectory__caption {
+    margin-top: var(--space-2);
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+  }
+
+  .trajectory__chart-wrap {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .trajectory__svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .traj-grid {
+    stroke: #f1f5f9;
+    stroke-width: 1;
+  }
+
+  .traj-axis {
+    stroke: #cbd5e1;
+    stroke-width: 1;
+  }
+
+  .traj-tick {
+    stroke: #cbd5e1;
+    stroke-width: 1;
+  }
+
+  .traj-tick-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--text-tertiary);
+  }
+
+  .traj-axis-title {
+    font-family: var(--font-base);
+    font-size: 11px;
+    fill: var(--text-tertiary);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .traj-x-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--text-secondary);
+  }
+
+  .traj-x-kind {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .traj-x-kind--freeze {
+    fill: var(--text-muted);
+  }
+  .traj-x-kind--monthly_catalog {
+    fill: var(--accent);
+  }
+
+  .traj-line {
+    fill: none;
+  }
+
+  .traj-line--score {
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .traj-line--evidence {
+    stroke: var(--text-tertiary);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+    stroke-linecap: round;
+    opacity: 0.7;
+  }
+
+  .traj-circle--score {
+    fill: var(--accent);
+    stroke: var(--bg-card);
+    stroke-width: 2;
+    cursor: pointer;
+    transition: r 0.15s ease;
+  }
+  .traj-circle--score:hover {
+    r: 7;
+  }
+
+  .traj-circle--evidence {
+    fill: var(--text-tertiary);
+    opacity: 0.6;
+  }
+
+  .trajectory__legend {
+    display: flex;
+    gap: var(--space-6);
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+
+  .traj-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .traj-swatch {
+    display: inline-block;
+    width: 24px;
+    height: 3px;
+    border-radius: 1px;
+  }
+  .traj-swatch--score {
+    background: var(--accent);
+  }
+  .traj-swatch--evidence {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--text-tertiary) 0 5px,
+      transparent 5px 9px
+    );
+    height: 2px;
+  }
+
+  .trajectory--placeholder .trajectory__placeholder-msg {
+    color: var(--text-tertiary);
+    font-size: var(--text-base);
+    margin: 0;
+  }
+</style>
