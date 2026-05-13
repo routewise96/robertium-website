@@ -4,6 +4,18 @@ import { formatDomainName } from '../lib/format';
 import fs from 'node:fs';
 import path from 'node:path';
 
+interface TrialEntry {
+  nct_id: string;
+  title: string | null;
+  phases: string[];
+  overall_status: string | null;
+  study_type: string | null;
+  start_date: string | null;
+  completion_date: string | null;
+  last_update_date: string | null;
+  first_seen_check_date?: string;
+}
+
 interface PredictionRow {
   hypothesis_id: number;
   drug: string;
@@ -18,7 +30,10 @@ interface PredictionRow {
   status: 'pending' | 'partial_support' | 'strong_support';
   frozen_at: string;
   last_check_date: string | null;
+  trial_check_at: string | null;
   baseline_pmid_count: number;
+  baseline_trial_count: number;
+  baseline_trial_nct_ids: string[];
   current_pmid_count: number;
   new_pmids_since_freeze: Array<{
     pmid: string;
@@ -27,7 +42,9 @@ interface PredictionRow {
     year: number | null;
     first_seen_check_date: string;
   }>;
-  new_trial_nct_ids: string[];
+  new_trials_since_freeze: TrialEntry[];
+  new_trials_count: number;
+  has_phase_2_plus: boolean;
   support_first_seen_at: string | null;
 }
 
@@ -37,6 +54,7 @@ interface PredictionPayload {
     snapshot_date: string;
     frozen_at: string;
     last_checked_at: string;
+    trial_check_at: string | null;
     exported_at: string;
     total: number;
     pending: number;
@@ -46,11 +64,15 @@ interface PredictionPayload {
     mid_quality: number;
     total_new_pmids: number;
     total_new_trials: number;
+    with_baseline_trials: number;
+    with_new_trials: number;
+    with_phase_2_plus: number;
     methodology: {
-      baseline: string;
-      match_criteria: string;
+      pubmed_baseline: string;
+      pubmed_match_criteria: string;
+      ct_baseline: string;
+      ct_match_criteria: string;
       status_transitions: Record<string, string>;
-      clinical_trials_baseline: string;
     };
   };
   rows: PredictionRow[];
@@ -110,6 +132,14 @@ const lastCheckedDate = m.last_checked_at
           <span class="pred-stat-num">{m.total_new_trials}</span>
           <span class="pred-stat-label">New trials since freeze</span>
         </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num">{m.with_baseline_trials}</span>
+          <span class="pred-stat-label">With prior trials at freeze</span>
+        </div>
+        <div class="pred-stat">
+          <span class="pred-stat-num pred-stat--strong">{m.with_phase_2_plus}</span>
+          <span class="pred-stat-label">Phase 2+ trial transitions</span>
+        </div>
       </div>
       <p class="pred-stats-foot">
         Snapshot <code>{m.snapshot_name}</code> · frozen <time datetime={m.frozen_at}>{frozenDate}</time>
@@ -126,14 +156,24 @@ const lastCheckedDate = m.last_checked_at
           <span class="pred-method-hint">click to expand</span>
         </summary>
         <div class="pred-method-body">
-          <h3>Baseline</h3>
-          <p>{m.methodology.baseline}</p>
+          <h3>PubMed baseline</h3>
+          <p>{m.methodology.pubmed_baseline}</p>
           <h3>PubMed match criteria</h3>
-          <p><code>{m.methodology.match_criteria}</code></p>
+          <p><code>{m.methodology.pubmed_match_criteria}</code></p>
           <p class="pred-method-note">
             Criteria are intentionally strict to minimize false positives. Drug
             synonym expansion (e.g. FTY720 / fingolimod / Gilenya) is not yet
             applied — see the GitHub repo for the open issue.
+          </p>
+          <h3>ClinicalTrials.gov baseline</h3>
+          <p>{m.methodology.ct_baseline}</p>
+          <h3>ClinicalTrials.gov match criteria</h3>
+          <p><code>{m.methodology.ct_match_criteria}</code></p>
+          <p class="pred-method-note">
+            First delta check returns 0 new trials by design — the cache was
+            populated the same evening as the snapshot freeze, so
+            <code>last_update_date &gt; snapshot_date</code> is empty until the
+            next monthly cache refresh. Status will accumulate organically.
           </p>
           <h3>Status transitions</h3>
           <ul>
@@ -141,8 +181,6 @@ const lastCheckedDate = m.last_checked_at
             <li><strong>partial_support</strong> — {m.methodology.status_transitions.partial_support}</li>
             <li><strong>strong_support</strong> — {m.methodology.status_transitions.strong_support}</li>
           </ul>
-          <h3>ClinicalTrials.gov baseline</h3>
-          <p>{m.methodology.clinical_trials_baseline}</p>
           <h3>Integrity</h3>
           <p>
             The frozen snapshot is committed to git as
@@ -181,6 +219,10 @@ const lastCheckedDate = m.last_checked_at
           <legend class="pred-chips-legend">Quality</legend>
           <label class="pred-chip"><input type="checkbox" value="high" checked /> High</label>
           <label class="pred-chip"><input type="checkbox" value="mid" checked /> Mid</label>
+        </fieldset>
+        <fieldset class="pred-chips" aria-label="Filter by trial activity">
+          <legend class="pred-chips-legend">Trials</legend>
+          <label class="pred-chip"><input type="checkbox" id="pred-chip-has-new-trial" value="has_new_trial" /> Has new trial</label>
         </fieldset>
         <button type="button" id="pred-reset" class="pred-reset">Reset</button>
       </div>
@@ -224,6 +266,7 @@ const lastCheckedDate = m.last_checked_at
       const resetEl = document.getElementById('pred-reset');
       const statusChips = document.querySelectorAll('.pred-chips[aria-label="Filter by status"] input');
       const qualityChips = document.querySelectorAll('.pred-chips[aria-label="Filter by quality"] input');
+      const hasNewTrialChip = document.getElementById('pred-chip-has-new-trial');
 
       const PAGE_SIZE = 50;
       const STATUS_RANK = { strong_support: 0, partial_support: 1, pending: 2 };
@@ -267,9 +310,11 @@ const lastCheckedDate = m.last_checked_at
         const q = searchEl.value.trim().toLowerCase();
         const sel = getSelected(statusChips);
         const qua = getSelected(qualityChips);
+        const requireNewTrial = hasNewTrialChip && hasNewTrialChip.checked;
         filtered = rows.filter(r => {
           if (!sel.has(r.status)) return false;
           if (!qua.has(r.quality_tier)) return false;
+          if (requireNewTrial && (r.new_trials_count || 0) === 0) return false;
           if (q) {
             const hay = (r.drug + ' ' + r.mediator + ' ' + r.outcome + ' ' +
                          r.domain_source + ' ' + r.domain_target).toLowerCase();
@@ -311,9 +356,17 @@ const lastCheckedDate = m.last_checked_at
 
       function trialsList(arr) {
         if (!arr || arr.length === 0) return '';
-        return '<ul class="pred-pmid-list">' + arr.map(nct =>
-          '<li><a href="https://clinicaltrials.gov/study/' + encodeURIComponent(nct) + '" target="_blank" rel="noopener">' + escapeHtml(nct) + '</a></li>'
-        ).join('') + '</ul>';
+        return '<ul class="pred-pmid-list">' + arr.map(t => {
+          const nct = t && t.nct_id ? t.nct_id : '';
+          const title = t && t.title ? ' — ' + escapeHtml(t.title) : '';
+          const phases = (t && t.phases && t.phases.length)
+            ? ' <span class="pred-pubdate">[' + t.phases.map(escapeHtml).join(', ') + ']</span>'
+            : '';
+          const status = t && t.overall_status ? ' <span class="pred-pubdate">(' + escapeHtml(t.overall_status) + ')</span>' : '';
+          const update = t && t.last_update_date ? ' <span class="pred-pubdate">updated ' + escapeHtml(t.last_update_date) + '</span>' : '';
+          return '<li><a href="https://clinicaltrials.gov/study/' + encodeURIComponent(nct) + '" target="_blank" rel="noopener">' + escapeHtml(nct) + '</a>'
+            + title + phases + status + update + '</li>';
+        }).join('') + '</ul>';
       }
 
       function render() {
@@ -326,11 +379,18 @@ const lastCheckedDate = m.last_checked_at
         }
         tbody.innerHTML = slice.map(r => {
           const newPmids = r.new_pmids_since_freeze || [];
-          const newTrials = r.new_trial_nct_ids || [];
+          const newTrials = r.new_trials_since_freeze || [];
+          const baselineTrialCount = r.baseline_trial_count || 0;
+          const trialBadge = r.has_phase_2_plus
+            ? ' <span class="pred-qbadge pred-qbadge--high" title="Phase 2+ trial registered post-freeze">P2+</span>'
+            : '';
+          const trialCell = (r.new_trials_count || 0)
+            + (baselineTrialCount > 0 ? ' <span class="pred-pubdate">/ ' + baselineTrialCount + ' baseline</span>' : '')
+            + trialBadge;
           const detailsRow = (newPmids.length > 0 || newTrials.length > 0)
             ? '<tr class="pred-detail-row" hidden><td colspan="9"><div class="pred-detail">'
               + (newPmids.length > 0 ? '<h4>New PMIDs since freeze</h4>' + pmidsList(newPmids) : '')
-              + (newTrials.length > 0 ? '<h4>New trial NCT IDs</h4>' + trialsList(newTrials) : '')
+              + (newTrials.length > 0 ? '<h4>New trials since freeze</h4>' + trialsList(newTrials) : '')
               + '</div></td></tr>'
             : '';
           const hasDetail = newPmids.length > 0 || newTrials.length > 0;
@@ -342,7 +402,7 @@ const lastCheckedDate = m.last_checked_at
             + '<td>' + qualityBadge(r.quality_tier) + '</td>'
             + '<td class="pred-mono">' + (r.score != null ? r.score.toFixed(3) : '—') + '</td>'
             + '<td class="pred-mono">' + (r.current_pmid_count || 0) + '</td>'
-            + '<td class="pred-mono">' + (r.new_trial_nct_ids ? r.new_trial_nct_ids.length : 0) + '</td>'
+            + '<td class="pred-mono">' + trialCell + '</td>'
             + '<td>' + (r.last_check_date || '—') + '</td>'
             + '</tr>' + detailsRow;
         }).join('');
@@ -393,10 +453,12 @@ const lastCheckedDate = m.last_checked_at
       searchEl.addEventListener('input', applyFilters);
       statusChips.forEach(c => c.addEventListener('change', applyFilters));
       qualityChips.forEach(c => c.addEventListener('change', applyFilters));
+      if (hasNewTrialChip) hasNewTrialChip.addEventListener('change', applyFilters);
       resetEl.addEventListener('click', () => {
         searchEl.value = '';
         statusChips.forEach(c => c.checked = true);
         qualityChips.forEach(c => c.checked = true);
+        if (hasNewTrialChip) hasNewTrialChip.checked = false;
         currentSort = { key: 'default', dir: 'desc' };
         document.querySelectorAll('th[data-sort]').forEach(t => t.removeAttribute('data-active'));
         applyFilters();
