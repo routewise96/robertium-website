@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../../layouts/Layout.astro';
 import ProvenanceTrace from '../../components/ProvenanceTrace.astro';
+import SimilarHypotheses from '../../components/SimilarHypotheses.astro';
 import { formatDomainName } from '../../lib/format';
 
 export async function getStaticPaths() {
@@ -115,6 +116,12 @@ const domainTarget = prov?.domain?.target ? formatDomainName(prov.domain.target)
         <ProvenanceTrace hypothesisId={id} />
       </div>
     </section>
+
+    <section class="hyp-page__similar">
+      <div class="container--narrow">
+        <SimilarHypotheses hypothesisId={id} />
+      </div>
+    </section>
   </main>
 </Layout>
 
@@ -194,7 +201,12 @@ const domainTarget = prov?.domain?.target ? formatDomainName(prov.domain.target)
   .hyp-page__back:hover { color: var(--accent, #0891b2); text-decoration: underline; }
 
   .hyp-page__body {
-    padding: 2rem 0 4rem;
+    padding: 2rem 0 1rem;
+  }
+  .hyp-page__similar {
+    padding: 1rem 0 4rem;
+    border-top: 1px solid var(--border, #e5e7eb);
+    margin-top: 1.5rem;
   }
 
   @media (max-width: 720px) {
