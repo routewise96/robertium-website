@@ -321,8 +321,10 @@ const summaryText = outcome
   .ct-table__scroll { overflow-x: auto; }
   .ct-table {
     width: 100%;
+    min-width: 56rem;
     border-collapse: collapse;
     font-size: 0.85rem;
+    table-layout: auto;
   }
   .ct-table thead {
     background: #f9fafb;
@@ -338,10 +340,19 @@ const summaryText = outcome
     border-bottom: 1px solid var(--border, #e5e7eb);
     white-space: nowrap;
   }
+  /* Per-column widths: NCT/Phase/Status/Date are fixed and nowrap, Title
+     gets the slack, Sponsor capped so Title can dominate. */
+  .ct-table th:nth-child(1) { width: 7rem; }       /* NCT ID */
+  .ct-table th:nth-child(3) { width: 6.5rem; }     /* Phase */
+  .ct-table th:nth-child(4) { width: 8rem; }       /* Status */
+  .ct-table th:nth-child(5) { width: 10rem; }      /* Sponsor */
+  .ct-table th:nth-child(6) { width: 6.5rem; }     /* Last update */
   .ct-table td {
     padding: 0.65rem 0.75rem;
     border-bottom: 1px solid #f3f4f6;
     vertical-align: top;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
   .ct-table tr:last-child td { border-bottom: none; }
   .ct-table__nct {
@@ -353,13 +364,16 @@ const summaryText = outcome
   }
   .ct-table__nct:hover { text-decoration: underline; }
   .ct-table__title {
-    min-width: 18rem;
-    max-width: 28rem;
+    min-width: 20rem;
     color: var(--text, #1f2937);
+    word-break: normal;
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
   .ct-table__sponsor {
-    max-width: 14rem;
     color: var(--text-muted, #6b7280);
+    word-break: normal;
+    overflow-wrap: break-word;
   }
   .ct-table__date {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -393,5 +407,10 @@ const summaryText = outcome
   @media (max-width: 640px) {
     .ct-panel { padding: 1.25rem 1.1rem; }
     .ct-panel__toggle { width: 100%; }
+    /* Drop the Sponsor column on phones so Title gets readable width.
+       Wrapper still scrolls horizontally if remaining columns overflow. */
+    .ct-table { min-width: 44rem; }
+    .ct-table th:nth-child(5),
+    .ct-table td.ct-table__sponsor { display: none; }
   }
 </style>

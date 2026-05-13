@@ -352,6 +352,23 @@ a { color: inherit; }
   font-weight: var(--weight-medium);
 }
 .section a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+/*
+ * Specificity override: .section a (0,1,1) was beating .btn--* (0,1,0) and
+ * forcing button text into the accent colour, which on .btn--primary's
+ * accent background renders as low-contrast/invisible (and disappears
+ * entirely on hover when both background and text become accent-hover).
+ * Restore the intended button palette across all states.
+ */
+.section a.btn--primary,
+.section a.btn--primary:hover,
+.section a.btn--primary:focus { color: var(--text-inverse); text-decoration: none; }
+.section a.btn--secondary { color: var(--text-primary); text-decoration: none; }
+.section a.btn--secondary:hover,
+.section a.btn--secondary:focus { color: var(--accent); text-decoration: none; }
+.section a.prov-callout__cta,
+.section a.prov-callout__cta:hover,
+.section a.prov-callout__cta:focus { color: #fff; text-decoration: none; }
 @media (max-width: 880px) {
   .section { padding: var(--space-16) 0; }
 }
@@ -487,6 +504,13 @@ a { color: inherit; }
 .timeline-item p { font-size: 15px; color: var(--text-secondary); margin: 0; }
 
 /* ---------- Contact ---------- */
+/*
+ * Only deviation from the original: center the section header so the
+ * icon+title pair sit above the row of cards. Contact.astro wraps the
+ * grid in .container (not .container--narrow) so 3 cards have room to
+ * sit one-per-line at their natural size without truncating URLs.
+ */
+#contact .section-header { justify-content: center; }
 .contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .contact-card {
   display: flex; align-items: center; gap: 14px;
