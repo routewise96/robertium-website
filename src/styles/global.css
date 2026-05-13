@@ -505,15 +505,28 @@ a { color: inherit; }
 
 /* ---------- Contact ---------- */
 #contact .section-header { justify-content: center; }
+/*
+ * Flex layout (with wrap) genuinely centers the cards as a group: the
+ * wrapper has max-width + auto margins so the cards collectively sit in
+ * the middle of the section, and justify-content distributes them
+ * evenly around that centre. The earlier `grid repeat(3, 1fr)` filled
+ * the whole container width, which made the row span edge-to-edge and
+ * looked off-centre when the section header above it was narrower.
+ */
 .contact-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-  justify-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 .contact-card {
   display: flex; align-items: center; gap: 14px;
   padding: 20px; background: #fff; border: 1px solid var(--border-subtle);
   border-radius: 8px; text-decoration: none; transition: border-color .15s;
-  width: 100%;
+  flex: 1 1 240px;
+  max-width: 320px;
 }
 .contact-card:hover { border-color: var(--accent); }
 .contact-card .cc-icon {
@@ -1354,7 +1367,7 @@ a { color: inherit; }
   .pipeline { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .stat-card .stat-num { font-size: 36px; }
-  .contact-grid { grid-template-columns: 1fr; }
+  /* .contact-grid is flex now (see Contact section above), wrap handles single column on phones. */
 
   .hyp-hero { padding: 40px 0 24px; }
   .hyp-hero h1 { font-size: 28px; }
