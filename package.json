@@ -19,6 +19,7 @@
     "cytoscape": "^3.33.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
     "sharp": "^0.34.5"
   }
 }

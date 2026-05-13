@@ -1,0 +1,318 @@
+---
+import drugIndex from '../data/drug_index.json';
+
+// 411 canonical drug names piped into a <datalist> for autocomplete suggestions.
+// Researchers can still submit a drug not in the catalog — the field is
+// free-text and the suggestions are advisory only.
+type DrugIndexEntry = { canonical?: string; display_name?: string };
+const drugSuggestions: string[] = (drugIndex.drugs as DrugIndexEntry[])
+  .map((d) => d.canonical ?? d.display_name ?? '')
+  .filter((s) => s.length > 0)
+  .sort((a, b) => a.localeCompare(b));
+
+const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? '';
+---
+
+<form class="submission-form" id="submission-form" novalidate>
+  <div class="form-field">
+    <label class="form-label" for="sf-drug">
+      Drug <span class="form-required">*</span>
+    </label>
+    <p class="form-hint">Generic or brand name. Suggestions are advisory — propose new drugs freely.</p>
+    <input
+      type="text"
+      id="sf-drug"
+      name="drug"
+      class="hyp-input"
+      list="sf-drug-suggestions"
+      autocomplete="off"
+      required
+      minlength="2"
+      maxlength="100"
+    />
+    <datalist id="sf-drug-suggestions">
+      {drugSuggestions.map((name) => <option value={name} />)}
+    </datalist>
+    <p class="form-error" data-error-for="drug"></p>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-mediator">
+      Mediator <span class="form-required">*</span>
+    </label>
+    <p class="form-hint">Molecular target, pathway, or mechanism (e.g. COX-2, NF-kB, autophagy).</p>
+    <input
+      type="text"
+      id="sf-mediator"
+      name="mediator"
+      class="hyp-input"
+      autocomplete="off"
+      required
+      minlength="2"
+      maxlength="100"
+    />
+    <p class="form-error" data-error-for="mediator"></p>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-outcome">
+      Outcome <span class="form-required">*</span>
+    </label>
+    <p class="form-hint">Disease or phenotype (e.g. Alzheimer's disease, fibrosis).</p>
+    <input
+      type="text"
+      id="sf-outcome"
+      name="outcome"
+      class="hyp-input"
+      autocomplete="off"
+      required
+      minlength="2"
+      maxlength="200"
+    />
+    <p class="form-error" data-error-for="outcome"></p>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-reasoning">
+      Reasoning <span class="form-optional">(optional)</span>
+    </label>
+    <p class="form-hint">Why do you think this hypothesis is worth checking? Up to 2,000 characters.</p>
+    <textarea
+      id="sf-reasoning"
+      name="reasoning"
+      class="hyp-input submission-textarea"
+      rows="6"
+      maxlength="2000"
+    ></textarea>
+    <p class="form-error" data-error-for="reasoning"></p>
+  </div>
+
+  <div class="submission-divider"></div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-name">
+      Name <span class="form-required">*</span>
+    </label>
+    <input
+      type="text"
+      id="sf-name"
+      name="submitter_name"
+      class="hyp-input"
+      autocomplete="name"
+      required
+      minlength="2"
+      maxlength="100"
+    />
+    <p class="form-error" data-error-for="submitter_name"></p>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-affiliation">
+      Affiliation <span class="form-required">*</span>
+    </label>
+    <input
+      type="text"
+      id="sf-affiliation"
+      name="submitter_affiliation"
+      class="hyp-input"
+      autocomplete="organization"
+      required
+      minlength="2"
+      maxlength="200"
+    />
+    <p class="form-error" data-error-for="submitter_affiliation"></p>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-email">
+      Email <span class="form-required">*</span>
+    </label>
+    <p class="form-hint">For follow-up questions only. Never published.</p>
+    <input
+      type="email"
+      id="sf-email"
+      name="submitter_email"
+      class="hyp-input"
+      autocomplete="email"
+      required
+      maxlength="254"
+    />
+    <p class="form-error" data-error-for="submitter_email"></p>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="sf-orcid">
+      ORCID <span class="form-optional">(optional)</span>
+    </label>
+    <p class="form-hint">Format: 0000-0000-0000-0000. Provides credit attribution if you have one.</p>
+    <input
+      type="text"
+      id="sf-orcid"
+      name="submitter_orcid"
+      class="hyp-input"
+      autocomplete="off"
+      pattern="\d{4}-\d{4}-\d{4}-\d{3}[\dX]"
+      placeholder="0000-0000-0000-0000"
+    />
+    <p class="form-error" data-error-for="submitter_orcid"></p>
+  </div>
+
+  <div class="form-field">
+    <div
+      class="cf-turnstile"
+      data-sitekey={turnstileSitekey}
+      data-theme="auto"
+      data-callback="onTurnstileSuccess"
+    ></div>
+    <p class="form-error" data-error-for="turnstile_token"></p>
+  </div>
+
+  <p class="form-error form-error--global" data-error-for="_"></p>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn--primary" id="sf-submit">
+      Submit hypothesis
+    </button>
+    <span class="form-submit-status" id="sf-status"></span>
+  </div>
+</form>
+
+<div class="submission-success" id="submission-success" hidden>
+  <h3>Submission received</h3>
+  <p>
+    Thanks for contributing. Your submission ID is
+    <code id="sf-success-id"></code>.
+  </p>
+  <p>
+    It will be reviewed manually within 24–72 hours. If approved, the hypothesis
+    enters the discovery pipeline and is published with your attribution at
+    <a href="/community">/community</a>. If we need clarification, we'll email you.
+  </p>
+</div>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+  import { initSubmissionForm } from '../scripts/submission-form';
+  initSubmissionForm();
+</script>
+
+<style>
+  .submission-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+  }
+
+  .form-required {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .form-optional {
+    color: var(--text-tertiary);
+    font-weight: 400;
+    font-size: 13px;
+  }
+
+  .form-hint {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .submission-textarea {
+    min-height: 140px;
+    font-family: inherit;
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .form-error {
+    margin: 0;
+    font-size: 13px;
+    color: var(--state-danger, #b91c1c);
+    min-height: 0;
+    line-height: 1.45;
+  }
+
+  .form-error:empty {
+    display: none;
+  }
+
+  .form-error--global {
+    margin-top: var(--space-2);
+  }
+
+  .submission-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--space-2) 0;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+  }
+
+  .form-submit-status {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .form-submit-status[data-status="submitting"] { color: var(--text-secondary); }
+  .form-submit-status[data-status="error"] { color: var(--state-danger, #b91c1c); }
+
+  .hyp-input[aria-invalid="true"] {
+    border-color: var(--state-danger, #b91c1c);
+  }
+
+  .submission-success {
+    border: 1px solid var(--border-default);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+  }
+
+  .submission-success h3 {
+    margin: 0 0 var(--space-3);
+    font-size: 18px;
+    color: var(--text-primary);
+  }
+
+  .submission-success p {
+    margin: 0 0 var(--space-3);
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .submission-success p:last-child { margin-bottom: 0; }
+
+  .submission-success code {
+    background: var(--bg-section);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    .submission-form { gap: var(--space-5); }
+  }
+</style>

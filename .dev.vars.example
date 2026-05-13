@@ -1,0 +1,25 @@
+# Local-only secrets for `wrangler pages dev`.
+# Copy this file to .dev.vars (gitignored) and fill in real values.
+# Production values are set in the Cloudflare Pages dashboard.
+
+# Turnstile official testing keys (always-pass / always-fail variants documented
+# at https://developers.cloudflare.com/turnstile/troubleshooting/testing/).
+# Replace with real Turnstile site secret in production.
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Fine-grained PAT scoped to the SANDBOX repo only during dev.
+# Repository access: routewise96/test-submissions
+# Permissions: Contents Read+Write
+GITHUB_TOKEN=ghp_REPLACE_WITH_FINE_GRAINED_PAT_SANDBOX_ONLY
+
+# Sandbox repo for local dev. Production uses routewise96/robertium.
+GITHUB_REPO=routewise96/test-submissions
+GITHUB_BRANCH=main
+
+# Salt for IP hashing (privacy). Rotate periodically in production.
+# Local-dev salt is intentionally not secret.
+IP_HASH_SALT=local_dev_salt_not_for_production
+
+# Public Turnstile sitekey (exposed to client at build time via Astro).
+# 1x00000000000000000000AA is the always-pass test sitekey.
+PUBLIC_TURNSTILE_SITEKEY=1x00000000000000000000AA
