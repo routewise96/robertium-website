@@ -506,27 +506,27 @@ a { color: inherit; }
 /* ---------- Contact ---------- */
 #contact .section-header { justify-content: center; }
 /*
- * Flex layout (with wrap) genuinely centers the cards as a group: the
- * wrapper has max-width + auto margins so the cards collectively sit in
- * the middle of the section, and justify-content distributes them
- * evenly around that centre. The earlier `grid repeat(3, 1fr)` filled
- * the whole container width, which made the row span edge-to-edge and
- * looked off-centre when the section header above it was narrower.
+ * Three cards on one line on desktop (no wrap), equal widths via
+ * flex:1 1 0. min-width:0 lets the cards shrink past their content
+ * width so the GitHub URL doesn't push LinkedIn onto a new row.
+ * The URL text is ellipsis-truncated inside .cc-text. On phones
+ * (<768px) flex-wrap:wrap kicks back in for a single-column stack.
  */
 .contact-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 20px;
-  max-width: 900px;
+  gap: 16px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 .contact-card {
   display: flex; align-items: center; gap: 14px;
   padding: 20px; background: #fff; border: 1px solid var(--border-subtle);
   border-radius: 8px; text-decoration: none; transition: border-color .15s;
-  flex: 1 1 240px;
-  max-width: 320px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 360px;
 }
 .contact-card:hover { border-color: var(--accent); }
 .contact-card .cc-icon {
@@ -534,8 +534,19 @@ a { color: inherit; }
   width: 40px; height: 40px; background: var(--accent-bg); border-radius: 8px; flex-shrink: 0;
 }
 .contact-card .cc-icon svg { color: var(--accent); }
-.contact-card .cc-text { font-size: 14px; color: var(--text-secondary); line-height: 1.4; }
+.contact-card .cc-text {
+  font-size: 14px; color: var(--text-secondary); line-height: 1.4;
+  min-width: 0; flex: 1 1 auto;
+  overflow: hidden;
+}
 .contact-card .cc-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+/* Truncate the URL/email line (the text node following .cc-label) with
+   an ellipsis so a long link can't widen the card past its flex basis. */
+.contact-card .cc-text {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.contact-card .cc-label { white-space: normal; }
 
 /* ---------- Footer ---------- */
 .site-footer { background: var(--bg-section); border-top: 1px solid var(--border-subtle); padding: 64px 0 32px; }
@@ -1367,7 +1378,10 @@ a { color: inherit; }
   .pipeline { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .stat-card .stat-num { font-size: 36px; }
-  /* .contact-grid is flex now (see Contact section above), wrap handles single column on phones. */
+  /* Below the mobile breakpoint, let the row wrap so each card gets
+     its own line (instead of squeezing three into a phone width). */
+  .contact-grid { flex-wrap: wrap; }
+  .contact-card { flex: 1 1 100%; max-width: 100%; }
 
   .hyp-hero { padding: 40px 0 24px; }
   .hyp-hero h1 { font-size: 28px; }
