@@ -17,3 +17,8 @@ pages_build_output_dir = "./dist"
 binding = "RATE_LIMIT_KV"
 id = "6ea06b4e4294409691a946209520f7d0"
 preview_id = "a9c3c598838740ddac38cac132590587"
+
+[vars]
+PUBLIC_TURNSTILE_SITEKEY = "0x4AAAAAADOYqFjwKiK8uHqW"
+GITHUB_REPO = "routewise96/robertium"
+GITHUB_BRANCH = "main"
