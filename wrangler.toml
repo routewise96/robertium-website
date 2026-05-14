@@ -2,32 +2,14 @@ name = "robertium-website"
 compatibility_date = "2026-05-03"
 pages_build_output_dir = "./dist"
 
-# Bindings for the /api/submit Pages Function (researcher hypothesis submissions).
-#
-# Daniel creates the KV namespace once via wrangler CLI:
-#   wrangler kv:namespace create RATE_LIMIT_KV
-#   wrangler kv:namespace create RATE_LIMIT_KV --preview
-# then pastes both IDs below.
-#
-# Secrets (TURNSTILE_SECRET_KEY, GITHUB_TOKEN, IP_HASH_SALT) and
-# non-secret vars (GITHUB_REPO, GITHUB_BRANCH, PUBLIC_TURNSTILE_SITEKEY)
-# are configured in the Cloudflare Pages dashboard for production.
-# Local-dev values live in .dev.vars (gitignored).
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "6ea06b4e4294409691a946209520f7d0"
 preview_id = "a9c3c598838740ddac38cac132590587"
 
-# Cloudflare Email Routing: outbound send binding for submission
-# notifications. The destination address (daniel@robertium.com) must be
-# added as a verified Destination Address in the Email Routing settings,
-# and the binding itself must also be configured in the Pages dashboard
-# under Settings > Functions > Bindings (type: Send Email, variable name:
-# NOTIFICATIONS, destination: daniel@robertium.com) for production
-# autodeploys to pick it up.
-send_email = [
-  { name = "NOTIFICATIONS", destination_address = "daniel@robertium.com" },
-]
+[[send_email]]
+name = "NOTIFICATIONS"
+destination_address = "daniel@robertium.com"
 
 [vars]
 PUBLIC_TURNSTILE_SITEKEY = "0x4AAAAAADOYqFjwKiK8uHqW"
