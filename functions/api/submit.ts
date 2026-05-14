@@ -213,10 +213,17 @@ async function verifyTurnstile(token: string, ip: string, secret: string): Promi
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ secret, response: token, remoteip: ip }),
     });
-    if (!resp.ok) return false;
-    const result = (await resp.json()) as { success?: boolean };
+    if (!resp.ok) {
+      console.warn(`[submit] turnstile http ${resp.status}`);
+      return false;
+    }
+    const result = (await resp.json()) as { success?: boolean; 'error-codes'?: string[] };
+    if (result.success !== true) {
+      console.warn('[submit] turnstile rejected:', (result['error-codes'] ?? []).join(','));
+    }
     return result.success === true;
-  } catch {
+  } catch (err) {
+    console.error('[submit] turnstile network error:', err instanceof Error ? err.message : String(err));
     return false;
   }
 }
@@ -251,19 +258,33 @@ async function storeSubmission(
         headers: {
           'authorization': `Bearer ${env.GITHUB_TOKEN}`,
           'accept': 'application/vnd.github+json',
+          'content-type': 'application/json',
           'user-agent': 'robertium-submissions/1.0',
           'x-github-api-version': '2022-11-28',
         },
         body: JSON.stringify({ message, content, branch: env.GITHUB_BRANCH }),
       });
-    } catch {
+    } catch (err) {
+      console.error('[submit] github fetch error:', err instanceof Error ? err.message : String(err));
       return { ok: false, reason: 'network' };
     }
 
     if (resp.status === 201) return { ok: true, submissionId: id };
-    if (resp.status === 401 || resp.status === 403) return { ok: false, reason: 'auth' };
-    if (resp.status === 422) continue; // ULID collision — vanishingly rare, retry.
-    if (resp.status >= 500 && attempt + 1 < STORAGE_MAX_ATTEMPTS) continue;
+    if (resp.status === 401 || resp.status === 403) {
+      const body = await resp.text().catch(() => '');
+      console.error(`[submit] github auth ${resp.status}: ${body.slice(0, 300)}`);
+      return { ok: false, reason: 'auth' };
+    }
+    if (resp.status === 422) {
+      console.warn(`[submit] github 422 (collision) attempt=${attempt} id=${id}`);
+      continue; // ULID collision — vanishingly rare, retry.
+    }
+    if (resp.status >= 500 && attempt + 1 < STORAGE_MAX_ATTEMPTS) {
+      console.warn(`[submit] github ${resp.status} attempt=${attempt}, retrying`);
+      continue;
+    }
+    const body = await resp.text().catch(() => '');
+    console.error(`[submit] github http ${resp.status}: ${body.slice(0, 300)}`);
     return { ok: false, reason: 'http' };
   }
   return { ok: false, reason: 'collision_retry_exhausted' };
@@ -271,75 +292,160 @@ async function storeSubmission(
 
 // ----- Handlers --------------------------------------------------------------
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  let raw: unknown;
+// Guard that every binding promised by `Env` is actually present at runtime.
+// CF Pages can silently leave `env.SOMETHING` undefined if the binding is
+// configured in wrangler.toml but the production deployment didn't pick it up
+// (a common gotcha with KV namespaces on Pages — the binding must also be set
+// in Settings > Functions > KV namespace bindings in the dashboard for
+// production). Hitting `env.RATE_LIMIT_KV.get(...)` on undefined throws a
+// TypeError that surfaces as a generic 502 with no usable detail. We turn
+// that failure mode into an explicit 503 + a logged list of missing names.
+function checkEnv(env: Env): string[] {
+  const missing: string[] = [];
+  if (!env.TURNSTILE_SECRET_KEY) missing.push('TURNSTILE_SECRET_KEY');
+  if (!env.GITHUB_TOKEN) missing.push('GITHUB_TOKEN');
+  if (!env.GITHUB_REPO) missing.push('GITHUB_REPO');
+  if (!env.GITHUB_BRANCH) missing.push('GITHUB_BRANCH');
+  if (!env.IP_HASH_SALT) missing.push('IP_HASH_SALT');
+  if (!env.RATE_LIMIT_KV || typeof env.RATE_LIMIT_KV.get !== 'function') {
+    missing.push('RATE_LIMIT_KV');
+  }
+  return missing;
+}
+
+function describeError(err: unknown): string {
+  if (err instanceof Error) {
+    return `${err.name}: ${err.message}${err.stack ? `\n${err.stack}` : ''}`;
+  }
   try {
-    raw = await request.json();
+    return JSON.stringify(err);
   } catch {
-    return errorResponse(400, 'validation_failed', 'Request body must be valid JSON');
+    return String(err);
   }
+}
 
-  const validation = validate(raw);
-  if (!validation.ok) {
-    return errorResponse(400, 'validation_failed', 'One or more fields failed validation', validation.details);
-  }
-  const input = validation.value;
+export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  // Wrap the entire handler so any unhandled throw becomes a structured 500
+  // with a server-side log entry, instead of a bare 502 from the runtime.
+  try {
+    const missing = checkEnv(env);
+    if (missing.length > 0) {
+      console.error('[submit] missing env bindings:', missing.join(', '));
+      return errorResponse(
+        503,
+        'internal_error',
+        'Submission service is not fully configured. Please email daniel@robertium.com.',
+      );
+    }
 
-  const clientIp = request.headers.get('CF-Connecting-IP') ?? '0.0.0.0';
-  const ipHash = await sha256Hex(clientIp + env.IP_HASH_SALT);
-  const rateKey = `rate:${ipHash}`;
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch (err) {
+      console.warn('[submit] invalid JSON body:', describeError(err));
+      return errorResponse(400, 'validation_failed', 'Request body must be valid JSON');
+    }
 
-  if (await env.RATE_LIMIT_KV.get(rateKey)) {
+    const validation = validate(raw);
+    if (!validation.ok) {
+      return errorResponse(
+        400,
+        'validation_failed',
+        'One or more fields failed validation',
+        validation.details,
+      );
+    }
+    const input = validation.value;
+
+    const clientIp = request.headers.get('CF-Connecting-IP') ?? '0.0.0.0';
+
+    let ipHash: string;
+    try {
+      ipHash = await sha256Hex(clientIp + env.IP_HASH_SALT);
+    } catch (err) {
+      console.error('[submit] sha256 failed:', describeError(err));
+      return errorResponse(500, 'internal_error', 'Internal error hashing client identifier.');
+    }
+    const rateKey = `rate:${ipHash}`;
+
+    let rateHit: string | null;
+    try {
+      rateHit = await env.RATE_LIMIT_KV.get(rateKey);
+    } catch (err) {
+      console.error('[submit] KV get failed:', describeError(err));
+      return errorResponse(500, 'internal_error', 'Rate limit store unavailable.');
+    }
+    if (rateHit) {
+      return errorResponse(
+        429,
+        'rate_limited',
+        'A submission from this network was already received in the last 24 hours',
+      );
+    }
+
+    const turnstileOk = await verifyTurnstile(
+      input.turnstile_token,
+      clientIp,
+      env.TURNSTILE_SECRET_KEY,
+    );
+    if (!turnstileOk) {
+      return errorResponse(403, 'turnstile_failed', 'Bot verification failed, please retry');
+    }
+
+    const submission: Record<string, unknown> = {
+      schema_version: SCHEMA_VERSION,
+      submission_id: ulid(),
+      submitted_at: new Date().toISOString(),
+      submitter: {
+        name: input.submitter_name,
+        affiliation: input.submitter_affiliation,
+        email: input.submitter_email,
+        ...(input.submitter_orcid ? { orcid: input.submitter_orcid } : {}),
+      },
+      hypothesis: {
+        drug: input.drug,
+        mediator: input.mediator,
+        outcome: input.outcome,
+      },
+      ...(input.reasoning ? { reasoning: input.reasoning } : {}),
+      metadata: {
+        turnstile_verified: true,
+        ip_address_hash: `sha256:${ipHash}`,
+        submission_source: SUBMISSION_SOURCE,
+      },
+      status: 'pending',
+    };
+
+    const storage = await storeSubmission(submission, env);
+    if (!storage.ok) {
+      console.error('[submit] storage failed:', storage.reason);
+      const message =
+        storage.reason === 'auth'
+          ? 'Submission service is misconfigured. Please email daniel@robertium.com.'
+          : 'Submission service is temporarily unavailable. Please retry in a few minutes.';
+      return errorResponse(502, 'storage_failed', message);
+    }
+
+    try {
+      await env.RATE_LIMIT_KV.put(rateKey, storage.submissionId, {
+        expirationTtl: RATE_LIMIT_TTL_SECONDS,
+      });
+    } catch (err) {
+      // The submission already landed in GitHub; failing to record the rate
+      // limit is not fatal for the user. Just log and return success.
+      console.warn('[submit] KV put failed (rate limit not recorded):', describeError(err));
+    }
+
+    console.log('[submit] ok:', storage.submissionId);
+    return jsonResponse(200, { ok: true, submission_id: storage.submissionId });
+  } catch (err) {
+    console.error('[submit] unhandled exception:', describeError(err));
     return errorResponse(
-      429,
-      'rate_limited',
-      'A submission from this network was already received in the last 24 hours',
+      500,
+      'internal_error',
+      'An unexpected error occurred. Please retry shortly.',
     );
   }
-
-  const turnstileOk = await verifyTurnstile(input.turnstile_token, clientIp, env.TURNSTILE_SECRET_KEY);
-  if (!turnstileOk) {
-    return errorResponse(403, 'turnstile_failed', 'Bot verification failed, please retry');
-  }
-
-  const submission: Record<string, unknown> = {
-    schema_version: SCHEMA_VERSION,
-    submission_id: ulid(),
-    submitted_at: new Date().toISOString(),
-    submitter: {
-      name: input.submitter_name,
-      affiliation: input.submitter_affiliation,
-      email: input.submitter_email,
-      ...(input.submitter_orcid ? { orcid: input.submitter_orcid } : {}),
-    },
-    hypothesis: {
-      drug: input.drug,
-      mediator: input.mediator,
-      outcome: input.outcome,
-    },
-    ...(input.reasoning ? { reasoning: input.reasoning } : {}),
-    metadata: {
-      turnstile_verified: true,
-      ip_address_hash: `sha256:${ipHash}`,
-      submission_source: SUBMISSION_SOURCE,
-    },
-    status: 'pending',
-  };
-
-  const storage = await storeSubmission(submission, env);
-  if (!storage.ok) {
-    const message =
-      storage.reason === 'auth'
-        ? 'Submission service is misconfigured. Please email daniel@robertium.com.'
-        : 'Submission service is temporarily unavailable. Please retry in a few minutes.';
-    return errorResponse(502, 'storage_failed', message);
-  }
-
-  await env.RATE_LIMIT_KV.put(rateKey, storage.submissionId, {
-    expirationTtl: RATE_LIMIT_TTL_SECONDS,
-  });
-
-  return jsonResponse(200, { ok: true, submission_id: storage.submissionId });
 };
 
 export const onRequestOptions: PagesFunction = async () => {
