@@ -38,6 +38,15 @@ const SCHEMA_VERSION = '1.0';
 const SUBMISSION_SOURCE = 'website_form_v1';
 const STORAGE_MAX_ATTEMPTS = 3;
 
+// Identity used as both committer and author on the GitHub Contents API
+// PUT. Setting these explicitly (instead of letting GitHub fall back to the
+// PAT owner) means the commit is treated as a third-party event, which is
+// what triggers email notifications for repo watchers, including the owner.
+// Side benefit: cleaner `git blame` — submissions are a distinct actor from
+// Daniel's manual commits.
+const SUBMISSION_BOT_NAME = 'Robertium Submissions Bot';
+const SUBMISSION_BOT_EMAIL = 'submissions@robertium.com';
+
 // ----- ULID (Crockford base32, lex-sortable) ---------------------------------
 // First 10 chars = millisecond timestamp, last 16 = 80 bits of randomness.
 // Inline implementation keeps the Worker bundle dependency-free.
@@ -259,7 +268,13 @@ async function storeSubmission(
           'user-agent': 'robertium-submissions/1.0',
           'x-github-api-version': '2022-11-28',
         },
-        body: JSON.stringify({ message, content, branch: env.GITHUB_BRANCH }),
+        body: JSON.stringify({
+          message,
+          content,
+          branch: env.GITHUB_BRANCH,
+          committer: { name: SUBMISSION_BOT_NAME, email: SUBMISSION_BOT_EMAIL },
+          author: { name: SUBMISSION_BOT_NAME, email: SUBMISSION_BOT_EMAIL },
+        }),
       });
     } catch (err) {
       console.error('[submit] github fetch error:', err instanceof Error ? err.message : String(err));
