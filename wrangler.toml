@@ -15,5 +15,5 @@ pages_build_output_dir = "./dist"
 # Local-dev values live in .dev.vars (gitignored).
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"
+id = "6ea06b4e4294409691a946209520f7d0"
+preview_id = "a9c3c598838740ddac38cac132590587"
