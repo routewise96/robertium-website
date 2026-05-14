@@ -6,6 +6,7 @@
 // GitHub Contents API. Pending submissions are reviewed manually before
 // they enter the discovery pipeline.
 
+import { EmailMessage } from 'cloudflare:email';
 import { isValidOrcid } from '../../src/lib/orcid';
 
 interface Env {
@@ -14,6 +15,7 @@ interface Env {
   GITHUB_REPO: string;
   GITHUB_BRANCH: string;
   IP_HASH_SALT: string;
+  NOTIFICATIONS: { send: (message: EmailMessage) => Promise<void> };
 }
 
 type SubmitInput = {
@@ -46,6 +48,15 @@ const STORAGE_MAX_ATTEMPTS = 3;
 // Daniel's manual commits.
 const SUBMISSION_BOT_NAME = 'Robertium Submissions Bot';
 const SUBMISSION_BOT_EMAIL = 'submissions@robertium.com';
+
+// Notification email identity. Sender must match a verified address in
+// the Cloudflare Email Routing settings for the worker's zone; the
+// destination must be a verified routing address forwarded to Daniel's
+// inbox. The Pages dashboard binding (Send Email → NOTIFICATIONS) is
+// what makes env.NOTIFICATIONS.send(...) work at runtime.
+const NOTIFICATION_FROM_ADDR = 'notifications@robertium.com';
+const NOTIFICATION_FROM_NAME = 'Robertium Submissions';
+const NOTIFICATION_TO_ADDR = 'daniel@robertium.com';
 
 // ----- ULID (Crockford base32, lex-sortable) ---------------------------------
 // First 10 chars = millisecond timestamp, last 16 = 80 bits of randomness.
@@ -316,7 +327,80 @@ function checkEnv(env: Env): string[] {
   if (!env.GITHUB_REPO) missing.push('GITHUB_REPO');
   if (!env.GITHUB_BRANCH) missing.push('GITHUB_BRANCH');
   if (!env.IP_HASH_SALT) missing.push('IP_HASH_SALT');
+  if (!env.NOTIFICATIONS || typeof env.NOTIFICATIONS.send !== 'function') {
+    missing.push('NOTIFICATIONS');
+  }
   return missing;
+}
+
+// ----- Email notification ----------------------------------------------------
+
+// RFC 2047 'Q'-encoded word for headers containing non-ASCII (e.g. arrow
+// glyphs in the subject). Most modern clients also accept raw UTF-8 in
+// headers per RFC 6532, but Q-encoding works everywhere.
+function encodeHeader(value: string): string {
+  // ASCII-only fast path keeps logs readable.
+  if (/^[\x20-\x7E]*$/.test(value)) return value;
+  const quoted = value
+    .replace(/=/g, '=3D')
+    .replace(/\?/g, '=3F')
+    .replace(/_/g, '=5F')
+    .replace(/[\x00-\x1F\x7F-￿]/g, (ch) => {
+      const bytes = new TextEncoder().encode(ch);
+      let out = '';
+      for (const b of bytes) out += '=' + b.toString(16).toUpperCase().padStart(2, '0');
+      return out;
+    })
+    .replace(/ /g, '_');
+  return `=?UTF-8?Q?${quoted}?=`;
+}
+
+async function sendNotification(
+  env: Env,
+  submission: Record<string, unknown>,
+  submissionId: string,
+): Promise<void> {
+  const submitter = submission.submitter as Record<string, string>;
+  const hyp = submission.hypothesis as Record<string, string>;
+  const reasoning = (submission.reasoning as string | undefined) ?? '';
+
+  const subject = `[Robertium] New submission: ${hyp.drug} → ${hyp.mediator} → ${hyp.outcome}`;
+  const reviewUrl =
+    `https://github.com/${env.GITHUB_REPO}/blob/${env.GITHUB_BRANCH}` +
+    `/data/submissions/pending/${submissionId}.json`;
+
+  const bodyLines = [
+    `Submission ID: ${submissionId}`,
+    `From: ${submitter.name} <${submitter.email}>`,
+    `Affiliation: ${submitter.affiliation}`,
+    `ORCID: ${submitter.orcid ?? 'not provided'}`,
+    '',
+    `Drug: ${hyp.drug}`,
+    `Mediator: ${hyp.mediator}`,
+    `Outcome: ${hyp.outcome}`,
+    '',
+    'Reasoning:',
+    reasoning || '  (not provided)',
+    '',
+    `Review at: ${reviewUrl}`,
+  ];
+
+  const headers = [
+    `From: ${NOTIFICATION_FROM_NAME} <${NOTIFICATION_FROM_ADDR}>`,
+    `To: ${NOTIFICATION_TO_ADDR}`,
+    `Subject: ${encodeHeader(subject)}`,
+    `Message-ID: <${submissionId}@robertium.com>`,
+    `Date: ${new Date().toUTCString()}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: 8bit',
+  ];
+
+  const raw = headers.join('\r\n') + '\r\n\r\n' + bodyLines.join('\r\n') + '\r\n';
+
+  await env.NOTIFICATIONS.send(
+    new EmailMessage(NOTIFICATION_FROM_ADDR, NOTIFICATION_TO_ADDR, raw),
+  );
 }
 
 function describeError(err: unknown): string {
@@ -414,6 +498,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           ? 'Submission service is misconfigured. Please email daniel@robertium.com.'
           : 'Submission service is temporarily unavailable. Please retry in a few minutes.';
       return errorResponse(502, 'storage_failed', message);
+    }
+
+    // Notify Daniel out-of-band. The submission is already persisted in
+    // GitHub at this point, so a notification failure must not surface to
+    // the user — just log and continue.
+    try {
+      await sendNotification(env, submission, storage.submissionId);
+    } catch (err) {
+      console.warn('[submit] email notification failed:', describeError(err));
     }
 
     console.log('[submit] ok:', storage.submissionId);
