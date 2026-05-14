@@ -6,7 +6,6 @@
 // GitHub Contents API. Pending submissions are reviewed manually before
 // they enter the discovery pipeline.
 
-import { EmailMessage } from 'cloudflare:email';
 import { isValidOrcid } from '../../src/lib/orcid';
 
 interface Env {
@@ -15,7 +14,7 @@ interface Env {
   GITHUB_REPO: string;
   GITHUB_BRANCH: string;
   IP_HASH_SALT: string;
-  NOTIFICATIONS: { send: (message: EmailMessage) => Promise<void> };
+  TELEGRAM_BOT_TOKEN: string;
 }
 
 type SubmitInput = {
@@ -49,14 +48,12 @@ const STORAGE_MAX_ATTEMPTS = 3;
 const SUBMISSION_BOT_NAME = 'Robertium Submissions Bot';
 const SUBMISSION_BOT_EMAIL = 'submissions@robertium.com';
 
-// Notification email identity. Sender must match a verified address in
-// the Cloudflare Email Routing settings for the worker's zone; the
-// destination must be a verified routing address forwarded to Daniel's
-// inbox. The Pages dashboard binding (Send Email → NOTIFICATIONS) is
-// what makes env.NOTIFICATIONS.send(...) work at runtime.
-const NOTIFICATION_FROM_ADDR = 'notifications@robertium.com';
-const NOTIFICATION_FROM_NAME = 'Robertium Submissions';
-const NOTIFICATION_TO_ADDR = 'daniel@robertium.com';
+// Telegram notification target. Hardcoded numeric chat_id (Daniel's
+// Telegram ID); the bot must be started by the user once (/start) before
+// it can send messages to this chat. Token comes from the Pages secret
+// TELEGRAM_BOT_TOKEN, never logged.
+const TELEGRAM_ADMIN_CHAT_ID = 738922628;
+const TELEGRAM_API_TIMEOUT_MS = 5000;
 
 // ----- ULID (Crockford base32, lex-sortable) ---------------------------------
 // First 10 chars = millisecond timestamp, last 16 = 80 bits of randomness.
@@ -327,35 +324,24 @@ function checkEnv(env: Env): string[] {
   if (!env.GITHUB_REPO) missing.push('GITHUB_REPO');
   if (!env.GITHUB_BRANCH) missing.push('GITHUB_BRANCH');
   if (!env.IP_HASH_SALT) missing.push('IP_HASH_SALT');
-  if (!env.NOTIFICATIONS || typeof env.NOTIFICATIONS.send !== 'function') {
-    missing.push('NOTIFICATIONS');
-  }
+  if (!env.TELEGRAM_BOT_TOKEN) missing.push('TELEGRAM_BOT_TOKEN');
   return missing;
 }
 
-// ----- Email notification ----------------------------------------------------
+// ----- Telegram notification -------------------------------------------------
 
-// RFC 2047 'Q'-encoded word for headers containing non-ASCII (e.g. arrow
-// glyphs in the subject). Most modern clients also accept raw UTF-8 in
-// headers per RFC 6532, but Q-encoding works everywhere.
-function encodeHeader(value: string): string {
-  // ASCII-only fast path keeps logs readable.
-  if (/^[\x20-\x7E]*$/.test(value)) return value;
-  const quoted = value
-    .replace(/=/g, '=3D')
-    .replace(/\?/g, '=3F')
-    .replace(/_/g, '=5F')
-    .replace(/[\x00-\x1F\x7F-￿]/g, (ch) => {
-      const bytes = new TextEncoder().encode(ch);
-      let out = '';
-      for (const b of bytes) out += '=' + b.toString(16).toUpperCase().padStart(2, '0');
-      return out;
-    })
-    .replace(/ /g, '_');
-  return `=?UTF-8?Q?${quoted}?=`;
+// Telegram parse_mode=HTML accepts a small whitelist of tags; everything
+// else must be entity-encoded. We use HTML rather than MarkdownV2 because
+// the escape rules are simpler and our payload is plain text wrapped in
+// <b>...</b>.
+function escapeTelegramHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
-async function sendNotification(
+async function sendTelegramNotification(
   env: Env,
   submission: Record<string, unknown>,
   submissionId: string,
@@ -364,43 +350,70 @@ async function sendNotification(
   const hyp = submission.hypothesis as Record<string, string>;
   const reasoning = (submission.reasoning as string | undefined) ?? '';
 
-  const subject = `[Robertium] New submission: ${hyp.drug} → ${hyp.mediator} → ${hyp.outcome}`;
   const reviewUrl =
     `https://github.com/${env.GITHUB_REPO}/blob/${env.GITHUB_BRANCH}` +
     `/data/submissions/pending/${submissionId}.json`;
 
-  const bodyLines = [
-    `Submission ID: ${submissionId}`,
-    `From: ${submitter.name} <${submitter.email}>`,
-    `Affiliation: ${submitter.affiliation}`,
-    `ORCID: ${submitter.orcid ?? 'not provided'}`,
-    '',
-    `Drug: ${hyp.drug}`,
-    `Mediator: ${hyp.mediator}`,
-    `Outcome: ${hyp.outcome}`,
-    '',
-    'Reasoning:',
-    reasoning || '  (not provided)',
-    '',
-    `Review at: ${reviewUrl}`,
-  ];
+  const e = escapeTelegramHtml;
+  const orcidLine = submitter.orcid ? e(submitter.orcid) : '<i>not provided</i>';
+  const reasoningBlock = reasoning ? e(reasoning) : '<i>not provided</i>';
 
-  const headers = [
-    `From: ${NOTIFICATION_FROM_NAME} <${NOTIFICATION_FROM_ADDR}>`,
-    `To: ${NOTIFICATION_TO_ADDR}`,
-    `Subject: ${encodeHeader(subject)}`,
-    `Message-ID: <${submissionId}@robertium.com>`,
-    `Date: ${new Date().toUTCString()}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=utf-8',
-    'Content-Transfer-Encoding: 8bit',
-  ];
+  const text = [
+    '🔬 <b>New Robertium submission</b>',
+    '',
+    `<b>Drug:</b> ${e(hyp.drug)}`,
+    `<b>Mediator:</b> ${e(hyp.mediator)}`,
+    `<b>Outcome:</b> ${e(hyp.outcome)}`,
+    '',
+    `<b>From:</b> ${e(submitter.name)} (${e(submitter.affiliation)})`,
+    `<b>Email:</b> ${e(submitter.email)}`,
+    `<b>ORCID:</b> ${orcidLine}`,
+    '',
+    '<b>Reasoning:</b>',
+    reasoningBlock,
+    '',
+    `<b>ID:</b> <code>${e(submissionId)}</code>`,
+    `<a href="${reviewUrl}">Review on GitHub</a>`,
+  ].join('\n');
 
-  const raw = headers.join('\r\n') + '\r\n\r\n' + bodyLines.join('\r\n') + '\r\n';
+  // Telegram caps text at 4096 chars. With drug/mediator/outcome limited
+  // to 100-200 chars each by validate() and reasoning to 2000 chars we
+  // stay well under, but guard against future schema changes.
+  const truncated = text.length > 4096 ? text.slice(0, 4090) + '\n…' : text;
 
-  await env.NOTIFICATIONS.send(
-    new EmailMessage(NOTIFICATION_FROM_ADDR, NOTIFICATION_TO_ADDR, raw),
-  );
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEGRAM_API_TIMEOUT_MS);
+
+  try {
+    const resp = await fetch(
+      `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_ADMIN_CHAT_ID,
+          text: truncated,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+        }),
+        signal: controller.signal,
+      },
+    );
+
+    if (!resp.ok) {
+      // Body has the error description; never log the URL — it contains
+      // the bot token.
+      const body = await resp.text().catch(() => '');
+      console.warn(`[submit] telegram http ${resp.status}: ${body.slice(0, 300)}`);
+      return;
+    }
+    const data = (await resp.json()) as { ok?: boolean; description?: string };
+    if (!data.ok) {
+      console.warn('[submit] telegram api rejected:', data.description ?? 'unknown');
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function describeError(err: unknown): string {
@@ -500,13 +513,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return errorResponse(502, 'storage_failed', message);
     }
 
-    // Notify Daniel out-of-band. The submission is already persisted in
-    // GitHub at this point, so a notification failure must not surface to
-    // the user — just log and continue.
+    // Notify Daniel out-of-band via Telegram. The submission is already
+    // persisted in GitHub at this point, so a notification failure must
+    // not surface to the user — just log and continue.
     try {
-      await sendNotification(env, submission, storage.submissionId);
+      await sendTelegramNotification(env, submission, storage.submissionId);
     } catch (err) {
-      console.warn('[submit] email notification failed:', describeError(err));
+      console.warn('[submit] telegram notification failed:', describeError(err));
     }
 
     console.log('[submit] ok:', storage.submissionId);
