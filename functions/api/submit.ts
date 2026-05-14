@@ -14,7 +14,6 @@ interface Env {
   GITHUB_REPO: string;
   GITHUB_BRANCH: string;
   IP_HASH_SALT: string;
-  RATE_LIMIT_KV: KVNamespace;
 }
 
 type SubmitInput = {
@@ -32,13 +31,11 @@ type SubmitInput = {
 type ErrorCode =
   | 'validation_failed'
   | 'turnstile_failed'
-  | 'rate_limited'
   | 'storage_failed'
   | 'internal_error';
 
 const SCHEMA_VERSION = '1.0';
 const SUBMISSION_SOURCE = 'website_form_v1';
-const RATE_LIMIT_TTL_SECONDS = 86_400;
 const STORAGE_MAX_ATTEMPTS = 3;
 
 // ----- ULID (Crockford base32, lex-sortable) ---------------------------------
@@ -292,14 +289,11 @@ async function storeSubmission(
 
 // ----- Handlers --------------------------------------------------------------
 
-// Guard that every binding promised by `Env` is actually present at runtime.
-// CF Pages can silently leave `env.SOMETHING` undefined if the binding is
-// configured in wrangler.toml but the production deployment didn't pick it up
-// (a common gotcha with KV namespaces on Pages — the binding must also be set
-// in Settings > Functions > KV namespace bindings in the dashboard for
-// production). Hitting `env.RATE_LIMIT_KV.get(...)` on undefined throws a
-// TypeError that surfaces as a generic 502 with no usable detail. We turn
-// that failure mode into an explicit 503 + a logged list of missing names.
+// Guard that every secret/var promised by `Env` is actually present at
+// runtime. If anything is missing we fail with a structured 503 plus a
+// logged list of missing names, instead of a cryptic 502 from a downstream
+// undefined access. (Historical context: an unbound KV namespace used to
+// trip this exact failure mode before rate limiting was removed.)
 function checkEnv(env: Env): string[] {
   const missing: string[] = [];
   if (!env.TURNSTILE_SECRET_KEY) missing.push('TURNSTILE_SECRET_KEY');
@@ -307,9 +301,6 @@ function checkEnv(env: Env): string[] {
   if (!env.GITHUB_REPO) missing.push('GITHUB_REPO');
   if (!env.GITHUB_BRANCH) missing.push('GITHUB_BRANCH');
   if (!env.IP_HASH_SALT) missing.push('IP_HASH_SALT');
-  if (!env.RATE_LIMIT_KV || typeof env.RATE_LIMIT_KV.get !== 'function') {
-    missing.push('RATE_LIMIT_KV');
-  }
   return missing;
 }
 
@@ -366,22 +357,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       console.error('[submit] sha256 failed:', describeError(err));
       return errorResponse(500, 'internal_error', 'Internal error hashing client identifier.');
     }
-    const rateKey = `rate:${ipHash}`;
-
-    let rateHit: string | null;
-    try {
-      rateHit = await env.RATE_LIMIT_KV.get(rateKey);
-    } catch (err) {
-      console.error('[submit] KV get failed:', describeError(err));
-      return errorResponse(500, 'internal_error', 'Rate limit store unavailable.');
-    }
-    if (rateHit) {
-      return errorResponse(
-        429,
-        'rate_limited',
-        'A submission from this network was already received in the last 24 hours',
-      );
-    }
 
     const turnstileOk = await verifyTurnstile(
       input.turnstile_token,
@@ -424,16 +399,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           ? 'Submission service is misconfigured. Please email daniel@robertium.com.'
           : 'Submission service is temporarily unavailable. Please retry in a few minutes.';
       return errorResponse(502, 'storage_failed', message);
-    }
-
-    try {
-      await env.RATE_LIMIT_KV.put(rateKey, storage.submissionId, {
-        expirationTtl: RATE_LIMIT_TTL_SECONDS,
-      });
-    } catch (err) {
-      // The submission already landed in GitHub; failing to record the rate
-      // limit is not fatal for the user. Just log and return success.
-      console.warn('[submit] KV put failed (rate limit not recorded):', describeError(err));
     }
 
     console.log('[submit] ok:', storage.submissionId);
